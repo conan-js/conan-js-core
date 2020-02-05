@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "outDir": "./lib/",
+    "noImplicitAny": true,
+    "module": "commonjs",
+    "target": "es2015",
+    "jsx": "react",
+    "declaration": true,
+    "sourceMap": true,
+    "experimentalDecorators": true
+  }
+}
