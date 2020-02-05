@@ -98,15 +98,6 @@ export class EventThread  {
             ...(event.fork != null ? {fork:event.fork.getEvents()}: undefined),
         }));
     }
-    close(): Stage<string, any, any> {
-        let joinStage: Stage<string, any, any> = this.currentStage;
-        this.doStage({name: 'stop'}, TriggerType.STOP, 'onStop');
-        if (this.parent) {
-            this.parent.moveToStage(joinStage);
-        }
-        this.closed = true;
-        return this.currentStage;
-    }
 
     public doStage<PAYLOAD, STAGE extends Stage<string, any, PAYLOAD>>(
         stage: STAGE,

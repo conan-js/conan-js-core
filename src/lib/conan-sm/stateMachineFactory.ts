@@ -1,4 +1,4 @@
-import {StateMachine, StateMachineImpl} from "./stateMachine";
+import {ParentStateMachineInfo, StateMachineImpl} from "./stateMachine";
 import {SmListener} from "./domain";
 import {EventThread} from "./eventThread";
 import {IKeyValuePairs} from "../conan-utils/typesHelper";
@@ -20,7 +20,7 @@ export class StateMachineFactory {
         SM_LISTENER extends SmListener,
         JOIN_LISTENER extends SmListener,
         ACTIONS
-    > (parent: StateMachine<any, any>, data: StateMachineData<SM_LISTENER, JOIN_LISTENER, ACTIONS>) {
+    > (parent: ParentStateMachineInfo<any, any>, data: StateMachineData<SM_LISTENER, JOIN_LISTENER, ACTIONS>) {
         return this.doCreate(data, parent);
     }
 
@@ -28,7 +28,7 @@ export class StateMachineFactory {
         SM_LISTENER extends SmListener,
         JOIN_LISTENER extends SmListener,
         ACTIONS
-    > (data: StateMachineData<SM_LISTENER, JOIN_LISTENER, ACTIONS>, parent?: StateMachine<any, any>): StateMachineImpl <SM_LISTENER, JOIN_LISTENER, ACTIONS> {
+    > (data: StateMachineData<SM_LISTENER, JOIN_LISTENER, ACTIONS>, parent?: ParentStateMachineInfo<any, any>): StateMachineImpl <SM_LISTENER, JOIN_LISTENER, ACTIONS> {
         let actionsByStage: IKeyValuePairs<StageDef<string, any, any, any>> = Objects.keyfy(data.request.stageDefs, (it)=>it.name);
         let stateMachine: StateMachineImpl<SM_LISTENER, JOIN_LISTENER, ACTIONS> = new StateMachineImpl(data, actionsByStage, parent);
 

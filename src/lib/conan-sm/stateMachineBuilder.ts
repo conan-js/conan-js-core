@@ -69,21 +69,42 @@ export class StateMachineBuilder<
         return this;
     }
 
-    withStage<NAME extends string,
+    withStage<
+        NAME extends string,
         ACTIONS,
         STAGE extends Stage<NAME, ACTIONS, REQUIREMENTS>,
         REQUIREMENTS = void>(
         name: NAME,
         logic: IConstructor<ACTIONS, REQUIREMENTS>,
-        deferrer?: IBiConsumer<ACTIONS, REQUIREMENTS>
     ): this {
         this.data.request.stageDefs.push({
             name,
             logic,
-            deferrer,
         });
         return this;
     }
+
+    withDeferredStage<
+        NAME extends string,
+        ACTIONS,
+        STAGE extends Stage<NAME, ACTIONS, REQUIREMENTS>,
+        REQUIREMENTS = void>(
+        name: NAME,
+        logic: IConstructor<ACTIONS, REQUIREMENTS>,
+        deferrer: IBiConsumer<ACTIONS, REQUIREMENTS>,
+        joinsInto: string[]
+    ): this {
+        this.data.request.stageDefs.push({
+            name,
+            logic,
+            deferredInfo: {
+                deferrer,
+                joinsInto
+            }
+        });
+        return this;
+    }
+
 
 
     requestStage(stage: Stage<string, any, any>): this {

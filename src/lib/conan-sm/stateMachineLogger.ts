@@ -1,7 +1,9 @@
 import {Strings} from "../conan-utils/strings";
 
 export enum EventType {
+    STOP = 'STOP',
     FORK = 'FORK',
+    FORK_STOP = 'FORK_STOP',
     REQUEST_ACTION = 'REQ_ACTION',
     REQUEST_STAGE = 'REQ_STAGE',
     QUEUE_TO_PROCESS = 'Q_2_PROCESS',

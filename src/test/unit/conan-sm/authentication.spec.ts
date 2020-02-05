@@ -3,7 +3,7 @@ import {Authenticators} from "../../utils/authenticators";
 import {SerializedSmEvents} from "../../utils/serializedSmEvents";
 import {AppCredentials, UserNameAndPassword} from "../../../main/domain/domain";
 import {TriggerType} from "../../../lib/conan-sm/domain";
-import {AuthenticationPrototype} from "../../../main/sm/authentication/authenticationSm.prototype";
+import {AuthenticationPrototype} from "../../../main/sm/authentication/authentication.sm";
 
 describe('test', () => {
     const APP_CREDENTIALS: AppCredentials = {test: '1'};

@@ -1,116 +1,107 @@
-// import {
-//     NotAuthenticatedActions, NotAuthenticatedActionsListener,
-//     NotAuthenticatedEntryPoint,
-//     NotAuthenticatedListener,
-//     NotAuthenticatedStage
-// } from "./stages/notAuthenticated.stage";
-// import {
-//     AuthenticatedActions,
-//     AuthenticatedEntryPoint, AuthenticatedJoiner,
-//     AuthenticatedListener,
-//     AuthenticatedStage
-// } from "./stages/authenticated.stage";
-// import {
-//     AuthenticatingActions,
-//     AuthenticatingActionsListener,
-//     AuthenticatingEntryPoint,
-//     AuthenticatingStage
-// } from "./stages/authenticating.stage";
-// import {IBiConsumer, IBiFunction, IConsumer, IFunction, IVarArgConstructor} from "../../../lib/conan-utils/typesHelper";
-// import {AppCredentials, UserNameAndPassword} from "../../domain/domain";
-// import {EventThread} from "../../../lib/conan-sm/eventThread";
-// import {StateMachineBuilder} from "../../../lib/conan-sm/stateMachineBuilder";
-// import {StateMachineBuilderFactory} from "../../../lib/conan-sm/domain";
-//
-// export interface AuthenticationSmActions extends NotAuthenticatedActions, AuthenticatedActions {
-// }
-//
-//
-// export interface AuthenticationEntryPoints {
-//     readonly notAuthenticated: NotAuthenticatedEntryPoint,
-//     readonly authenticating: AuthenticatingEntryPoint,
-//     readonly authenticated: AuthenticatedEntryPoint,
-// }
-//
-// export type $AuthenticationSmActions = IBiFunction<EventThread, AuthenticationEntryPoints, IVarArgConstructor<AuthenticationSmActions>>;
-//
-//
-//
-// export interface AuthenticationSmListener extends NotAuthenticatedListener, AuthenticatingActionsListener, AuthenticatedListener {}
-// export interface AuthenticationSmJoiner extends AuthenticatedJoiner {}
-//
-//
-// export type ValidInitialStages = NotAuthenticatedStage | AuthenticatedStage;
-//
-// export interface AuthenticationSm extends StateMachineBuilder <AuthenticationSmListener, AuthenticationSmJoiner, AuthenticationSmActions> {}
-//
-// export class AuthenticationSmFactory implements StateMachineBuilderFactory <
-//         AuthenticationSmListener,
-//         AuthenticationSmJoiner,
-//         Authenticator,
-//         AuthenticationEntryPoints,
-//         ValidInitialStages,
-//         AuthenticationSmActions,
-//         AuthenticationSm> {
-//     create(authenticator: Authenticator, initialStageProvider: (input: AuthenticationEntryPoints) => ValidInitialStages): AuthenticationSm {
-//         let _authenticationStages: AuthenticationEntryPoints = {
-//             authenticating: {
-//                 name: 'authenticating',
-//                 create: (userNameAndPassword)=>({
-//                     requirements: userNameAndPassword,
-//                     name: 'authenticating'
-//                 })
-//             },
-//             notAuthenticated: {
-//                 name: 'notAuthenticated',
-//                 create: ()=>({
-//                     name: 'notAuthenticated'
-//                 })
-//             },
-//             authenticated: {
-//                 name: 'authenticated',
-//                 create: (appCredentials)=>({
-//                     name: 'authenticated',
-//                     requirements:appCredentials
-//                 })
-//             }
-//         };
-//
-//         let _$AuthenticationSmActions: $AuthenticationSmActions = (eventThread: EventThread, authenticationStages: AuthenticationEntryPoints) => {
-//             class AuthenticationActionsImpl implements AuthenticationSmActions {
-//                 constructor(
-//                     private readonly authenticator: Authenticator,
-//                 ) {
-//                 }
-//
-//                 doAuthenticating(userNameAndPassword: UserNameAndPassword): AuthenticatingStage {
-//                     return eventThread.forkAction<UserNameAndPassword, AuthenticatingActions, AuthenticatingStage>(
-//                         'doAuthenticating',
-//                         authenticationStages.authenticating.create(userNameAndPassword),
-//                         this.authenticator(userNameAndPassword),
-//                         (fork) => ({
-//                             doSuccess: (appCredentials: AppCredentials) => fork.closeWithAction('doSuccess', authenticationStages.authenticated.create(appCredentials), appCredentials),
-//                             doUnauthorised: () => fork.closeWithAction('doUnauthorised', authenticationStages.notAuthenticated.create())
-//                         })
-//                     );
-//                 }
-//
-//                 doLogout(): NotAuthenticatedStage {
-//                     return eventThread.actionToStage('doLogout', authenticationStages.notAuthenticated.create());
-//                 }
-//
-//                 doTimeout(): NotAuthenticatedStage {
-//                     return eventThread.actionToStage('doTimeout', authenticationStages.notAuthenticated.create());
-//                 }
-//             }
-//
-//             return AuthenticationActionsImpl;
-//         };
-//
-//         return new StateMachineBuilder<AuthenticationSmListener, AuthenticationSmJoiner, AuthenticationSmActions>(
-//             (eventThread) => new (_$AuthenticationSmActions(eventThread, _authenticationStages))(authenticator),
-//             initialStageProvider(_authenticationStages)
-//         );
-//     }
-//
-// }
+import {StateMachineBuilder} from "../../../lib/conan-sm/stateMachineBuilder";
+import {TriggerType} from "../../../lib/conan-sm/domain";
+import {EventType} from "../../../lib/conan-sm/stateMachineLogger";
+import {
+    AuthenticatingActions,
+    AuthenticatingActionsListener,
+    AuthenticatingStage,
+    AuthenticatingStageName
+} from "./stages/authenticating.stage";
+import {
+    NotAuthenticatedActions, NotAuthenticatedListener,
+    NotAuthenticatedStage,
+    NotAuthenticatedStageName
+} from "./stages/notAuthenticated.stage";
+import {AppCredentials, UserNameAndPassword} from "../../domain/domain";
+import {
+    AuthenticatedActions, AuthenticatedJoiner,
+    AuthenticatedListener,
+    AuthenticatedStage,
+    AuthenticatedStageName
+} from "./stages/authenticated.stage";
+import {IBiConsumer} from "../../../lib/conan-utils/typesHelper";
+
+
+export class AuthenticatedActionsLogic implements AuthenticatedActions {
+    doLogout(): NotAuthenticatedStage {
+        return {
+            name: "notAuthenticated",
+        };
+    }
+
+    doTimeout(): NotAuthenticatedStage {
+        return {
+            name: "notAuthenticated",
+        };
+    }
+
+}
+
+export class AuthenticatingActionsLogic implements AuthenticatingActions {
+    doSuccess(appCredentials: AppCredentials): AuthenticatedStage {
+        return {
+            requirements: appCredentials,
+            name: 'authenticated'
+        };
+    }
+
+    doUnauthorised(): NotAuthenticatedStage {
+        return {
+            name: 'notAuthenticated'
+        };
+    }
+
+}
+export class NotAuthenticatedActionsLogic implements NotAuthenticatedActions {
+    doAuthenticating(userNameAndPassword: UserNameAndPassword): AuthenticatingStage {
+        return {
+            name: 'authenticating',
+            requirements: userNameAndPassword
+        };
+    }
+}
+
+export type Authenticator = IBiConsumer<AuthenticatingActions, UserNameAndPassword>;
+export interface AuthenticationSmActions extends NotAuthenticatedActions, AuthenticatedActions {}
+export interface AuthenticationSmListener extends NotAuthenticatedListener, AuthenticatingActionsListener, AuthenticatedListener {}
+export interface AuthenticationSmJoiner extends AuthenticatedJoiner {}
+
+export class AuthenticationPrototype {
+    constructor(
+        private readonly authenticator: Authenticator,
+    ) {}
+
+    newBuilder (): StateMachineBuilder <AuthenticationSmListener, AuthenticationSmJoiner, AuthenticationSmActions> {
+        return new StateMachineBuilder<AuthenticationSmListener, AuthenticationSmJoiner, AuthenticationSmActions>()
+            .withStage<
+                NotAuthenticatedStageName,
+                NotAuthenticatedActions,
+                NotAuthenticatedStage
+            > (
+                'notAuthenticated',
+                NotAuthenticatedActionsLogic,
+            )
+            .withDeferredStage<
+                AuthenticatingStageName,
+                AuthenticatingActions,
+                AuthenticatingStage,
+                UserNameAndPassword
+            >(
+                "authenticating",
+                AuthenticatingActionsLogic,
+                this.authenticator,
+                ['authenticated']
+            ).
+            withStage<
+                AuthenticatedStageName,
+                AuthenticatedActions,
+                AuthenticatedStage,
+                AppCredentials
+            >(
+                "authenticated",
+                AuthenticatedActionsLogic,
+            )
+            .requestStage({name: 'start'})
+            .requestStage({name: 'notAuthenticated'})
+    }
+}

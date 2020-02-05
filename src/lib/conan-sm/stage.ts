@@ -13,5 +13,13 @@ export interface StageDef<
 > {
     readonly name: NAME;
     readonly logic: IConstructor<ACTIONS, REQUIREMENTS>;
+    readonly deferredInfo?: DeferredInfo<ACTIONS, REQUIREMENTS>;
+}
+
+export interface DeferredInfo<
+    ACTIONS,
+    REQUIREMENTS = void
+> {
     readonly deferrer?: IBiConsumer<ACTIONS, REQUIREMENTS>;
+    readonly joinsInto: string[];
 }

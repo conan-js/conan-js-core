@@ -53,10 +53,19 @@ interface StageToProcess {
 
 export type ToProcess = StageToProcess | ActionToProcess;
 
-export class StateMachineImpl<SM_LISTENER extends SmListener,
+export interface ParentStateMachineInfo<
+    SM_LISTENER extends SmListener,
+    JOIN_LISTENER extends SmListener,
+> {
+    stateMachine: StateMachine<SM_LISTENER, JOIN_LISTENER>,
+    joinsInto: string[]
+}
+
+export class StateMachineImpl<
+    SM_LISTENER extends SmListener,
     JOIN_LISTENER extends SmListener,
     ACTIONS,
-    > implements StateMachine<SM_LISTENER, JOIN_LISTENER> {
+> implements StateMachine<SM_LISTENER, JOIN_LISTENER> {
     private eventThread: EventThread;
     private listeners: SmListenersByType<SM_LISTENER, JOIN_LISTENER>;
     private processing: boolean = false;
@@ -65,7 +74,7 @@ export class StateMachineImpl<SM_LISTENER extends SmListener,
     constructor(
         private readonly data: StateMachineData<SM_LISTENER, JOIN_LISTENER, ACTIONS>,
         private readonly stageDefsByKey: IKeyValuePairs<StageDef<string, any, any, any>>,
-        private readonly parent?: StateMachine<any, any>,
+        private readonly parent?: ParentStateMachineInfo<any, any>,
     ) {
     }
 
@@ -190,12 +199,20 @@ export class StateMachineImpl<SM_LISTENER extends SmListener,
             actualThread = stageToProcess.eventThread;
         }
 
+        if (this.parent && this.parent.joinsInto.indexOf(stageToProcess.stage.name) !== -1) {
+            StateMachineLogger.log(this.data.request.name, this.eventThread.currentStage ? this.eventThread.currentStage.name : '-', EventType.FORK_STOP, `=>joining back ${intoStageName}`);
+            this.requestStage({name: 'stop'}, TriggerType.STOP, EventType.FORK_STOP, '', true);
+            this.parent.stateMachine.requestStage(stageToProcess.stage, TriggerType.FORK_JOIN, EventType.REQUEST_STAGE, '', false, '', stageToProcess.payload, stageToProcess.eventThread);
+            return
+        }
+
 
         let stageDef = this.stageDefsByKey [intoStageName];
-        if (stageDef && stageDef.deferrer) {
+        if (stageDef && stageDef.deferredInfo) {
             this.fork(
                 stageToProcess.stage,
-                (actions)=>stageDef.deferrer (actions, stageToProcess.payload)
+                (actions)=>stageDef.deferredInfo.deferrer (actions, stageToProcess.payload),
+                stageDef.deferredInfo.joinsInto
             )
         } else {
             actualThread.moveToStage(stageToProcess.stage, stageToProcess.triggerType);
@@ -220,10 +237,10 @@ export class StateMachineImpl<SM_LISTENER extends SmListener,
     }
 
     stop(): this {
-        this.eventThread.close();
         this.data.request.stopListeners.forEach(stopListener => {
             stopListener(this.getEvents());
         });
+        StateMachineLogger.log(this.eventThread.name, this.eventThread.currentStage.name, EventType.STOP, ``, '', []);
         return this;
     }
 
@@ -284,17 +301,13 @@ export class StateMachineImpl<SM_LISTENER extends SmListener,
                 let nextStageDef: StageDef<string, any, any, any> = actionsByStage [nextStage.name];
                 if (nextStageDef == null) {
                     if (!this.parent) {
-                        throw new Error(`trying to move to a non existent stage: ${nextStageDef.name}`);
+                        throw new Error(`trying to move to a non existent stage: ${nextStage.name}`);
                     }
 
-                    if (!this.parent.getStageDef(nextStage.name)) {
-                        throw new Error(`trying to move to a non existent stage from a forked stateMachine: ${nextStageDef.name}`);
+                    nextStageDef = this.parent.stateMachine.getStageDef(nextStage.name);
+                    if (!nextStageDef) {
+                        throw new Error(`trying to move to a non existent stage from a forked stateMachine: ${nextStage.name}`);
                     }
-
-                    this.eventThread.actionToStage(key, nextStage, payload);
-                    this.requestStage({name: 'stop'}, TriggerType.STOP, EventType.ACTION, '', true);
-                    this.parent.requestStage(nextStage, TriggerType.FORK_JOIN, EventType.ACTION, '', false);
-                    return;
                 }
 
 
@@ -303,7 +316,7 @@ export class StateMachineImpl<SM_LISTENER extends SmListener,
                     key,
                     payload,
                     nextStage,
-                    nextStageDef.deferrer ? TriggerType.FORK_START : TriggerType.MOVE_TO_STAGE,
+                    nextStageDef.deferredInfo ? TriggerType.FORK_START : TriggerType.MOVE_TO_STAGE,
                     EventType.ACTION,
                     pathName,
                     close,
@@ -323,9 +336,13 @@ export class StateMachineImpl<SM_LISTENER extends SmListener,
     private fork(
         nextStage: Stage<string, any, any>,
         defer: IConsumer<ACTIONS>,
+        joinsInto: string []
     ): StateMachineImpl<any, any, any> {
         StateMachineLogger.log(this.data.request.name, this.eventThread.currentStage.name, EventType.FORK, `forking deferred stage: ${nextStage.name}`);
-        return StateMachineFactory.fork(this,{
+        return StateMachineFactory.fork({
+            stateMachine: this,
+            joinsInto
+        },{
             request: {
                 name: `${this.data.request.name}/${nextStage.name}`,
                 stageDefs: [{
@@ -338,17 +355,25 @@ export class StateMachineImpl<SM_LISTENER extends SmListener,
                     whileRunning: [
                         {
                             metadata: '(autoDefer)',
+                            // @ts-ignore
                             value: {
-                                start: undefined,
                                 [Strings.camelCaseWithPrefix('on', nextStage.name)]: {
                                     thenRequest: (actions: any)=> defer(actions)
                                 },
                             }
-                        }],
+                        },{
+                            metadata: '(autoStop)',
+                            value: sm => ({
+                                onStop: {
+                                    then: ()=>sm.stop ()
+                                }
+                            })
+                        }
+                    ],
                     listenersByPath: {}
                 }),
                 syncStateMachineDefs: undefined,
-                stopListeners: undefined,
+                stopListeners: [],
                 nextConditionalReactionsQueue: new Queue(),
                 nextReactionsQueue: new Queue()
             }

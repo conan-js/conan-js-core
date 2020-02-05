@@ -2,12 +2,12 @@ import {expect} from "chai";
 import {SerializedSmEvents} from "../../utils/serializedSmEvents";
 import {defaultTranslations, Translations} from "../../../main/domain/translations";
 import {Authenticators} from "../../utils/authenticators";
-import {MainSmPrototype} from "../../../main/sm/main/mainSm.prototype";
+import {MainSm} from "../../../main/sm/main/main.sm";
 import {
     AuthenticationPrototype,
     AuthenticationSmJoiner,
     AuthenticationSmListener
-} from "../../../main/sm/authentication/authenticationSm.prototype";
+} from "../../../main/sm/authentication/authentication.sm";
 
 describe('test', () => {
     const TRANSLATIONS: Translations = defaultTranslations;
@@ -26,7 +26,7 @@ describe('test', () => {
 
 
     it("should start automatically initializing a state machine", (done) => {
-        new MainSmPrototype((actions) => actions.doInitialise(TRANSLATIONS)).define()
+        new MainSm((actions) => actions.doInitialise(TRANSLATIONS)).define()
             .always('testMainListener', sm => ({
                 onShowingLogin: {then: () => sm.stop()},
             }))
@@ -38,7 +38,7 @@ describe('test', () => {
     });
 
     it("should join with an authentication sm", (done) => {
-        new MainSmPrototype((actions) => actions.doInitialise(TRANSLATIONS)).define()
+        new MainSm((actions) => actions.doInitialise(TRANSLATIONS)).define()
             .always('testMainListener', sm => ({
                 onShowingApp: {then: () => sm.stop()},
             }))
