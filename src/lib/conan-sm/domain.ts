@@ -3,22 +3,11 @@ import {EventThread} from "./eventThread";
 import {Stage} from "./stage";
 import {StateMachine} from "./stateMachine";
 
-export enum TriggerType {
-    FORK_START = 'FORK_START',
-    FORK_JOIN = 'FORK_JOIN',
-    MOVE_TO_STAGE = 'MOVE_TO_STAGE',
-    ACTION_FROM = 'ACTION_FROM',
-    ACTION_INTO = 'ACTION_INTO',
-    START = 'START',
-    STOP = 'STOP',
-}
 
 export interface BaseSmEvent {
-    eventName: string,
-    trigger: TriggerType,
     stageName: string,
+    eventName: string,
     payload?: any;
-    currentPath?: string;
 }
 
 export interface SmEvent extends BaseSmEvent{

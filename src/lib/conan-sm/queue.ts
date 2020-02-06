@@ -1,6 +1,6 @@
 export class Queue <T> {
 
-    private readonly queuedElement: T[] = [];
+    private queuedElement: T[] = [];
 
     constructor(
         private readonly initialValues?: T[]
@@ -15,6 +15,11 @@ export class Queue <T> {
     }
 
     flush ():T[] {
+        this.queuedElement = [];
+        return this.queuedElement;
+    }
+
+    read() {
         return this.queuedElement;
     }
 }

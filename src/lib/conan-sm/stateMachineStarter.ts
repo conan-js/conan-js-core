@@ -25,7 +25,6 @@ export interface StateMachineStartRequest
 > {
     name: string,
     startingPath: string,
-    stopListeners: IConsumer<SerializedSmEvent[]>[],
     syncStateMachineDefs: SyncStateMachineDef<JOIN_LISTENER, any, any> [],
     stateMachineListenerDefs: StateMachineListenerDefs<SM_LISTENER, JOIN_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>
     stageDefs: StageDef<string, any, any, any> []

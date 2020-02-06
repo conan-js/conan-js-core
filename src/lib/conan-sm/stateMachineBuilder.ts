@@ -1,12 +1,10 @@
 import {IBiConsumer, IConstructor, IConsumer, IOptSetKeyValuePairs, WithMetadata} from "../conan-utils/typesHelper";
-import {SerializedSmEvent, SmListener} from "./domain";
+import {SmListener} from "./domain";
 import {SMJoinerDef, SMListenerDef, StateMachineListenerDefs} from "./stateMachineListenerDefs";
 import {StateMachine, StateMachineEndpoint} from "./stateMachine";
 import {StateMachineData, StateMachineStarter} from "./stateMachineStarter";
 import {Queue} from "./queue";
 import {Stage} from "./stage";
-import {Strings} from "../conan-utils/strings";
-import {StateMachineFactory} from "./stateMachineFactory";
 
 
 export type SyncListener<INTO_SM_LISTENER, JOIN_LISTENER extends SmListener> = IOptSetKeyValuePairs<keyof INTO_SM_LISTENER, JOIN_LISTENER>
@@ -35,25 +33,12 @@ export class StateMachineBuilder<
             stateMachineListenerDefs: StateMachineListenerDefs.init(),
             startingPath: undefined,
             name: undefined,
-            stopListeners: [],
             syncStateMachineDefs: [],
             stageDefs: [],
             nextStagesQueue: new Queue<Stage<string, any, any>>()
         }
     };
     private started: boolean = false;
-
-    onStop(cb: IConsumer<SerializedSmEvent[]>): this {
-        if (this.started) throw new Error("can't modify the behaviour of a state machine once that it has started");
-        this.data.request.stopListeners.push(cb);
-        return this;
-    }
-
-    whileOnPath(pathName: string, name: string, listener: SMListenerDef<SM_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>): this {
-        if (this.started) throw new Error("can't modify the behaviour of a state machine once that it has started");
-        this.data.request.stateMachineListenerDefs.addPath(pathName, name, listener);
-        return this;
-    }
 
     always(name: string, listener: SMListenerDef<SM_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>): this {
         if (this.started) throw new Error("can't modify the behaviour of a state machine once that it has started");

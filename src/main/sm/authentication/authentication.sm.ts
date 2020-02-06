@@ -1,6 +1,4 @@
 import {StateMachineBuilder} from "../../../lib/conan-sm/stateMachineBuilder";
-import {TriggerType} from "../../../lib/conan-sm/domain";
-import {EventType} from "../../../lib/conan-sm/stateMachineLogger";
 import {
     AuthenticatingActions,
     AuthenticatingActionsListener,
@@ -8,13 +6,15 @@ import {
     AuthenticatingStageName
 } from "./stages/authenticating.stage";
 import {
-    NotAuthenticatedActions, NotAuthenticatedListener,
+    NotAuthenticatedActions,
+    NotAuthenticatedListener,
     NotAuthenticatedStage,
     NotAuthenticatedStageName
 } from "./stages/notAuthenticated.stage";
 import {AppCredentials, UserNameAndPassword} from "../../domain/domain";
 import {
-    AuthenticatedActions, AuthenticatedJoiner,
+    AuthenticatedActions,
+    AuthenticatedJoiner,
     AuthenticatedListener,
     AuthenticatedStage,
     AuthenticatedStageName

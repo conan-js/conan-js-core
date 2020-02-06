@@ -1,15 +1,16 @@
 import {Strings} from "../conan-utils/strings";
 
 export enum EventType {
+    ADDING_REACTION = '+ASAP',
     STOP = 'STOP',
     FORK = 'FORK',
     FORK_STOP = 'FORK_STOP',
     REQUEST_ACTION = 'REQ_ACTION',
     REQUEST_STAGE = 'REQ_STAGE',
-    QUEUE_TO_PROCESS = 'Q_2_PROCESS',
+    QUEUE_TO_PROCESS = 'Q_EVENT',
     REQUEST_TRANSITION = 'REQ_TRANSIT',
-    REACTION_START = '=>START',
-    REACTION_END = '=>END',
+    REACTION_START = '=>REACT',
+    REACTION_END = '<=REACT',
     PUBLISH = 'PUBLISH',
     PROXY = 'PROXY',
     ACTION = 'ACTION',
@@ -29,18 +30,13 @@ export class StateMachineLogger {
 
         console.log(
             Strings.padEnd(threadNameCol, 30),
+            Strings.padEnd(handlerNameCol, 27),
             Strings.padEnd(stageNameCol, 25),
             Strings.padEnd(eventTypeCol, 12),
-            Strings.padEnd(handlerNameCol, 27),
-            details);
+            details
+        );
 
         if (!additionalLines) return;
-
-        let toPrint = additionalLines.filter(it=>it[1] != null && it[1] !== '{}' && it[1] !== '');
-
-        if (toPrint.length === 0) {
-            console.log('[no listeners]')
-        }
 
         additionalLines.forEach(it => {
             if (it[1] == null || it[1] === '{}' || it[1] == '') return;

@@ -1,10 +1,10 @@
 import {ParentStateMachineInfo, StateMachineImpl} from "./stateMachine";
 import {SmListener} from "./domain";
-import {EventThread} from "./eventThread";
 import {IKeyValuePairs} from "../conan-utils/typesHelper";
 import {StateMachineData} from "./stateMachineStarter";
 import {StageDef} from "./stage";
 import {Objects} from "../conan-utils/objects";
+import {EventType, StateMachineLogger} from "./stateMachineLogger";
 
 export class StateMachineFactory {
     static create<
@@ -28,21 +28,47 @@ export class StateMachineFactory {
         SM_LISTENER extends SmListener,
         JOIN_LISTENER extends SmListener,
         ACTIONS
-    > (data: StateMachineData<SM_LISTENER, JOIN_LISTENER, ACTIONS>, parent?: ParentStateMachineInfo<any, any>): StateMachineImpl <SM_LISTENER, JOIN_LISTENER, ACTIONS> {
+    > (
+        data: StateMachineData<SM_LISTENER, JOIN_LISTENER, ACTIONS>,
+        parent?: ParentStateMachineInfo<any, any>
+    ): StateMachineImpl <SM_LISTENER, JOIN_LISTENER, ACTIONS> {
         let actionsByStage: IKeyValuePairs<StageDef<string, any, any, any>> = Objects.keyfy(data.request.stageDefs, (it)=>it.name);
         let stateMachine: StateMachineImpl<SM_LISTENER, JOIN_LISTENER, ACTIONS> = new StateMachineImpl(data, actionsByStage, parent);
 
-        let eventThread = new EventThread(data.request.name, (params)=>{
-            stateMachine.publishEvent(params.eventThread, params.event);
+        let initialStages = data.request.nextStagesQueue.read();
+        let stageStringDefs: string [] = [];
+        Object.keys(stateMachine.stageDefsByKey).forEach(key=>{
+            let stageDef = stateMachine.stageDefsByKey[key];
+            let description = `${stageDef.name}`;
+            if (stageDef.deferredInfo) {
+                description += ` (deferred)`;
+            }
+            stageStringDefs.push(description)
         });
 
+        StateMachineLogger.log(data.request.name, '', EventType.INIT, `starting SM: `, undefined, [
+            [`listeners`, `${data.request.stateMachineListenerDefs.listeners.whileRunning.map(it => it.metadata)}`],
+            [`asap`, `${data.request.nextReactionsQueue.read().map(it => it.metadata)}`],
+            [`stage defs`, `${stageStringDefs.join(', ')}`],
+            [`on init`, `${initialStages.map(it => it.name).join(', ')}`],
+        ]);
 
         stateMachine.init(
-            eventThread,
             data.request.stateMachineListenerDefs.asListenersByType(stateMachine)
         );
 
 
+        stateMachine.onceAsap('stop=>LogStop', {
+            // @ts-ignore
+            onStop: {
+                then: ()=> StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.currentEvent.stageName, EventType.STOP, ``, '', [])
+            }
+        });
+
+        initialStages.forEach(it => {
+            stateMachine.requestStage(it, EventType.INIT);
+
+        });
 
         return stateMachine;
 

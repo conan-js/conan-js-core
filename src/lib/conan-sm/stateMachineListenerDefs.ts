@@ -26,9 +26,6 @@ export type SMJoinerDef <
 export interface SmListeningTypes <LISTENER_TYPE, JOINER_TYPE, KEY_LISTENER_TYPE = LISTENER_TYPE>
 {
     whileRunning: WithMetadataArray<LISTENER_TYPE, string>;
-    listenersByPath: WithMetadataKeyValuePairs<KEY_LISTENER_TYPE, string>;
-    // requestQueue: Queue<WithMetadataArray<LISTENER_TYPE, string>>;
-    // conditionallyNextQueue: Queue<WithMetadataArray<JOINER_TYPE, string>>;
 }
 
 export interface SmListenerDefsByType
@@ -59,7 +56,6 @@ export class StateMachineListenerDefs<
         BASE_SM extends StateMachine<SM_LISTENER, SM_JOINER>,
     >(): StateMachineListenerDefs <SM_LISTENER, SM_JOINER, BASE_SM> {
         return new StateMachineListenerDefs({
-            listenersByPath: {},
             whileRunning: [],
         });
     }
@@ -72,14 +68,6 @@ export class StateMachineListenerDefs<
     public asListenersByType (stateMachine: BASE_SM): SmListenersByType<SM_LISTENER, SM_JOINER> {
         return {
             whileRunning: StateMachineListenerDefs.transformListeners <SM_LISTENER, SM_JOINER, SM_LISTENER> (this.listeners.whileRunning, stateMachine),
-            listenersByPath: StateMachineListenerDefs.transformKeys<SM_LISTENER, SM_JOINER, SM_LISTENER> (this.listeners.listenersByPath, stateMachine),
-        };
-    }
-
-    addPath(pathName: string, name: string, listener: SMListenerDef<SM_LISTENER, BASE_SM>) {
-        this.listeners.listenersByPath [pathName] = {
-            value: listener,
-            metadata: name
         };
     }
 
@@ -111,19 +99,4 @@ export class StateMachineListenerDefs<
         });
         return result;
     }
-
-    static transformKeys<SM_LISTENER extends SmListener, SM_JOINER extends SmListener, LISTENER_OR_JOINER extends SM_LISTENER | SM_JOINER> (toTransform: WithMetadataKeyValuePairs<SMListenerDef<LISTENER_OR_JOINER, any>, string>, stateMachine: StateMachine<SM_LISTENER, SM_JOINER>): WithMetadataKeyValuePairs<LISTENER_OR_JOINER[], string>{
-        return Objects.mapKeys<
-            WithMetadataKeyValuePairs<LISTENER_OR_JOINER[], string>,
-            WithMetadata<SMListenerDef<LISTENER_OR_JOINER, any>, string>,
-            WithMetadata<LISTENER_OR_JOINER [], string>
-            >(
-            toTransform,
-            (valueWithMetadata)=>({
-                value: StateMachineListenerDefs.transformListener<SM_LISTENER, SM_JOINER, LISTENER_OR_JOINER>(valueWithMetadata, stateMachine).map(it=>it.value),
-                metadata: valueWithMetadata.metadata
-            })
-        )
-    }
-
 }
