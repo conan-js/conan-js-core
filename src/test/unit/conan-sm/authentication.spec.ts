@@ -11,6 +11,7 @@ describe('test', () => {
     let authenticationFork = SerializedSmEvents.fork({
         eventName: 'onDoAuthenticating',
         stageName: 'notAuthenticated',
+        payload: USERNAME_AND_PASSWORD,
     }, {
         stageName: 'authenticating',
         payload: USERNAME_AND_PASSWORD

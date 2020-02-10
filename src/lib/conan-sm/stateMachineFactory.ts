@@ -46,24 +46,28 @@ export class StateMachineFactory {
             stageStringDefs.push(description)
         });
 
-        StateMachineLogger.log(data.request.name, '', EventType.INIT, `starting SM: `, undefined, [
-            [`listeners`, `${data.request.stateMachineListenerDefs.listeners.whileRunning.map(it => it.metadata)}`],
-            [`asap`, `${data.request.nextReactionsQueue.read().map(it => it.metadata)}`],
-            [`stage defs`, `${stageStringDefs.join(', ')}`],
-            [`on init`, `${initialStages.map(it => it.name).join(', ')}`],
-        ]);
+        stateMachine.onceAsap('stop=>shutdown', {
+            // @ts-ignore
+            onStop: {
+                then: ()=> {
+                    StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.currentEvent.stageName, EventType.STOP, ``, '', []);
+                    stateMachine.shutdown();
+                }
+            }
+        });
+
 
         stateMachine.init(
             data.request.stateMachineListenerDefs.asListenersByType(stateMachine)
         );
 
 
-        stateMachine.onceAsap('stop=>LogStop', {
-            // @ts-ignore
-            onStop: {
-                then: ()=> StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.currentEvent.stageName, EventType.STOP, ``, '', [])
-            }
-        });
+        StateMachineLogger.log(data.request.name, '', EventType.INIT, `starting SM: `, undefined, [
+            [`listeners`, `${data.request.stateMachineListenerDefs.listeners.whileRunning.map(it => it.metadata)}`],
+            [`asap`, `${data.request.nextReactionsQueue.read().map(it => it.metadata)}`],
+            [`stage defs`, `${stageStringDefs.join(', ')}`],
+            [`on init`, `${initialStages.map(it => it.name).join(', ')}`],
+        ]);
 
         initialStages.forEach(it => {
             stateMachine.requestStage(it, EventType.INIT);

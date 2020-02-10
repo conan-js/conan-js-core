@@ -22,7 +22,7 @@ export class EventThread  {
     ){
         let thisStage: Stage<any, any> = {
             name: this.currentEvent.stageName,
-            requirements: this.currentEvent.payload
+            requirements: payload
         };
         this.addStageEvent(
             thisStage,

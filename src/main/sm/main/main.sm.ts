@@ -6,9 +6,15 @@ import {
     InitializingStageName
 } from "./stages/initializing.stage";
 import {Translations} from "../../domain/translations";
-import {ShowingLoginJoiner, ShowingLoginListener, ShowingLoginStage} from "./stages/showingLoginStage";
+import {
+    ShowingLoginActions,
+    ShowingLoginJoiner,
+    ShowingLoginListener,
+    ShowingLoginStage,
+    ShowingLoginStageName
+} from "./stages/showingLoginStage";
 import {IConsumer} from "../../../lib/conan-utils/typesHelper";
-import {ShowingAppJoiner, ShowingAppListener} from "./stages/showingApp.stage";
+import {ShowingAppJoiner, ShowingAppListener, ShowingAppStage} from "./stages/showingApp.stage";
 
 
 export type Initializer = IConsumer<InitializingActions>;
@@ -25,6 +31,15 @@ class InitializingActionsLogic implements InitializingActions {
     }
 }
 
+class ShowingLoginActionsLogic implements ShowingLoginActions {
+    doShowApp(): ShowingAppStage {
+        return {
+            name: 'showingAppStage'
+        };
+    }
+
+}
+
 export class MainSm {
     constructor(
         private readonly initializer: Initializer
@@ -37,6 +52,11 @@ export class MainSm {
                 InitializingActions,
                 InitializingStage
                 >('initializing', InitializingActionsLogic, this.initializer, ['showingLogin'])
+            .withStage<
+                ShowingLoginStageName,
+                ShowingLoginActions,
+                ShowingLoginStage
+            >('showingLogin', ShowingLoginActionsLogic)
             .requestStage({name: 'start'})
             .requestStage({name: 'initializing'})
 

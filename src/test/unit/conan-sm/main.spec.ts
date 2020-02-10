@@ -13,7 +13,6 @@ describe('test', () => {
     const TRANSLATIONS: Translations = defaultTranslations;
 
     let initializationFork = SerializedSmEvents.fork({
-        eventName: 'onDoStart',
         stageName: 'start',
     }, {
         stageName: 'initializing',
@@ -30,10 +29,43 @@ describe('test', () => {
             .always('testMainListener', sm => ({
                 onShowingLogin: {then: () => sm.stop()},
             }))
-            .onStop((events) => {
-                expect(events).to.deep.eq(SerializedSmEvents.events(initializationFork));
-                done();
-            })
+            .onceAsap('stop=>test', sm => ({
+                onStop: {
+                    then: () => {
+                        expect(sm.getEvents()).to.deep.eq([
+                                {
+                                    eventName: 'onStart',
+                                    stageName: 'start',
+                                    fork: [{
+                                        eventName: 'onStart',
+                                        stageName: 'start',
+                                    },{
+                                        eventName: 'onInitializing',
+                                        stageName: 'initializing',
+                                    },{
+                                        eventName: 'onDoInitialise',
+                                        stageName: 'initializing',
+                                        payload: TRANSLATIONS
+                                    },{
+                                        eventName: 'onStop',
+                                        stageName: 'stop',
+                                    }
+                                ],
+                                },
+                                {
+                                    eventName: 'onShowingLogin',
+                                    stageName: 'showingLogin',
+                                },
+                                {
+                                    eventName: 'onStop',
+                                    stageName: 'stop',
+                                },
+                            ]
+                        );
+                        done();
+                    }
+                }
+            }))
             .start('main-test1')
     });
 
@@ -42,10 +74,14 @@ describe('test', () => {
             .always('testMainListener', sm => ({
                 onShowingApp: {then: () => sm.stop()},
             }))
-            .onStop((events) => {
-                expect(events).to.deep.eq(SerializedSmEvents.events(initializationFork));
-                done();
-            })
+            .onceAsap('stop=>test', sm => ({
+                onStop: {
+                    then: () => {
+                        expect(sm.getEvents()).to.deep.eq(SerializedSmEvents.events(initializationFork));
+                        done();
+                    }
+                }
+            }))
             .sync <AuthenticationSmListener, AuthenticationSmJoiner>(
                 'sync-authentication',
                 new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith({})).newBuilder(),
@@ -55,7 +91,7 @@ describe('test', () => {
                             thenRequest: (mainActions) => mainActions.doShowApp()
                         }
                     }
-                }, (authenticationSm) => authenticationSm.onceAsap('notAuthenticated=>authenticated',{
+                }, (authenticationSm) => authenticationSm.onceAsap('notAuthenticated=>authenticated', {
                     onNotAuthenticated: {
                         thenRequest: (actions) => actions.doAuthenticating({})
                     }

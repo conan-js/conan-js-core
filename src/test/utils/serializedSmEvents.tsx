@@ -39,7 +39,7 @@ export class SerializedSmEvents {
     static fork (source: NameAndPayloadDefLike, causes: NameAndPayloadDefLike, childEvents: SerializedSmEvent[]): SerializedSmEvent[] {
         let forkStart: SerializedSmEvent = {
             ...SerializedSmEvents.explodeNameAndPayload(source),
-            fork: SerializedSmEvents.events(childEvents, causes),
+            fork: SerializedSmEvents.events(childEvents.slice(0, childEvents.length - 1), causes),
         };
         let lastEvent:SerializedSmEvent = childEvents[childEvents.length-1];
         let forkEnd: SerializedSmEvent = {
