@@ -1,4 +1,4 @@
-import {SerializedSmEvent, SmEvent, SmEventCallback, SmListener, SmListenerDefList} from "./domain";
+import {SerializedSmEvent, SmEvent, SmEventCallback, SmListener} from "./domain";
 import {StateMachineData} from "./stateMachineTree";
 import {EventThread} from "./eventThread";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
@@ -9,21 +9,22 @@ import {Strings} from "../conan-utils/strings";
 import {StateMachineFactory} from "./stateMachineFactory";
 import {Queue} from "./queue";
 
-export interface StateMachineEndpoint<SM_ON_LISTENER extends SmListener,
+export interface StateMachineEndpoint<
+    SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
-    > {
+> {
     onceAsap(name: string, requestListeners: SmListener<SM_ON_LISTENER>): this;
 
     conditionallyOnce(name: string, ifStageListeners: SmListener<SM_IF_LISTENER>): this;
 
-    requestStage(stage: Stage<string, any, any>, eventType: EventType): this;
+    requestStage(stage: Stage): this;
 }
 
 export interface StateMachine<
     SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
 > extends StateMachineEndpoint<SM_ON_LISTENER, SM_IF_LISTENER> {
-    requestTransition(methodName: string, payload: any, stage: Stage<string, any, any>, eventType: EventType, forksInto: StateMachine<any, any>): this;
+    requestTransition(methodName: string, payload: any, stage: Stage): this;
 
     stop(): this;
 
@@ -36,12 +37,11 @@ interface ActionToProcess {
     actionName: string;
     payload?: any;
     eventType: EventType;
-    forksInto: StateMachine<any, any>;
-    into: Stage<string, any, any>;
+    into: Stage;
 }
 
 interface StageToProcess {
-    stage: Stage<string, any, any>;
+    stage: Stage;
     eventType: EventType;
 }
 
@@ -71,24 +71,25 @@ export class StateMachineImpl<
     ) {
     }
 
-    requestStage(stage: Stage<string, any, any>, eventType: EventType): this {
+    requestStage(stage: Stage): this {
         this.assertNotClosed();
         this.doRequest({
             stage,
-            eventType: eventType
+            eventType:  stage.name === 'stop' ? EventType.STOP :
+                        stage.name === 'start' ? EventType.INIT:
+                        EventType.REQUEST_STAGE
         } as StageToProcess);
         return this;
     }
 
-    requestTransition(methodName: string, payload: any, stage: Stage<string, any, any>, eventType: EventType, forksInto: StateMachine<any, any>): this {
+    requestTransition(methodName: string, payload: any, stage: Stage): this {
         this.assertNotClosed();
         StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '-', EventType.REQUEST_TRANSITION, `=>transition[${methodName}::${stage.name}]`);
         this.doRequest({
             actionName: methodName,
             into: stage,
             payload: payload,
-            eventType: eventType,
-            forksInto
+            eventType: EventType.ACTION,
         });
         return this;
     }
@@ -110,7 +111,7 @@ export class StateMachineImpl<
 
     stop(): this {
         this.assertNotClosed();
-        this.requestStage({name: 'stop'}, EventType.STOP);
+        this.requestStage({name: 'stop'});
         return this;
     }
 
@@ -179,8 +180,7 @@ export class StateMachineImpl<
         let eventName = Strings.camelCaseWithPrefix('on', actionToProcess.actionName);
         this.onceAsap(`${eventName}=>${actionToProcess.into.name}`, {
             [eventName]: () => this.requestStage(
-                actionToProcess.into,
-                EventType.REQUEST_STAGE,
+                actionToProcess.into
             )
         });
 
@@ -197,10 +197,10 @@ export class StateMachineImpl<
 
         if (this.parent && this.parent.joinsInto.indexOf(stageToProcess.stage.name) !== -1) {
             StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '-', EventType.FORK_STOP, `=>joining back ${intoStageName}`);
-            this.requestStage({name: 'stop'}, EventType.FORK_STOP);
+            this.requestStage({name: 'stop'});
             this.onceAsap(`(continueOnParent=>${stageToProcess.stage.name})`, {
                 onStop: () => {
-                    this.parent.stateMachine.requestStage(stageToProcess.stage, EventType.REQUEST_STAGE);
+                    this.parent.stateMachine.requestStage(stageToProcess.stage);
                 }
             });
             return
@@ -244,7 +244,7 @@ export class StateMachineImpl<
             if (typeof toProxy !== 'function') return;
 
             (proxy as any)[key] = (payload: any) => {
-                let nextStage: Stage<string, any, any> = (actionsLogic as any)[key](payload);
+                let nextStage: Stage = (actionsLogic as any)[key](payload);
                 let nextStageDef: StageDef<string, any, any, any> = actionsByStage [nextStage.name];
                 if (nextStageDef == null) {
                     if (!this.parent) {
@@ -263,8 +263,6 @@ export class StateMachineImpl<
                     key,
                     payload,
                     nextStage,
-                    EventType.ACTION,
-                    null
                 );
             }
         });
@@ -277,7 +275,7 @@ export class StateMachineImpl<
     }
 
     private fork(
-        nextStage: Stage<string, any, any>,
+        nextStage: Stage,
         defer: IConsumer<ACTIONS>,
         joinsInto: string []
     ): StateMachineImpl<any, any, any> {
@@ -293,7 +291,7 @@ export class StateMachineImpl<
                     name: nextStage.name,
                     logic: this.stageDefsByKey[nextStage.name].logic
                 }],
-                nextStagesQueue: new Queue<Stage<string, any, any>>([{name: 'start'}, nextStage]),
+                nextStagesQueue: new Queue<Stage>([{name: 'start'}, nextStage]),
                 stateMachineListeners: [
                     {
                         metadata: `${deferEventName}=>(autoDefer)`,

@@ -57,7 +57,7 @@ export class StateMachineFactory {
         ]);
 
         initialStages.forEach(it => {
-            stateMachine.requestStage(it, EventType.INIT);
+            stateMachine.requestStage(it);
 
         });
 

@@ -32,7 +32,7 @@ export class StateMachineTreeBuilder<
         request: {
             nextReactionsQueue: new Queue<WithMetadata<SM_ON_LISTENER, string>>(),
             nextConditionalReactionsQueue: new Queue<WithMetadata<SM_IF_LISTENER, string>>(),
-            nextStagesQueue: new Queue<Stage<string, any, any>>(),
+            nextStagesQueue: new Queue<Stage>(),
             stateMachineListeners: [],
             name: undefined,
             syncStateMachineDefs: [],
@@ -96,7 +96,7 @@ export class StateMachineTreeBuilder<
 
 
 
-    requestStage(stage: Stage<string, any, any>): this {
+    requestStage(stage: Stage): this {
         this.data.request.nextStagesQueue.push(stage);
         return this;
     }

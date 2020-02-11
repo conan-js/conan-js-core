@@ -1,6 +1,6 @@
 import {IBiConsumer, IConstructor} from "../conan-utils/typesHelper";
 
-export interface Stage<NAME extends string, ACTIONS, REQUIREMENTS = void> {
+export interface Stage<NAME extends string = string, REQUIREMENTS = void> {
     name: NAME;
     requirements?: REQUIREMENTS;
 }
@@ -8,7 +8,7 @@ export interface Stage<NAME extends string, ACTIONS, REQUIREMENTS = void> {
 export interface StageDef<
     NAME extends string,
     ACTIONS,
-    STAGE extends Stage<NAME, ACTIONS, REQUIREMENTS>,
+    STAGE extends Stage<NAME, REQUIREMENTS>,
     REQUIREMENTS = void
 > {
     readonly name: NAME;

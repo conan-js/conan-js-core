@@ -24,7 +24,6 @@ export interface StageEntryPoint<STAGE, REQUIREMENTS = void> {
 
 export interface SmListenerParams {
     sm: StateMachine<any, any>;
-
 }
 
 export type SmEventCallback <ACTIONS> = IBiConsumer<ACTIONS, SmListenerParams>;

@@ -15,12 +15,12 @@ export class EventThread  {
         }));
     }
 
-    public addActionEvent<STAGE extends Stage<any, any, any>>(
+    public addActionEvent(
         actionEventName: string,
         payload: any,
         fork?: StateMachine<any, any>
     ){
-        let thisStage: Stage<any, any> = {
+        let thisStage: Stage = {
             name: this.currentEvent.stageName,
             requirements: payload
         };
@@ -32,12 +32,12 @@ export class EventThread  {
         )
     }
 
-    public addStageEvent<STAGE extends Stage<any, any, any>>(
-        stage: STAGE,
+    public addStageEvent(
+        stage: Stage,
         eventName: string,
         payload?: any,
         fork?: StateMachine<any, any>
-    ): STAGE {
+    ): Stage {
 
         let currentEvent = {
             stageName: stage.name,
