@@ -282,6 +282,7 @@ export class StateMachineImpl<
         joinsInto: string []
     ): StateMachineImpl<any, any, any> {
         StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent.stageName, EventType.FORK, `forking deferred stage: ${nextStage.name}`);
+        let deferEventName = Strings.camelCaseWithPrefix('on', nextStage.name);
         return StateMachineFactory.fork({
             stateMachine: this,
             joinsInto
@@ -295,9 +296,9 @@ export class StateMachineImpl<
                 nextStagesQueue: new Queue<Stage<string, any, any>>([{name: 'start'}, nextStage]),
                 stateMachineListeners: [
                     {
-                        metadata: '(autoDefer)',
+                        metadata: `${deferEventName}=>(autoDefer)`,
                         value: {
-                            [Strings.camelCaseWithPrefix('on', nextStage.name)]: (actions: any) => defer(actions)
+                            [deferEventName]: (actions: any) => defer(actions)
                         }
                     }
                 ],
