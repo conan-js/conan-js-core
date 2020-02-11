@@ -29,7 +29,7 @@ describe('test', () => {
                 onNotAuthenticated: (actions) => actions.doAuthenticating(USERNAME_AND_PASSWORD),
                 onAuthenticated: (actions, params) => params.sm.stop(),
             })
-            .onceAsap('stop=>test', {
+            .once('stop=>test', {
                 onStop: (actions, params) => {
                     expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events(authenticationFork, 'notAuthenticated'));
                     done();
@@ -67,7 +67,7 @@ describe('test', () => {
 
     it("should queue a request", (done) => {
         new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith(APP_CREDENTIALS)).newBuilder()
-            .onceAsap('onNotAuthenticated=>doAuthenticating', {
+            .once('onNotAuthenticated=>doAuthenticating', {
                 onNotAuthenticated: (actions) => actions.doAuthenticating(USERNAME_AND_PASSWORD)
             })
             .always('testMainListener', {

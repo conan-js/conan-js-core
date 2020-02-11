@@ -1,11 +1,11 @@
 import {IBiConsumer, IBiFunction} from "../conan-utils/typesHelper";
-import {SmEventCallback, SmListener, SmListenerDef, SmListenerDefList} from "./domain";
 import {StateMachineTreeBuilder, SyncStateMachineDef} from "./stateMachineTreeBuilder";
 import {StateMachine} from "./stateMachine";
 import {Objects} from "../conan-utils/objects";
 import {Queue} from "./queue";
 import {StateMachineFactory} from "./stateMachineFactory";
 import {Stage, StageDef} from "./stage";
+import {SmEventCallback, SmListener, SmListenerDef, SmListenerDefList} from "./stateMachineListeners";
 
 export interface Synchronisation {
     syncDef: SyncStateMachineDef<any, any, any>;
@@ -102,7 +102,7 @@ export class StateMachineTree<
             sync.syncDef.joiner,
             (ifStatements) => (
                 () => {
-                    into.conditionallyOnce(`if=>${sync.syncDef.syncName}`, ifStatements);
+                    into.nextConditionally(`if=>${sync.syncDef.syncName}`, ifStatements);
                 }
             )
         );

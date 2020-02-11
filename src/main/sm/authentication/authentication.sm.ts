@@ -20,7 +20,7 @@ import {
     AuthenticatedStageName
 } from "./stages/authenticated.stage";
 import {IBiConsumer} from "../../../lib/conan-utils/typesHelper";
-import {BasicSmListener, SmListenerDef} from "../../../lib/conan-sm/domain";
+import {BasicSmListener, SmListenerDef} from "../../../lib/conan-sm/stateMachineListeners";
 
 
 export class AuthenticatedActionsLogic implements AuthenticatedActions {

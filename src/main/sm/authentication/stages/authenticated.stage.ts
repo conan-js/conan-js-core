@@ -1,7 +1,7 @@
 import {NotAuthenticatedStage} from "./notAuthenticated.stage";
 import {AppCredentials} from "../../../domain/domain";
-import {SmEventCallback, SmListener} from "../../../../lib/conan-sm/domain";
 import {Stage} from "../../../../lib/conan-sm/stage";
+import {SmEventCallback, SmListener} from "../../../../lib/conan-sm/stateMachineListeners";
 
 
 export type AuthenticatedStageName = 'authenticated';

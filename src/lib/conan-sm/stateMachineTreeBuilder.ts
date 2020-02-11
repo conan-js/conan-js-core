@@ -1,9 +1,9 @@
 import {IBiConsumer, IConstructor, IConsumer, IOptSetKeyValuePairs, WithMetadata} from "../conan-utils/typesHelper";
-import {SmListener} from "./domain";
 import {StateMachine, StateMachineEndpoint} from "./stateMachine";
 import {StateMachineData, StateMachineTree} from "./stateMachineTree";
 import {Queue} from "./queue";
 import {Stage} from "./stage";
+import {SmListener} from "./stateMachineListeners";
 
 
 export type SyncListener<
@@ -50,7 +50,7 @@ export class StateMachineTreeBuilder<
         return this;
     }
 
-    onceAsap(name: string, requestListeners: SM_ON_LISTENER): this {
+    once(name: string, requestListeners: SM_ON_LISTENER): this {
         this.data.request.nextReactionsQueue.push({
             metadata: name,
             value: requestListeners
@@ -101,7 +101,7 @@ export class StateMachineTreeBuilder<
         return this;
     }
 
-    conditionallyOnce(name: string, ifStageListeners: SM_IF_LISTENER): this {
+    nextConditionally(name: string, ifStageListeners: SM_IF_LISTENER): this {
         this.data.request.nextConditionalReactionsQueue.push({
             metadata: name,
             value: ifStageListeners

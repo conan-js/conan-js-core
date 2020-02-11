@@ -1,7 +1,7 @@
-import {SmEventCallback, SmListener} from "../../../../lib/conan-sm/domain";
 import {ShowingLoginStage} from "./showingLoginStage";
 import {Translations} from "../../../domain/translations";
 import {Stage} from "../../../../lib/conan-sm/stage";
+import {SmEventCallback, SmListener} from "../../../../lib/conan-sm/stateMachineListeners";
 
 export type InitializingStageName = 'initializing';
 

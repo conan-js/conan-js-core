@@ -1,4 +1,4 @@
-import {SerializedSmEvent, SmEvent, SmEventCallback, SmListener} from "./domain";
+import {SerializedSmEvent, SmEvent} from "./domain";
 import {StateMachineData} from "./stateMachineTree";
 import {EventThread} from "./eventThread";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
@@ -8,14 +8,15 @@ import {ReactionsFactory} from "./reactionsFactory";
 import {Strings} from "../conan-utils/strings";
 import {StateMachineFactory} from "./stateMachineFactory";
 import {Queue} from "./queue";
+import {SmEventCallback, SmListener} from "./stateMachineListeners";
 
 export interface StateMachineEndpoint<
     SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
 > {
-    onceAsap(name: string, requestListeners: SmListener<SM_ON_LISTENER>): this;
+    once(name: string, requestListeners: SmListener<SM_ON_LISTENER>): this;
 
-    conditionallyOnce(name: string, ifStageListeners: SmListener<SM_IF_LISTENER>): this;
+    nextConditionally(name: string, ifStageListeners: SmListener<SM_IF_LISTENER>): this;
 
     requestStage(stage: Stage): this;
 }
@@ -94,12 +95,12 @@ export class StateMachineImpl<
         return this;
     }
 
-    conditionallyOnce(name: string, ifStageListeners: SmListener<SM_IF_LISTENER>): this {
+    nextConditionally(name: string, ifStageListeners: SmListener<SM_IF_LISTENER>): this {
         this.assertNotClosed();
         throw new Error('TBI');
     }
 
-    onceAsap(name: string, requestListeners: SmListener<SM_ON_LISTENER>): this {
+    once(name: string, requestListeners: SmListener<SM_ON_LISTENER>): this {
         this.assertNotClosed();
         StateMachineLogger.log(this.data.request.name, this.eventThread && this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '', EventType.ADDING_REACTION, `adding ASAP reaction: ${name}`);
         this.data.request.nextReactionsQueue.push({
@@ -178,7 +179,7 @@ export class StateMachineImpl<
         StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '-', EventType.REQUEST_ACTION, `=>processing action [${actionToProcess.actionName}]`);
 
         let eventName = Strings.camelCaseWithPrefix('on', actionToProcess.actionName);
-        this.onceAsap(`${eventName}=>${actionToProcess.into.name}`, {
+        this.once(`${eventName}=>${actionToProcess.into.name}`, {
             [eventName]: () => this.requestStage(
                 actionToProcess.into
             )
@@ -198,7 +199,7 @@ export class StateMachineImpl<
         if (this.parent && this.parent.joinsInto.indexOf(stageToProcess.stage.name) !== -1) {
             StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '-', EventType.FORK_STOP, `=>joining back ${intoStageName}`);
             this.requestStage({name: 'stop'});
-            this.onceAsap(`(continueOnParent=>${stageToProcess.stage.name})`, {
+            this.once(`(continueOnParent=>${stageToProcess.stage.name})`, {
                 onStop: () => {
                     this.parent.stateMachine.requestStage(stageToProcess.stage);
                 }
