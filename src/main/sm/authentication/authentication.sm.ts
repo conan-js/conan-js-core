@@ -1,4 +1,4 @@
-import {StateMachineBuilder} from "../../../lib/conan-sm/stateMachineBuilder";
+import {StateMachineTreeBuilder} from "../../../lib/conan-sm/stateMachineTreeBuilder";
 import {
     AuthenticatingActions,
     AuthenticatingListener,
@@ -72,8 +72,8 @@ export class AuthenticationPrototype {
         private readonly authenticator: Authenticator,
     ) {}
 
-    newBuilder (): StateMachineBuilder <AuthenticationSmListener, AuthenticationSmJoiner, AuthenticationSmActions> {
-        return new StateMachineBuilder ()
+    newBuilder (): StateMachineTreeBuilder <AuthenticationSmListener, AuthenticationSmJoiner, AuthenticationSmActions> {
+        return new StateMachineTreeBuilder ()
             .withStage<
                 NotAuthenticatedStageName,
                 NotAuthenticatedActions

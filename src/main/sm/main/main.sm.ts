@@ -1,4 +1,4 @@
-import {StateMachineBuilder} from "../../../lib/conan-sm/stateMachineBuilder";
+import {StateMachineTreeBuilder} from "../../../lib/conan-sm/stateMachineTreeBuilder";
 import {
     InitializingActions,
     InitializingListener,
@@ -45,8 +45,8 @@ export class MainSm {
         private readonly initializer: Initializer
     ) {}
 
-    define (): StateMachineBuilder <MainSmListener, MainSmJoiner, MainSmActions> {
-        return new StateMachineBuilder()
+    define (): StateMachineTreeBuilder <MainSmListener, MainSmJoiner, MainSmActions> {
+        return new StateMachineTreeBuilder()
             .withDeferredStage<
                 InitializingStageName,
                 InitializingActions,

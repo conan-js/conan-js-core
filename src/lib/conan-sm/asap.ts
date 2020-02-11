@@ -21,6 +21,7 @@ export class Asap<T> {
         private readonly now: T,
         private readonly nextTick: Promise<T>
     ) {}
+
     asap (consumer: IConsumer<T>): this{
         if (this.now){
             consumer(this.now);

@@ -1,5 +1,5 @@
 import {SerializedSmEvent, SmEvent, SmEventCallback, SmListener, SmListenerDefList} from "./domain";
-import {StateMachineData} from "./stateMachineStarter";
+import {StateMachineData} from "./stateMachineTree";
 import {EventThread} from "./eventThread";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {Stage, StageDef} from "./stage";
@@ -19,9 +19,10 @@ export interface StateMachineEndpoint<SM_ON_LISTENER extends SmListener,
     requestStage(stage: Stage<string, any, any>, eventType: EventType): this;
 }
 
-export interface StateMachine<SM_ON_LISTENER extends SmListener,
+export interface StateMachine<
+    SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
-    > extends StateMachineEndpoint<SM_ON_LISTENER, SM_IF_LISTENER> {
+> extends StateMachineEndpoint<SM_ON_LISTENER, SM_IF_LISTENER> {
     requestTransition(methodName: string, payload: any, stage: Stage<string, any, any>, eventType: EventType, forksInto: StateMachine<any, any>): this;
 
     stop(): this;
@@ -53,12 +54,12 @@ export interface ParentStateMachineInfo<SM_LISTENER extends SmListener,
     joinsInto: string[]
 }
 
-export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
+export class StateMachineImpl<
+    SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
     ACTIONS,
-    > implements StateMachine<SM_ON_LISTENER, SM_IF_LISTENER> {
+> implements StateMachine<SM_ON_LISTENER, SM_IF_LISTENER> {
     readonly eventThread: EventThread = new EventThread();
-    private listeners: SmListenerDefList<SM_ON_LISTENER>;
     private processing: boolean = false;
     private toProcessQueue: ToProcess[] = [];
     private closed: boolean = false;
@@ -69,11 +70,6 @@ export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
         private readonly parent?: ParentStateMachineInfo<any, any>,
     ) {
     }
-
-    init(listeners: SmListenerDefList<SM_ON_LISTENER>): void {
-        this.listeners = listeners;
-    }
-
 
     requestStage(stage: Stage<string, any, any>, eventType: EventType): this {
         this.assertNotClosed();
@@ -125,9 +121,10 @@ export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
         let reactionsFactory = new ReactionsFactory();
         let reactions: WithMetadataArray<SmEventCallback<ACTIONS>, string> = [];
 
-        let requestedReactionsProvider = new ReactionsFactory().create(event, actions, this.data.request.nextReactionsQueue.read());
-        reactions.push(...reactionsFactory.create(event, actions, this.listeners));
-        reactions.push(...requestedReactionsProvider);
+        let asapReactions = reactionsFactory.create(event, actions, this.data.request.nextReactionsQueue.read());
+        let listenerReactions = reactionsFactory.create(event, actions, this.data.request.stateMachineListeners);
+        reactions.push(...listenerReactions);
+        reactions.push(...asapReactions);
 
         StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent.stageName, EventType.PUBLISH, `${event.eventName}::pending reactions: [${reactions.length}]`, event.eventName);
         reactions.forEach((it, i) => {
@@ -296,7 +293,6 @@ export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
                     logic: this.stageDefsByKey[nextStage.name].logic
                 }],
                 nextStagesQueue: new Queue<Stage<string, any, any>>([{name: 'start'}, nextStage]),
-                startingPath: this.data.request.startingPath,
                 stateMachineListeners: [
                     {
                         metadata: '(autoDefer)',

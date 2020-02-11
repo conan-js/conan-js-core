@@ -1,7 +1,7 @@
 import {IBiConsumer, IConstructor, IConsumer, IOptSetKeyValuePairs, WithMetadata} from "../conan-utils/typesHelper";
 import {SmListener} from "./domain";
 import {StateMachine, StateMachineEndpoint} from "./stateMachine";
-import {StateMachineData, StateMachineStarter} from "./stateMachineStarter";
+import {StateMachineData, StateMachineTree} from "./stateMachineTree";
 import {Queue} from "./queue";
 import {Stage} from "./stage";
 
@@ -16,14 +16,14 @@ export interface SyncStateMachineDef<
     INTO_SM_ON_LISTENER extends SmListener,
     JOIN_SM_ON_LISTENER extends SmListener,
 > {
-    stateMachineBuilder: StateMachineBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>,
+    stateMachineBuilder: StateMachineTreeBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>,
     syncName: string,
     syncStartingPath?: string;
     joiner: SyncListener<INTO_SM_ON_LISTENER, SM_IF_LISTENER>,
-    initCb?: IConsumer<StateMachineBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>>
+    initCb?: IConsumer<StateMachineTreeBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>>
 }
 
-export class StateMachineBuilder<
+export class StateMachineTreeBuilder<
     SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
     SM_ACTIONS
@@ -34,7 +34,6 @@ export class StateMachineBuilder<
             nextConditionalReactionsQueue: new Queue<WithMetadata<SM_IF_LISTENER, string>>(),
             nextStagesQueue: new Queue<Stage<string, any, any>>(),
             stateMachineListeners: [],
-            startingPath: undefined,
             name: undefined,
             syncStateMachineDefs: [],
             stageDefs: [],
@@ -115,9 +114,9 @@ export class StateMachineBuilder<
         JOIN_SM_ON_LISTENER extends SmListener
     >(
         name: string,
-        stateMachine: StateMachineBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>,
+        stateMachine: StateMachineTreeBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>,
         joiner: SyncListener<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>,
-        initCb?: IConsumer<StateMachineBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>>
+        initCb?: IConsumer<StateMachineTreeBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>>
     ): this {
         if (this.started) throw new Error("can't modify the behaviour of a state machine once that it has started");
         this.data.request.syncStateMachineDefs.push({
@@ -129,11 +128,10 @@ export class StateMachineBuilder<
         return this;
     }
 
-    start(name: string, startingPath?: string): StateMachine<SM_ON_LISTENER, SM_IF_LISTENER> {
+    start(name: string): StateMachine<SM_ON_LISTENER, SM_IF_LISTENER> {
         if (this.started) throw new Error("can't start twice the same state machine");
 
         this.data.request.name = name;
-        this.data.request.startingPath = startingPath;
-        return new StateMachineStarter().start(this);
+        return new StateMachineTree().start(this);
     }
 }

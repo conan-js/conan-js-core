@@ -1,7 +1,7 @@
 import {ParentStateMachineInfo, StateMachineImpl} from "./stateMachine";
 import {SmListener} from "./domain";
 import {IKeyValuePairs} from "../conan-utils/typesHelper";
-import {StateMachineData} from "./stateMachineStarter";
+import {StateMachineData} from "./stateMachineTree";
 import {StageDef} from "./stage";
 import {Objects} from "../conan-utils/objects";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
@@ -47,11 +47,6 @@ export class StateMachineFactory {
                 stateMachine.shutdown();
             }
         });
-
-
-        stateMachine.init(
-            data.request.stateMachineListeners
-        );
 
 
         StateMachineLogger.log(data.request.name, '', EventType.INIT, `starting SM: `, undefined, [
