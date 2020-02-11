@@ -1,52 +1,57 @@
 import {IBiConsumer, IConstructor, IConsumer, IOptSetKeyValuePairs, WithMetadata} from "../conan-utils/typesHelper";
 import {SmListener} from "./domain";
-import {SMJoinerDef, SMListenerDef, StateMachineListenerDefs} from "./stateMachineListenerDefs";
 import {StateMachine, StateMachineEndpoint} from "./stateMachine";
 import {StateMachineData, StateMachineStarter} from "./stateMachineStarter";
 import {Queue} from "./queue";
 import {Stage} from "./stage";
 
 
-export type SyncListener<INTO_SM_LISTENER, JOIN_LISTENER extends SmListener> = IOptSetKeyValuePairs<keyof INTO_SM_LISTENER, JOIN_LISTENER>
+export type SyncListener<
+    INTO_SM_ON_LISTENER extends SmListener,
+    JOIN_SM_ON_LISTENER extends SmListener
+> = IOptSetKeyValuePairs<keyof INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>
 
-export interface SyncStateMachineDef<JOIN_LISTENER extends SmListener,
-    INTO_SM_LISTENER extends SmListener,
-    INTO_JOIN_LISTENER extends SmListener,
-    > {
-    stateMachineBuilder: StateMachineBuilder<INTO_SM_LISTENER, INTO_JOIN_LISTENER, any>,
+export interface SyncStateMachineDef<
+    SM_IF_LISTENER extends SmListener,
+    INTO_SM_ON_LISTENER extends SmListener,
+    JOIN_SM_ON_LISTENER extends SmListener,
+> {
+    stateMachineBuilder: StateMachineBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>,
     syncName: string,
     syncStartingPath?: string;
-    joiner: SyncListener<INTO_SM_LISTENER, JOIN_LISTENER>,
-    initCb?: IConsumer<StateMachineBuilder<INTO_SM_LISTENER, INTO_JOIN_LISTENER, any>>
+    joiner: SyncListener<INTO_SM_ON_LISTENER, SM_IF_LISTENER>,
+    initCb?: IConsumer<StateMachineBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>>
 }
 
 export class StateMachineBuilder<
-    SM_LISTENER extends SmListener,
-    JOIN_LISTENER extends SmListener,
-    ACTIONS,
-    INITIAL_ACTIONS = ACTIONS,
-> implements StateMachineEndpoint <SM_LISTENER, JOIN_LISTENER> {
-    public data: StateMachineData<SM_LISTENER, JOIN_LISTENER, ACTIONS, INITIAL_ACTIONS> = {
+    SM_ON_LISTENER extends SmListener,
+    SM_IF_LISTENER extends SmListener,
+    SM_ACTIONS
+> implements StateMachineEndpoint <SM_ON_LISTENER, SM_IF_LISTENER> {
+    public data: StateMachineData<SM_ON_LISTENER, SM_IF_LISTENER> = {
         request: {
-            nextReactionsQueue: new Queue<WithMetadata<SMListenerDef<SM_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>, string>>(),
-            nextConditionalReactionsQueue: new Queue<WithMetadata<SMJoinerDef<JOIN_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>, string>>(),
-            stateMachineListenerDefs: StateMachineListenerDefs.init(),
+            nextReactionsQueue: new Queue<WithMetadata<SM_ON_LISTENER, string>>(),
+            nextConditionalReactionsQueue: new Queue<WithMetadata<SM_IF_LISTENER, string>>(),
+            nextStagesQueue: new Queue<Stage<string, any, any>>(),
+            stateMachineListeners: [],
             startingPath: undefined,
             name: undefined,
             syncStateMachineDefs: [],
             stageDefs: [],
-            nextStagesQueue: new Queue<Stage<string, any, any>>()
         }
     };
     private started: boolean = false;
 
-    always(name: string, listener: SMListenerDef<SM_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>): this {
+    always(name: string, listener: SM_ON_LISTENER): this {
         if (this.started) throw new Error("can't modify the behaviour of a state machine once that it has started");
-        this.data.request.stateMachineListenerDefs.addWhileRunning(name, listener);
+        this.data.request.stateMachineListeners.push({
+            metadata: name,
+            value: listener
+        });
         return this;
     }
 
-    onceAsap(name: string, requestListeners: SMListenerDef<SM_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>): this {
+    onceAsap(name: string, requestListeners: SM_ON_LISTENER): this {
         this.data.request.nextReactionsQueue.push({
             metadata: name,
             value: requestListeners
@@ -57,8 +62,8 @@ export class StateMachineBuilder<
     withStage<
         NAME extends string,
         ACTIONS,
-        STAGE extends Stage<NAME, ACTIONS, REQUIREMENTS>,
-        REQUIREMENTS = void>(
+        REQUIREMENTS = void
+    >(
         name: NAME,
         logic: IConstructor<ACTIONS, REQUIREMENTS>,
     ): this {
@@ -72,8 +77,8 @@ export class StateMachineBuilder<
     withDeferredStage<
         NAME extends string,
         ACTIONS,
-        STAGE extends Stage<NAME, ACTIONS, REQUIREMENTS>,
-        REQUIREMENTS = void>(
+        REQUIREMENTS = void
+    >(
         name: NAME,
         logic: IConstructor<ACTIONS, REQUIREMENTS>,
         deferrer: IBiConsumer<ACTIONS, REQUIREMENTS>,
@@ -97,7 +102,7 @@ export class StateMachineBuilder<
         return this;
     }
 
-    conditionallyOnce(name: string, ifStageListeners: SMJoinerDef<JOIN_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>): this {
+    conditionallyOnce(name: string, ifStageListeners: SM_IF_LISTENER): this {
         this.data.request.nextConditionalReactionsQueue.push({
             metadata: name,
             value: ifStageListeners
@@ -105,25 +110,26 @@ export class StateMachineBuilder<
         return this;
     }
 
-    sync<INTO_SM_LISTENER extends SmListener,
-        INTO_JOIN_LISTENER extends SmListener,
-        >(
+    sync<
+        INTO_SM_ON_LISTENER extends SmListener,
+        JOIN_SM_ON_LISTENER extends SmListener
+    >(
         name: string,
-        stateMachine: StateMachineBuilder<INTO_SM_LISTENER, INTO_JOIN_LISTENER, any>,
-        joiner: SyncListener<INTO_SM_LISTENER, JOIN_LISTENER>,
-        initCb?: IConsumer<StateMachineBuilder<INTO_SM_LISTENER, INTO_JOIN_LISTENER, any>>
+        stateMachine: StateMachineBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>,
+        joiner: SyncListener<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>,
+        initCb?: IConsumer<StateMachineBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>>
     ): this {
         if (this.started) throw new Error("can't modify the behaviour of a state machine once that it has started");
         this.data.request.syncStateMachineDefs.push({
             stateMachineBuilder: stateMachine,
             syncName: name,
-            joiner: joiner as SyncListener<any, JOIN_LISTENER>,
+            joiner: joiner as unknown as SyncListener<any, SM_IF_LISTENER>,
             initCb
         });
         return this;
     }
 
-    start(name: string, startingPath?: string): StateMachine<SM_LISTENER, JOIN_LISTENER> {
+    start(name: string, startingPath?: string): StateMachine<SM_ON_LISTENER, SM_IF_LISTENER> {
         if (this.started) throw new Error("can't start twice the same state machine");
 
         this.data.request.name = name;

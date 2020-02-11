@@ -34,7 +34,7 @@ class InitializingActionsLogic implements InitializingActions {
 class ShowingLoginActionsLogic implements ShowingLoginActions {
     doShowApp(): ShowingAppStage {
         return {
-            name: 'showingAppStage'
+            name: 'showingApp'
         };
     }
 

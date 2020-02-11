@@ -19,7 +19,7 @@ export class Queue <T> {
         return this.queuedElement;
     }
 
-    read() {
+    read(): T[] {
         return this.queuedElement;
     }
 }

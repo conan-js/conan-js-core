@@ -1,7 +1,7 @@
 import {StateMachineBuilder} from "../../../lib/conan-sm/stateMachineBuilder";
 import {
     AuthenticatingActions,
-    AuthenticatingActionsListener,
+    AuthenticatingListener,
     AuthenticatingStage,
     AuthenticatingStageName
 } from "./stages/authenticating.stage";
@@ -20,6 +20,7 @@ import {
     AuthenticatedStageName
 } from "./stages/authenticated.stage";
 import {IBiConsumer} from "../../../lib/conan-utils/typesHelper";
+import {BasicSmListener, SmListenerDef} from "../../../lib/conan-sm/domain";
 
 
 export class AuthenticatedActionsLogic implements AuthenticatedActions {
@@ -63,7 +64,7 @@ export class NotAuthenticatedActionsLogic implements NotAuthenticatedActions {
 
 export type Authenticator = IBiConsumer<AuthenticatingActions, UserNameAndPassword>;
 export interface AuthenticationSmActions extends NotAuthenticatedActions, AuthenticatedActions {}
-export interface AuthenticationSmListener extends NotAuthenticatedListener, AuthenticatingActionsListener, AuthenticatedListener {}
+export interface AuthenticationSmListener extends NotAuthenticatedListener, AuthenticatingListener, AuthenticatedListener, BasicSmListener {}
 export interface AuthenticationSmJoiner extends AuthenticatedJoiner {}
 
 export class AuthenticationPrototype {
@@ -72,11 +73,10 @@ export class AuthenticationPrototype {
     ) {}
 
     newBuilder (): StateMachineBuilder <AuthenticationSmListener, AuthenticationSmJoiner, AuthenticationSmActions> {
-        return new StateMachineBuilder<AuthenticationSmListener, AuthenticationSmJoiner, AuthenticationSmActions>()
+        return new StateMachineBuilder ()
             .withStage<
                 NotAuthenticatedStageName,
-                NotAuthenticatedActions,
-                NotAuthenticatedStage
+                NotAuthenticatedActions
             > (
                 'notAuthenticated',
                 NotAuthenticatedActionsLogic,
@@ -84,7 +84,6 @@ export class AuthenticationPrototype {
             .withDeferredStage<
                 AuthenticatingStageName,
                 AuthenticatingActions,
-                AuthenticatingStage,
                 UserNameAndPassword
             >(
                 "authenticating",
@@ -95,7 +94,6 @@ export class AuthenticationPrototype {
             withStage<
                 AuthenticatedStageName,
                 AuthenticatedActions,
-                AuthenticatedStage,
                 AppCredentials
             >(
                 "authenticated",

@@ -1,28 +1,27 @@
-import {SMJoinerDef, SMListenerDef, SmListenersByType, StateMachineListenerDefs} from "./stateMachineListenerDefs";
-import {SerializedSmEvent, SmEvent, SmListener} from "./domain";
+import {SerializedSmEvent, SmEvent, SmEventCallback, SmListener, SmListenerDefList} from "./domain";
 import {StateMachineData} from "./stateMachineStarter";
 import {EventThread} from "./eventThread";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {Stage, StageDef} from "./stage";
-import {ICallback, IConsumer, IKeyValuePairs, WithMetadataArray} from "../conan-utils/typesHelper";
+import {IConsumer, IKeyValuePairs, WithMetadataArray} from "../conan-utils/typesHelper";
 import {ReactionsFactory} from "./reactionsFactory";
 import {Strings} from "../conan-utils/strings";
 import {StateMachineFactory} from "./stateMachineFactory";
 import {Queue} from "./queue";
 
-export interface StateMachineEndpoint<SM_LISTENER extends SmListener,
-    JOIN_LISTENER extends SmListener,
+export interface StateMachineEndpoint<SM_ON_LISTENER extends SmListener,
+    SM_IF_LISTENER extends SmListener,
     > {
-    onceAsap(name: string, requestListeners: SMListenerDef<SM_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>): this;
+    onceAsap(name: string, requestListeners: SmListener<SM_ON_LISTENER>): this;
 
-    conditionallyOnce(name: string, ifStageListeners: SMJoinerDef<JOIN_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>): this;
+    conditionallyOnce(name: string, ifStageListeners: SmListener<SM_IF_LISTENER>): this;
 
-    requestStage (stage: Stage<string, any, any>, eventType: EventType): this;
+    requestStage(stage: Stage<string, any, any>, eventType: EventType): this;
 }
 
-export interface StateMachine<SM_LISTENER extends SmListener,
-    JOIN_LISTENER extends SmListener,
-    > extends StateMachineEndpoint<SM_LISTENER, JOIN_LISTENER> {
+export interface StateMachine<SM_ON_LISTENER extends SmListener,
+    SM_IF_LISTENER extends SmListener,
+    > extends StateMachineEndpoint<SM_ON_LISTENER, SM_IF_LISTENER> {
     requestTransition(methodName: string, payload: any, stage: Stage<string, any, any>, eventType: EventType, forksInto: StateMachine<any, any>): this;
 
     stop(): this;
@@ -47,40 +46,37 @@ interface StageToProcess {
 
 export type ToProcess = StageToProcess | ActionToProcess;
 
-export interface ParentStateMachineInfo<
-    SM_LISTENER extends SmListener,
+export interface ParentStateMachineInfo<SM_LISTENER extends SmListener,
     JOIN_LISTENER extends SmListener,
-> {
+    > {
     stateMachine: StateMachine<SM_LISTENER, JOIN_LISTENER>,
     joinsInto: string[]
 }
 
-export class StateMachineImpl<
-    SM_LISTENER extends SmListener,
-    JOIN_LISTENER extends SmListener,
+export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
+    SM_IF_LISTENER extends SmListener,
     ACTIONS,
-> implements StateMachine<SM_LISTENER, JOIN_LISTENER> {
-    eventThread: EventThread;
-    private listeners: SmListenersByType<SM_LISTENER, JOIN_LISTENER>;
+    > implements StateMachine<SM_ON_LISTENER, SM_IF_LISTENER> {
+    readonly eventThread: EventThread = new EventThread();
+    private listeners: SmListenerDefList<SM_ON_LISTENER>;
     private processing: boolean = false;
     private toProcessQueue: ToProcess[] = [];
     private closed: boolean = false;
 
     constructor(
-        readonly data: StateMachineData<SM_LISTENER, JOIN_LISTENER, ACTIONS>,
+        readonly data: StateMachineData<SM_ON_LISTENER, SM_IF_LISTENER>,
         readonly stageDefsByKey: IKeyValuePairs<StageDef<string, any, any, any>>,
         private readonly parent?: ParentStateMachineInfo<any, any>,
     ) {
     }
 
-    init(listeners: SmListenersByType<SM_LISTENER, JOIN_LISTENER>): void {
-        this.eventThread = new EventThread();
+    init(listeners: SmListenerDefList<SM_ON_LISTENER>): void {
         this.listeners = listeners;
     }
 
 
     requestStage(stage: Stage<string, any, any>, eventType: EventType): this {
-        this.assertNotClosed ();
+        this.assertNotClosed();
         this.doRequest({
             stage,
             eventType: eventType
@@ -89,7 +85,7 @@ export class StateMachineImpl<
     }
 
     requestTransition(methodName: string, payload: any, stage: Stage<string, any, any>, eventType: EventType, forksInto: StateMachine<any, any>): this {
-        this.assertNotClosed ();
+        this.assertNotClosed();
         StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '-', EventType.REQUEST_TRANSITION, `=>transition[${methodName}::${stage.name}]`);
         this.doRequest({
             actionName: methodName,
@@ -101,14 +97,14 @@ export class StateMachineImpl<
         return this;
     }
 
-    conditionallyOnce(name: string, ifStageListeners: SMJoinerDef<JOIN_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>): this {
-        this.assertNotClosed ();
+    conditionallyOnce(name: string, ifStageListeners: SmListener<SM_IF_LISTENER>): this {
+        this.assertNotClosed();
         throw new Error('TBI');
     }
 
-    onceAsap(name: string, requestListeners: SMListenerDef<SM_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>): this {
-        this.assertNotClosed ();
-        StateMachineLogger.log(this.data.request.name, this.eventThread && this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName: '', EventType.ADDING_REACTION, `adding ASAP reaction: ${name}`);
+    onceAsap(name: string, requestListeners: SmListener<SM_ON_LISTENER>): this {
+        this.assertNotClosed();
+        StateMachineLogger.log(this.data.request.name, this.eventThread && this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '', EventType.ADDING_REACTION, `adding ASAP reaction: ${name}`);
         this.data.request.nextReactionsQueue.push({
             metadata: name,
             value: requestListeners
@@ -117,32 +113,31 @@ export class StateMachineImpl<
     }
 
     stop(): this {
-        this.assertNotClosed ();
+        this.assertNotClosed();
         this.requestStage({name: 'stop'}, EventType.STOP);
         return this;
     }
 
     publishEvent(event: SmEvent) {
-        this.assertNotClosed ();
+        this.assertNotClosed();
 
         let actions: ACTIONS = this.createProxy(this, this.stageDefsByKey, event.stageName, event.payload);
         let reactionsFactory = new ReactionsFactory();
-        let reactions: WithMetadataArray<ICallback, string>  = [];
+        let reactions: WithMetadataArray<SmEventCallback<ACTIONS>, string> = [];
 
-        let whileRunningListeners = this.listeners.whileRunning;
-
-        reactions.push(...reactionsFactory.create(event, actions, whileRunningListeners));
-        reactions.push(...this.requestedReactionsProvider(event, actions));
+        let requestedReactionsProvider = new ReactionsFactory().create(event, actions, this.data.request.nextReactionsQueue.read());
+        reactions.push(...reactionsFactory.create(event, actions, this.listeners));
+        reactions.push(...requestedReactionsProvider);
 
         StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent.stageName, EventType.PUBLISH, `${event.eventName}::pending reactions: [${reactions.length}]`, event.eventName);
         reactions.forEach((it, i) => {
             StateMachineLogger.log(this.data.request.name, event.stageName, EventType.REACTION_START, `START [${it.metadata}]: reaction ${i + 1} of ${reactions.length}`);
-            it.value();
+            it.value(actions, {sm: this});
             StateMachineLogger.log(this.data.request.name, event.stageName, EventType.REACTION_END, `END [${it.metadata}]`)
         });
     }
 
-    private doRequest (toProcess: ToProcess): void{
+    private doRequest(toProcess: ToProcess): void {
         if (!this.processing) {
             this.processing = true;
             if ((toProcess as ActionToProcess).actionName) {
@@ -153,8 +148,8 @@ export class StateMachineImpl<
             this.processPendingEvents();
             this.processing = false;
         } else {
-            StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent.stageName, EventType.QUEUE_TO_PROCESS, `queueing: ${(toProcess as ActionToProcess).actionName ? 
-                `action [${(toProcess as ActionToProcess).actionName}]`: 
+            StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent.stageName, EventType.QUEUE_TO_PROCESS, `queueing: ${(toProcess as ActionToProcess).actionName ?
+                `action [${(toProcess as ActionToProcess).actionName}]` :
                 `stage [${(toProcess as StageToProcess).stage.name}]`
             }`);
             this.toProcessQueue.push(toProcess)
@@ -185,14 +180,11 @@ export class StateMachineImpl<
         StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '-', EventType.REQUEST_ACTION, `=>processing action [${actionToProcess.actionName}]`);
 
         let eventName = Strings.camelCaseWithPrefix('on', actionToProcess.actionName);
-        // @ts-ignore
         this.onceAsap(`${eventName}=>${actionToProcess.into.name}`, {
-            [eventName]: {
-                then: ()=> this.requestStage(
-                    actionToProcess.into,
-                    EventType.REQUEST_STAGE,
-                )
-            }
+            [eventName]: () => this.requestStage(
+                actionToProcess.into,
+                EventType.REQUEST_STAGE,
+            )
         });
 
         this.eventThread.addActionEvent(
@@ -210,11 +202,8 @@ export class StateMachineImpl<
             StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '-', EventType.FORK_STOP, `=>joining back ${intoStageName}`);
             this.requestStage({name: 'stop'}, EventType.FORK_STOP);
             this.onceAsap(`(continueOnParent=>${stageToProcess.stage.name})`, {
-                // @ts-ignore
-                onStop: {
-                    then: ()=> {
-                        this.parent.stateMachine.requestStage(stageToProcess.stage, EventType.REQUEST_STAGE);
-                    }
+                onStop: () => {
+                    this.parent.stateMachine.requestStage(stageToProcess.stage, EventType.REQUEST_STAGE);
                 }
             });
             return
@@ -239,13 +228,6 @@ export class StateMachineImpl<
 
     getEvents(): SerializedSmEvent [] {
         return this.eventThread.serialize();
-    }
-
-
-    private requestedReactionsProvider(event: SmEvent, actions: ACTIONS): WithMetadataArray<ICallback, string> {
-        let listenersDef: WithMetadataArray<SMListenerDef<SM_LISTENER, any>, any> = this.data.request.nextReactionsQueue.read();
-        let listeners: WithMetadataArray<SM_LISTENER, any> = StateMachineListenerDefs.transformListeners(listenersDef, this);
-        return new ReactionsFactory().create(event, actions, listeners);
     }
 
     private createProxy(
@@ -306,7 +288,7 @@ export class StateMachineImpl<
         return StateMachineFactory.fork({
             stateMachine: this,
             joinsInto
-        },{
+        }, {
             request: {
                 name: `${this.data.request.name}/${nextStage.name}`,
                 stageDefs: [{
@@ -315,19 +297,14 @@ export class StateMachineImpl<
                 }],
                 nextStagesQueue: new Queue<Stage<string, any, any>>([{name: 'start'}, nextStage]),
                 startingPath: this.data.request.startingPath,
-                stateMachineListenerDefs:new StateMachineListenerDefs({
-                    whileRunning: [
-                        {
-                            metadata: '(autoDefer)',
-                            // @ts-ignore
-                            value: {
-                                [Strings.camelCaseWithPrefix('on', nextStage.name)]: {
-                                    thenRequest: (actions: any)=> defer(actions)
-                                },
-                            }
+                stateMachineListeners: [
+                    {
+                        metadata: '(autoDefer)',
+                        value: {
+                            [Strings.camelCaseWithPrefix('on', nextStage.name)]: (actions: any) => defer(actions)
                         }
-                    ],
-                }),
+                    }
+                ],
                 syncStateMachineDefs: undefined,
                 nextConditionalReactionsQueue: new Queue(),
                 nextReactionsQueue: new Queue()
@@ -340,7 +317,7 @@ export class StateMachineImpl<
     }
 
     private assertNotClosed() {
-        if (this.closed){
+        if (this.closed) {
             throw new Error(`can't perform any actions in a SM once the SM is closed`);
         }
     }

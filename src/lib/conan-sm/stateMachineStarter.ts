@@ -1,7 +1,6 @@
-import {IBiConsumer, IBiFunction, IConsumer, WithMetadata} from "../conan-utils/typesHelper";
-import {EventListener, SerializedSmEvent, SmListener} from "./domain";
+import {IBiConsumer, IBiFunction} from "../conan-utils/typesHelper";
+import {SmEventCallback, SmListener, SmListenerDef, SmListenerDefList} from "./domain";
 import {StateMachineBuilder, SyncStateMachineDef} from "./stateMachineBuilder";
-import {SMJoinerDef, SMListenerDef, StateMachineListenerDefs} from "./stateMachineListenerDefs";
 import {StateMachine} from "./stateMachine";
 import {Objects} from "../conan-utils/objects";
 import {Queue} from "./queue";
@@ -20,38 +19,37 @@ export interface StartSmTree {
 
 export interface StateMachineStartRequest
 <
-    SM_LISTENER extends SmListener,
-    JOIN_LISTENER extends SmListener,
+    SM_ON_LISTENER extends SmListener,
+    SM_IF_LISTENER extends SmListener,
 > {
     name: string,
     startingPath: string,
-    syncStateMachineDefs: SyncStateMachineDef<JOIN_LISTENER, any, any> [],
-    stateMachineListenerDefs: StateMachineListenerDefs<SM_LISTENER, JOIN_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>
+    syncStateMachineDefs: SyncStateMachineDef<SM_IF_LISTENER, any, any> [],
+    stateMachineListeners: SmListenerDefList<SM_ON_LISTENER>
     stageDefs: StageDef<string, any, any, any> []
-    nextReactionsQueue: Queue<WithMetadata<SMListenerDef<SM_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>, string>>
-    nextConditionalReactionsQueue: Queue<WithMetadata<SMJoinerDef<JOIN_LISTENER, StateMachine<SM_LISTENER, JOIN_LISTENER>>, string>>
+    nextReactionsQueue: Queue<SmListenerDef<SM_ON_LISTENER>>
+    nextConditionalReactionsQueue: Queue<SmListenerDef<SM_IF_LISTENER>>
     nextStagesQueue: Queue<Stage<string, any, any>>
 }
 
 
 
 export interface StateMachineData<
-    SM_LISTENER extends SmListener,
-    JOIN_LISTENER extends SmListener,
-    ACTIONS,
-    INITIAL_ACTIONS = ACTIONS,
+    SM_ON_LISTENER extends SmListener,
+    SM_IF_LISTENER extends SmListener,
 > {
-    request: StateMachineStartRequest<SM_LISTENER, JOIN_LISTENER>;
+    request: StateMachineStartRequest<SM_ON_LISTENER, SM_IF_LISTENER>;
 }
 
-export class StateMachineStarter<SM_LISTENER extends SmListener,
-    JOIN_LISTENER extends SmListener,
+export class StateMachineStarter<
+    SM_ON_LISTENER extends SmListener,
+    SM_IF_LISTENER extends SmListener,
     ACTIONS,
-    > {
-    start(builder: StateMachineBuilder<SM_LISTENER, JOIN_LISTENER, ACTIONS>): StateMachine<SM_LISTENER, JOIN_LISTENER> {
+> {
+    start(builder: StateMachineBuilder<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS>): StateMachine<SM_ON_LISTENER, SM_IF_LISTENER> {
         let root: StartSmTree = this.createSyncSmTree(builder);
         this.childrenFirst(root, (data, synchronisation) => this.doSyncListeners(data, synchronisation));
-        return this.parentFirst<StateMachine<SM_LISTENER, JOIN_LISTENER>>(root, undefined, (startTree, syncDef) => {
+        return this.parentFirst<StateMachine<SM_ON_LISTENER, SM_IF_LISTENER>>(root, undefined, (startTree, syncDef) => {
             return this.create(startTree.stateMachineBuilder.data, syncDef)
         });
     }
@@ -101,19 +99,19 @@ export class StateMachineStarter<SM_LISTENER extends SmListener,
         into: StateMachineBuilder<any, any, any>,
         sync: Synchronisation
     ): void {
-        let syncListener: INTO_LISTENER = Objects.mapKeys<INTO_LISTENER, FROM_JOINER, EventListener<FROM_ACTIONS, any, any>>(
+        let syncListener: INTO_LISTENER = Objects.mapKeys<INTO_LISTENER, FROM_JOINER, SmEventCallback<any>>(
             sync.syncDef.joiner,
-            (ifStatements) => ({
-                then: () => {
+            (ifStatements) => (
+                () => {
                     into.conditionallyOnce(`if=>${sync.syncDef.syncName}`, ifStatements);
                 }
-            })
+            )
         );
         sync.syncDef.stateMachineBuilder.always(`${sync.syncDef.syncName}`, syncListener);
     }
 
-    create(stateMachineData: StateMachineData<any, any, any>, syncDef: SyncStateMachineDef<any, any, any>): StateMachine<SM_LISTENER, JOIN_LISTENER> {
-        let finalSMData: StateMachineData<any, any, any> = !syncDef ? stateMachineData : {
+    create(stateMachineData: StateMachineData<any, any>, syncDef: SyncStateMachineDef<any, any, any>): StateMachine<SM_ON_LISTENER, SM_IF_LISTENER> {
+        let finalSMData: StateMachineData<any, any> = !syncDef ? stateMachineData : {
             ...stateMachineData,
             request: {
                 ...stateMachineData.request,

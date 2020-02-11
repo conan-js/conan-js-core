@@ -26,75 +26,69 @@ describe('test', () => {
 
     it("should start automatically initializing a state machine", (done) => {
         new MainSm((actions) => actions.doInitialise(TRANSLATIONS)).define()
-            .always('testMainListener', sm => ({
-                onShowingLogin: {then: () => sm.stop()},
-            }))
-            .onceAsap('stop=>test', sm => ({
-                onStop: {
-                    then: () => {
-                        expect(sm.getEvents()).to.deep.eq([
-                                {
+            .always('testMainListener', {
+                onShowingLogin: (_, params) => params.sm.stop(),
+            })
+            .onceAsap('stop=>test', {
+                onStop: (_, params) => {
+                    expect(params.sm.getEvents()).to.deep.eq([
+                            {
+                                eventName: 'onStart',
+                                stageName: 'start',
+                                fork: [{
                                     eventName: 'onStart',
                                     stageName: 'start',
-                                    fork: [{
-                                        eventName: 'onStart',
-                                        stageName: 'start',
-                                    },{
-                                        eventName: 'onInitializing',
-                                        stageName: 'initializing',
-                                    },{
-                                        eventName: 'onDoInitialise',
-                                        stageName: 'initializing',
-                                        payload: TRANSLATIONS
-                                    },{
-                                        eventName: 'onStop',
-                                        stageName: 'stop',
-                                    }
-                                ],
-                                },
-                                {
-                                    eventName: 'onShowingLogin',
-                                    stageName: 'showingLogin',
-                                },
-                                {
+                                }, {
+                                    eventName: 'onInitializing',
+                                    stageName: 'initializing',
+                                }, {
+                                    eventName: 'onDoInitialise',
+                                    stageName: 'initializing',
+                                    payload: TRANSLATIONS
+                                }, {
                                     eventName: 'onStop',
                                     stageName: 'stop',
-                                },
-                            ]
-                        );
-                        done();
-                    }
+                                }
+                                ],
+                            },
+                            {
+                                eventName: 'onShowingLogin',
+                                stageName: 'showingLogin',
+                            },
+                            {
+                                eventName: 'onStop',
+                                stageName: 'stop',
+                            },
+                        ]
+                    );
+                    done();
                 }
-            }))
+            })
             .start('main-test1')
     });
 
     it("should join with an authentication sm", (done) => {
         new MainSm((actions) => actions.doInitialise(TRANSLATIONS)).define()
-            .always('testMainListener', sm => ({
-                onShowingApp: {then: () => sm.stop()},
-            }))
-            .onceAsap('stop=>test', sm => ({
-                onStop: {
-                    then: () => {
-                        expect(sm.getEvents()).to.deep.eq(SerializedSmEvents.events(initializationFork));
-                        done();
-                    }
+            .always('testMainListener', {
+                onShowingApp: (_, params) => params.sm.stop(),
+            })
+            .onceAsap('stop=>test', {
+                onStop: (_, params) => {
+                    expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events(initializationFork));
+                    done();
                 }
-            }))
+
+            })
             .sync <AuthenticationSmListener, AuthenticationSmJoiner>(
                 'sync-authentication',
                 new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith({})).newBuilder(),
                 {
                     onAuthenticated: {
-                        ifShowingLogin: {
-                            thenRequest: (mainActions) => mainActions.doShowApp()
-                        }
+                        ifShowingLogin: (mainActions) => mainActions.doShowApp()
+
                     }
                 }, (authenticationSm) => authenticationSm.onceAsap('notAuthenticated=>authenticated', {
-                    onNotAuthenticated: {
-                        thenRequest: (actions) => actions.doAuthenticating({})
-                    }
+                    onNotAuthenticated: (actions) => actions.doAuthenticating({})
                 }))
             .start('main-test2')
     })

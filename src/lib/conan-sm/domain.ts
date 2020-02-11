@@ -1,6 +1,4 @@
-import {IBiConsumer, IConsumer, IFunction, IKeyValuePairs} from "../conan-utils/typesHelper";
-import {EventThread} from "./eventThread";
-import {Stage} from "./stage";
+import {IBiConsumer, IFunction, IKeyValuePairs, WithMetadata, WithMetadataArray} from "../conan-utils/typesHelper";
 import {StateMachine} from "./stateMachine";
 
 
@@ -24,21 +22,19 @@ export interface StageEntryPoint<STAGE, REQUIREMENTS = void> {
     create: IFunction<REQUIREMENTS, STAGE>;
 }
 
-export interface ThenParams<NEXT_STAGE, OUTPUT> {
-    notAuthenticatedStage: NEXT_STAGE;
-    payload: OUTPUT;
+export interface SmListenerParams {
+    sm: StateMachine<any, any>;
+
 }
 
-export interface ActionListener<THIS_ACTIONS, THIS_STAGE extends Stage<string, THIS_ACTIONS, any>, PAYLOAD = void> {
-    then?: IBiConsumer<ThenParams<THIS_STAGE, PAYLOAD>, SmEvent>;
-    thenRequest?: IBiConsumer<THIS_ACTIONS, SmEvent>;
-    withPayload?: IBiConsumer<PAYLOAD, SmEvent>;
+export type SmEventCallback <ACTIONS> = IBiConsumer<ACTIONS, SmListenerParams>;
+
+export type SmListener <ACTIONS = any>= IKeyValuePairs<SmEventCallback<ACTIONS>>;
+export type SmListenerDef <ACTIONS = any>= WithMetadata<SmListener<ACTIONS>, string>;
+export type SmListenerDefList <FROM extends SmListener>= WithMetadataArray<FROM, string>;
+
+export interface BasicSmListener extends SmListener{
+    onStart?: SmEventCallback<void>;
+    onStop?: SmEventCallback<void>;
 }
 
-export interface EventListener<THIS_ACTIONS, THIS_STAGE extends Stage<string, THIS_ACTIONS, REQUIREMENTS>, REQUIREMENTS = void> extends ActionListener<THIS_ACTIONS, THIS_STAGE, REQUIREMENTS>{}
-
-export type SmListener <
-    ACTIONS = any,
-    STAGE extends Stage<string, ACTIONS, REQUIREMENTS>  = any,
-    REQUIREMENTS = any
->= IKeyValuePairs<EventListener<ACTIONS, STAGE, REQUIREMENTS>>;

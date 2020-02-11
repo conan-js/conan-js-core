@@ -29,7 +29,7 @@ export interface IVarArgConstructor<T> {
 
 export type OneOrManyOf <T> = T | T [];
 
-export type ProvidedOrStaticOf <BASED_ON, RESULT extends {}> = IFunction<BASED_ON, RESULT> | RESULT;
+export type ProvidedOrStaticOf <RESULT extends {}, BASED_ON> = IFunction<BASED_ON, RESULT> | RESULT;
 
 export class OneOrMany {
     static asArray<T> (toIterate: OneOrManyOf<T>): T[] {
