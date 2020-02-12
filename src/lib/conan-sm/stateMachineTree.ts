@@ -102,7 +102,7 @@ export class StateMachineTree<
             sync.syncDef.joiner,
             (ifStatements) => (
                 () => {
-                    into.nextConditionally(`if=>${sync.syncDef.syncName}`, ifStatements);
+                    into.nextConditionally([`if=>${sync.syncDef.syncName}`, ifStatements]);
                 }
             )
         );

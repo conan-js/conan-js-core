@@ -29,7 +29,7 @@ describe('test', () => {
             .always('testMainListener', {
                 onShowingLogin: (_, params) => params.sm.stop(),
             })
-            .once('stop=>test', {
+            .once(['stop=>test', {
                 onStop: (_, params) => {
                     expect(params.sm.getEvents()).to.deep.eq([
                             {
@@ -63,7 +63,7 @@ describe('test', () => {
                     );
                     done();
                 }
-            })
+            }])
             .start('main-test1')
     });
 
@@ -72,13 +72,13 @@ describe('test', () => {
             .always('testMainListener', {
                 onShowingApp: (_, params) => params.sm.stop(),
             })
-            .once('stop=>test', {
+            .once(['stop=>test', {
                 onStop: (_, params) => {
                     expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events(initializationFork));
                     done();
                 }
 
-            })
+            }])
             .sync <AuthenticationSmListener, AuthenticationSmJoiner>(
                 'sync-authentication',
                 new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith({})).newBuilder(),
@@ -87,9 +87,9 @@ describe('test', () => {
                         ifShowingLogin: (mainActions) => mainActions.doShowApp()
 
                     }
-                }, (authenticationSm) => authenticationSm.once('notAuthenticated=>authenticated', {
+                }, (authenticationSm) => authenticationSm.once(['notAuthenticated=>authenticated', {
                     onNotAuthenticated: (actions) => actions.doAuthenticating({})
-                }))
+                }]))
             .start('main-test2')
     })
 

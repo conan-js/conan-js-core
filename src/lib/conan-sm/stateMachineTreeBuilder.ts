@@ -3,7 +3,7 @@ import {StateMachine, StateMachineEndpoint} from "./stateMachine";
 import {StateMachineData, StateMachineTree} from "./stateMachineTree";
 import {Queue} from "./queue";
 import {Stage} from "./stage";
-import {SmListener} from "./stateMachineListeners";
+import {SmListener, SmListenerDefLike, SmListenerDefLikeParser} from "./stateMachineListeners";
 
 
 export type SyncListener<
@@ -28,6 +28,8 @@ export class StateMachineTreeBuilder<
     SM_IF_LISTENER extends SmListener,
     SM_ACTIONS
 > implements StateMachineEndpoint <SM_ON_LISTENER, SM_IF_LISTENER> {
+    private readonly smListenerDefLikeParser: SmListenerDefLikeParser = new SmListenerDefLikeParser();
+
     public data: StateMachineData<SM_ON_LISTENER, SM_IF_LISTENER> = {
         request: {
             nextReactionsQueue: new Queue<WithMetadata<SM_ON_LISTENER, string>>(),
@@ -50,11 +52,10 @@ export class StateMachineTreeBuilder<
         return this;
     }
 
-    once(name: string, requestListeners: SM_ON_LISTENER): this {
-        this.data.request.nextReactionsQueue.push({
-            metadata: name,
-            value: requestListeners
-        });
+    once(listener: SmListenerDefLike<SM_ON_LISTENER>): this {
+        this.data.request.nextReactionsQueue.push(
+            this.smListenerDefLikeParser.parse(listener)
+        );
         return this;
     }
 
@@ -101,11 +102,10 @@ export class StateMachineTreeBuilder<
         return this;
     }
 
-    nextConditionally(name: string, ifStageListeners: SM_IF_LISTENER): this {
-        this.data.request.nextConditionalReactionsQueue.push({
-            metadata: name,
-            value: ifStageListeners
-        });
+    nextConditionally(ifStageListeners: SmListenerDefLike<SM_IF_LISTENER>): this {
+        this.data.request.nextConditionalReactionsQueue.push(
+            this.smListenerDefLikeParser.parse(ifStageListeners)
+        );
         return this;
     }
 

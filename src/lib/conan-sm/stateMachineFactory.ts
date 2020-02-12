@@ -7,9 +7,11 @@ import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {SmListener} from "./stateMachineListeners";
 
 export class StateMachineFactory {
-    static create<SM_ON_LISTENER extends SmListener,
+    static create<
+        SM_ON_LISTENER extends SmListener,
         SM_IF_LISTENER extends SmListener,
-        ACTIONS>(data: StateMachineData<SM_ON_LISTENER, SM_IF_LISTENER>): StateMachineImpl<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS> {
+        ACTIONS
+    >(data: StateMachineData<SM_ON_LISTENER, SM_IF_LISTENER>): StateMachineImpl<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS> {
         return this.doCreate(data);
     }
 
@@ -20,9 +22,11 @@ export class StateMachineFactory {
         return this.doCreate(data, parent);
     }
 
-    private static doCreate<SM_LISTENER extends SmListener,
+    private static doCreate<
+        SM_LISTENER extends SmListener,
         JOIN_LISTENER extends SmListener,
-        ACTIONS>(
+        ACTIONS
+    >(
         data: StateMachineData<SM_LISTENER, JOIN_LISTENER>,
         parent?: ParentStateMachineInfo<any, any>
     ): StateMachineImpl<SM_LISTENER, JOIN_LISTENER, ACTIONS> {
@@ -40,13 +44,12 @@ export class StateMachineFactory {
             stageStringDefs.push(description)
         });
 
-        stateMachine.once('stop=>shutdown', {
-            // @ts-ignore
+        stateMachine.once(['stop=>shutdown', {
             onStop: () => {
                 StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.currentEvent.stageName, EventType.STOP, ``, '', []);
                 stateMachine.shutdown();
             }
-        });
+        } as any as SM_LISTENER]);
 
 
         StateMachineLogger.log(data.request.name, '', EventType.INIT, `starting SM: `, undefined, [
