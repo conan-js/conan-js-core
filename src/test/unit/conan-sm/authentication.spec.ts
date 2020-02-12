@@ -25,10 +25,10 @@ describe('test', () => {
 
     it("should listen to stages and stop gracefully", (done) => {
         new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith(APP_CREDENTIALS)).newBuilder()
-            .always('notAuth=>Authenticating, authenticated=>stop', {
+            .always(['notAuth=>Authenticating, authenticated=>stop', {
                 onNotAuthenticated: (actions) => actions.doAuthenticating(USERNAME_AND_PASSWORD),
                 onAuthenticated: (actions, params) => params.sm.stop(),
-            })
+            }])
             .once(['stop=>test', {
                 onStop: (actions, params) => {
                     expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events(authenticationFork, 'notAuthenticated'));
@@ -41,12 +41,12 @@ describe('test', () => {
 
     it("should listen to stages and actions and stop gracefully", (done) => {
         new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith(APP_CREDENTIALS)).newBuilder()
-            .always('notAuthenticated=>authenticating, authenticated=>doTimeout, doTimeout=>stop', {
+            .always(['notAuthenticated=>authenticating, authenticated=>doTimeout, doTimeout=>stop', {
                 onNotAuthenticated: (actions) => actions.doAuthenticating(USERNAME_AND_PASSWORD),
                 onAuthenticated: (actions, params) => setTimeout(() => actions.doTimeout()),
                 onDoTimeout: (actions, params)=> params.sm.stop()
-            })
-            .always('stop => test', {
+            }])
+            .always(['stop => test', {
                 onStop: (_, params) => {
                     {
                         expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events([
@@ -60,7 +60,7 @@ describe('test', () => {
                     }
 
                 },
-            })
+            }])
             .start('auth-test2')
     });
 
@@ -70,10 +70,10 @@ describe('test', () => {
             .once(['onNotAuthenticated=>doAuthenticating', {
                 onNotAuthenticated: (actions) => actions.doAuthenticating(USERNAME_AND_PASSWORD)
             }])
-            .always('testMainListener', {
+            .always(['testMainListener', {
                 onAuthenticated: (actions, params) => params.sm.stop()
-            })
-            .always('stop=>test', {
+            }])
+            .always(['stop=>test', {
                 onStop: (_, params) => {
                         expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events([
                             ...authenticationFork,
@@ -81,14 +81,14 @@ describe('test', () => {
                         done();
                     }
 
-            })
+            }])
             .start('auth-test4')
     });
 
     it("should call many times into a listener", (done) => {
         let calls: string [] = [];
         new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith(APP_CREDENTIALS)).newBuilder()
-            .always('testMainListener', {
+            .always(['testMainListener', {
                 onNotAuthenticated: (actions) => {
                         actions.doAuthenticating(USERNAME_AND_PASSWORD);
                         calls.push('first not authenticated');
@@ -97,11 +97,11 @@ describe('test', () => {
                         calls.push('authenticated');
                         params.sm.stop();
                 }
-            })
-            .always('testMainListener - dupe', {
+            }])
+            .always(['testMainListener - dupe', {
                 onNotAuthenticated: () => calls.push('second not authenticated'),
-            })
-            .always('stop=>test', {
+            }])
+            .always(['stop=>test', {
                 onStop: () => {
                         expect(calls).to.deep.eq([
                             'first not authenticated',
@@ -110,7 +110,7 @@ describe('test', () => {
                         ]);
                         done();
                     }
-            })
+            }])
             .start('auth-test5');
     });
 });

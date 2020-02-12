@@ -106,7 +106,7 @@ export class StateMachineTree<
                 }
             )
         );
-        sync.syncDef.stateMachineBuilder.always(`${sync.syncDef.syncName}`, syncListener);
+        sync.syncDef.stateMachineBuilder.always([`${sync.syncDef.syncName}`, syncListener]);
     }
 
     create(stateMachineData: StateMachineData<any, any>, syncDef: SyncStateMachineDef<any, any, any>): StateMachine<SM_ON_LISTENER, SM_IF_LISTENER> {

@@ -26,9 +26,9 @@ describe('test', () => {
 
     it("should start automatically initializing a state machine", (done) => {
         new MainSm((actions) => actions.doInitialise(TRANSLATIONS)).define()
-            .always('testMainListener', {
+            .always(['testMainListener', {
                 onShowingLogin: (_, params) => params.sm.stop(),
-            })
+            }])
             .once(['stop=>test', {
                 onStop: (_, params) => {
                     expect(params.sm.getEvents()).to.deep.eq([
@@ -69,9 +69,9 @@ describe('test', () => {
 
     it("should join with an authentication sm", (done) => {
         new MainSm((actions) => actions.doInitialise(TRANSLATIONS)).define()
-            .always('testMainListener', {
+            .always(['testMainListener', {
                 onShowingApp: (_, params) => params.sm.stop(),
-            })
+            }])
             .once(['stop=>test', {
                 onStop: (_, params) => {
                     expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events(initializationFork));
