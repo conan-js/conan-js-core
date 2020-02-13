@@ -4,7 +4,7 @@ import {StateMachineData} from "./stateMachineTree";
 import {StageDef} from "./stage";
 import {Objects} from "../conan-utils/objects";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
-import {SmListener} from "./stateMachineListeners";
+import {ListenerType, SmListener} from "./stateMachineListeners";
 
 export class StateMachineFactory {
     static create<
@@ -44,7 +44,7 @@ export class StateMachineFactory {
             stageStringDefs.push(description)
         });
 
-        stateMachine.once(['stop=>shutdown', {
+        stateMachine.addListener(ListenerType.ONCE, ['stop=>shutdown', {
             onStop: () => {
                 StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.currentEvent.stageName, EventType.STOP, ``, '', []);
                 stateMachine.shutdown();

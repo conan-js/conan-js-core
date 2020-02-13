@@ -3,6 +3,7 @@ import {Authenticators} from "../../utils/authenticators";
 import {SerializedSmEvents} from "../../utils/serializedSmEvents";
 import {AppCredentials, UserNameAndPassword} from "../../../main/domain/domain";
 import {AuthenticationPrototype} from "../../../main/sm/authentication/authentication.sm";
+import {ListenerType} from "../../../lib/conan-sm/stateMachineListeners";
 
 describe('test', () => {
     const APP_CREDENTIALS: AppCredentials = {test: '1'};
@@ -29,7 +30,7 @@ describe('test', () => {
                 onNotAuthenticated: (actions) => actions.doAuthenticating(USERNAME_AND_PASSWORD),
                 onAuthenticated: (actions, params) => params.sm.stop(),
             }])
-            .once(['stop=>test', {
+            .addListener(ListenerType.ONCE, ['stop=>test', {
                 onStop: (actions, params) => {
                     expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events(authenticationFork, 'notAuthenticated'));
                     done();
@@ -67,7 +68,7 @@ describe('test', () => {
 
     it("should queue a request", (done) => {
         new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith(APP_CREDENTIALS)).newBuilder()
-            .once(['onNotAuthenticated=>doAuthenticating', {
+            .addListener(ListenerType.ONCE, ['onNotAuthenticated=>doAuthenticating', {
                 onNotAuthenticated: (actions) => actions.doAuthenticating(USERNAME_AND_PASSWORD)
             }])
             .always(['testMainListener', {

@@ -8,6 +8,7 @@ import {
     AuthenticationSmJoiner,
     AuthenticationSmListener
 } from "../../../main/sm/authentication/authentication.sm";
+import {ListenerType} from "../../../lib/conan-sm/stateMachineListeners";
 
 describe('test', () => {
     const TRANSLATIONS: Translations = defaultTranslations;
@@ -29,7 +30,7 @@ describe('test', () => {
             .always(['testMainListener', {
                 onShowingLogin: (_, params) => params.sm.stop(),
             }])
-            .once(['stop=>test', {
+            .addListener(ListenerType.ONCE, ['stop=>test', {
                 onStop: (_, params) => {
                     expect(params.sm.getEvents()).to.deep.eq([
                             {
@@ -72,7 +73,7 @@ describe('test', () => {
             .always(['testMainListener', {
                 onShowingApp: (_, params) => params.sm.stop(),
             }])
-            .once(['stop=>test', {
+            .addListener(ListenerType.ONCE, ['stop=>test', {
                 onStop: (_, params) => {
                     expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events(initializationFork));
                     done();
@@ -87,7 +88,7 @@ describe('test', () => {
                         ifShowingLogin: (mainActions) => mainActions.doShowApp()
 
                     }
-                }, (authenticationSm) => authenticationSm.once(['notAuthenticated=>authenticated', {
+                }, (authenticationSm) => authenticationSm.addListener(ListenerType.ONCE, ['notAuthenticated=>authenticated', {
                     onNotAuthenticated: (actions) => actions.doAuthenticating({})
                 }]))
             .start('main-test2')

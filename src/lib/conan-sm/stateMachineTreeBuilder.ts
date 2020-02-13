@@ -1,9 +1,9 @@
 import {IBiConsumer, IConstructor, IConsumer, IOptSetKeyValuePairs, WithMetadata} from "../conan-utils/typesHelper";
-import {StateMachine, StateMachineEndpoint} from "./stateMachine";
+import {StateMachine, SmEventsPublisher} from "./stateMachine";
 import {StateMachineData, StateMachineTree} from "./stateMachineTree";
 import {Queue} from "./queue";
 import {Stage} from "./stage";
-import {SmListener, SmListenerDefLike, SmListenerDefLikeParser} from "./stateMachineListeners";
+import {ListenerType, SmListener, SmListenerDefLike, SmListenerDefLikeParser} from "./stateMachineListeners";
 
 
 export type SyncListener<
@@ -27,7 +27,7 @@ export class StateMachineTreeBuilder<
     SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
     SM_ACTIONS
-> implements StateMachineEndpoint <SM_ON_LISTENER, SM_IF_LISTENER> {
+> implements SmEventsPublisher <SM_ON_LISTENER, SM_IF_LISTENER> {
     private readonly smListenerDefLikeParser: SmListenerDefLikeParser = new SmListenerDefLikeParser();
 
     public data: StateMachineData<SM_ON_LISTENER, SM_IF_LISTENER> = {
@@ -51,7 +51,7 @@ export class StateMachineTreeBuilder<
         return this;
     }
 
-    once(listener: SmListenerDefLike<SM_ON_LISTENER>): this {
+    addListener(type: ListenerType, listener: SmListenerDefLike<SM_ON_LISTENER>): this {
         this.data.request.nextReactionsQueue.push(
             this.smListenerDefLikeParser.parse(listener)
         );

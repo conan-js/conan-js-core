@@ -8,23 +8,28 @@ import {ReactionsFactory} from "./reactionsFactory";
 import {Strings} from "../conan-utils/strings";
 import {StateMachineFactory} from "./stateMachineFactory";
 import {Queue} from "./queue";
-import {SmEventCallback, SmListener, SmListenerDefLike, SmListenerDefLikeParser} from "./stateMachineListeners";
+import {
+    ListenerType,
+    SmEventCallback,
+    SmListener,
+    SmListenerDefLike,
+    SmListenerDefLikeParser
+} from "./stateMachineListeners";
 
-export interface StateMachineEndpoint<
+export interface SmEventsPublisher<
     SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
 > {
-    once(listener: SmListenerDefLike<SM_ON_LISTENER>): this;
-
-    nextConditionally(ifStageListeners: SmListenerDefLike<SM_IF_LISTENER>): this;
-
-    requestStage(stage: Stage): this;
+    addListener(type: ListenerType, listener: SmListenerDefLike<SM_ON_LISTENER>): this;
 }
 
 export interface StateMachine<
     SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
-> extends StateMachineEndpoint<SM_ON_LISTENER, SM_IF_LISTENER> {
+> extends SmEventsPublisher<SM_ON_LISTENER, SM_IF_LISTENER> {
+
+    requestStage(stage: Stage): this;
+
     requestTransition(methodName: string, payload: any, stage: Stage): this;
 
     stop(): this;
@@ -101,7 +106,7 @@ export class StateMachineImpl<
         throw new Error('TBI');
     }
 
-    once(listener: SmListenerDefLike<SM_ON_LISTENER>): this {
+    addListener(type: ListenerType, listener: SmListenerDefLike<SM_ON_LISTENER>): this {
         this.assertNotClosed();
         let listenerDef = this.smListenerDefLikeParser.parse(listener);
         StateMachineLogger.log(this.data.request.name, this.eventThread && this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '', EventType.ADDING_REACTION, `adding ASAP reaction: ${listenerDef.metadata}`);
@@ -178,7 +183,7 @@ export class StateMachineImpl<
         StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '-', EventType.REQUEST_ACTION, `=>processing action [${actionToProcess.actionName}]`);
 
         let eventName = Strings.camelCaseWithPrefix('on', actionToProcess.actionName);
-        this.once([
+        this.addListener(ListenerType.ONCE, [
             `${eventName}=>${actionToProcess.into.name}`,
             {
                 [eventName]: () => this.requestStage(
@@ -201,7 +206,7 @@ export class StateMachineImpl<
         if (this.parent && this.parent.joinsInto.indexOf(stageToProcess.stage.name) !== -1) {
             StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '-', EventType.FORK_STOP, `=>joining back ${intoStageName}`);
             this.requestStage({name: 'stop'});
-            this.once([
+            this.addListener(ListenerType.ONCE, [
                 `(continueOnParent=>${stageToProcess.stage.name})`,
                 {
                     onStop: () => {
