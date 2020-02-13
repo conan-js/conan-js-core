@@ -1,4 +1,3 @@
-import {SerializedSmEvent, SmEvent} from "./domain";
 import {StateMachineData} from "./stateMachineTree";
 import {EventThread} from "./eventThread";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
@@ -15,29 +14,8 @@ import {
     SmListenerDefLike,
     SmListenerDefLikeParser
 } from "./stateMachineListeners";
-
-export interface SmEventsPublisher<
-    SM_ON_LISTENER extends SmListener,
-    SM_IF_LISTENER extends SmListener,
-> {
-    addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type?: ListenerType): this;
-}
-
-export interface StateMachine<
-    SM_ON_LISTENER extends SmListener,
-    SM_IF_LISTENER extends SmListener,
-> extends SmEventsPublisher<SM_ON_LISTENER, SM_IF_LISTENER> {
-
-    requestStage(stage: Stage): this;
-
-    requestTransition(methodName: string, payload: any, stage: Stage): this;
-
-    stop(): this;
-
-    getEvents(): SerializedSmEvent [];
-
-    getStageDef(name: string): StageDef<any, any, any>;
-}
+import {SerializedSmEvent, SmEvent, SmTransition} from "./stateMachineEvents";
+import {SmController} from "./_domain";
 
 interface ActionToProcess {
     actionName: string;
@@ -56,7 +34,7 @@ export type ToProcess = StageToProcess | ActionToProcess;
 export interface ParentStateMachineInfo<SM_LISTENER extends SmListener,
     JOIN_LISTENER extends SmListener,
     > {
-    stateMachine: StateMachine<SM_LISTENER, JOIN_LISTENER>,
+    stateMachine: StateMachineImpl<SM_LISTENER, JOIN_LISTENER, any>,
     joinsInto: string[]
 }
 
@@ -64,7 +42,7 @@ export class StateMachineImpl<
     SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
     ACTIONS,
-> implements StateMachine<SM_ON_LISTENER, SM_IF_LISTENER> {
+> implements SmController<SM_ON_LISTENER, SM_IF_LISTENER> {
     readonly eventThread: EventThread = new EventThread();
     private processing: boolean = false;
     private toProcessQueue: ToProcess[] = [];
@@ -89,21 +67,16 @@ export class StateMachineImpl<
         return this;
     }
 
-    requestTransition(methodName: string, payload: any, stage: Stage): this {
+    requestTransition(transition: SmTransition): this {
         this.assertNotClosed();
-        StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '-', EventType.REQUEST_TRANSITION, `=>transition[${methodName}::${stage.name}]`);
+        StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '-', EventType.REQUEST_TRANSITION, `=>transition[${transition.methodName}::${transition.stage.name}]`);
         this.doRequest({
-            actionName: methodName,
-            into: stage,
-            payload: payload,
+            actionName: transition.methodName,
+            into: transition.stage,
+            payload: transition.payload,
             eventType: EventType.ACTION,
         });
         return this;
-    }
-
-    nextConditionally(listener: SmListenerDefLike<SM_IF_LISTENER>): this {
-        this.assertNotClosed();
-        throw new Error('TBI');
     }
 
     addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
@@ -239,7 +212,7 @@ export class StateMachineImpl<
     }
 
     private createProxy(
-        stateMachine: StateMachine<any, any>,
+        stateMachine: SmController<any, any>,
         actionsByStage: IKeyValuePairs<StageDef<string, any, any, any>>,
         stageName: string,
         stagePayload: any,
@@ -270,11 +243,11 @@ export class StateMachineImpl<
 
 
                 StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent.stageName, EventType.PROXY, `(proxy::${key})=>requesting::${nextStage.name}`);
-                stateMachine.requestTransition(
-                    key,
-                    payload,
-                    nextStage,
-                );
+                stateMachine.requestTransition({
+                    methodName: key,
+                    payload: payload,
+                    stage: nextStage,
+                });
             }
         });
         return proxy;

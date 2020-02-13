@@ -1,6 +1,6 @@
 import {WithMetadataArray} from "../conan-utils/typesHelper";
-import {SmEvent} from "./domain";
 import {SmEventCallback, SmListener} from "./stateMachineListeners";
+import {SmEvent} from "./stateMachineEvents";
 
 export class ReactionsFactory<ACTIONS> {
     create(event: SmEvent, actions: ACTIONS, smListeners: WithMetadataArray<SmListener, string>): WithMetadataArray<SmEventCallback<ACTIONS>, string> {

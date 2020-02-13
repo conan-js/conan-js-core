@@ -1,9 +1,9 @@
 import {IBiConsumer, IConstructor, IConsumer, IOptSetKeyValuePairs, WithMetadata} from "../conan-utils/typesHelper";
-import {StateMachine, SmEventsPublisher} from "./stateMachine";
 import {StateMachineData, StateMachineTree} from "./stateMachineTree";
 import {Queue} from "./queue";
 import {Stage} from "./stage";
 import {ListenerType, SmListener, SmListenerDefLike, SmListenerDefLikeParser} from "./stateMachineListeners";
+import {SmEventsPublisher, SmController} from "./_domain";
 
 
 export type SyncListener<
@@ -119,7 +119,7 @@ export class StateMachineTreeBuilder<
         return this;
     }
 
-    start(name: string): StateMachine<SM_ON_LISTENER, SM_IF_LISTENER> {
+    start(name: string): SmController<SM_ON_LISTENER, SM_IF_LISTENER> {
         if (this.started) throw new Error("can't start twice the same state machine");
 
         this.data.request.name = name;

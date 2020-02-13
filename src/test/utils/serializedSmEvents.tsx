@@ -1,5 +1,5 @@
 import {Strings} from "../../lib/conan-utils/strings";
-import {SerializedSmEvent } from "../../lib/conan-sm/domain";
+import {SerializedSmEvent} from "../../lib/conan-sm/stateMachineEvents";
 
 export interface NameAndPayloadDef {
     stageName: string;

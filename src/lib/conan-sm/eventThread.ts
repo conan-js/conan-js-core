@@ -1,6 +1,6 @@
-import {SerializedSmEvent, SmEvent} from "./domain";
 import {Stage} from "./stage";
-import {StateMachine} from "./stateMachine";
+import {SerializedSmEvent, SmEvent} from "./stateMachineEvents";
+import {SmController} from "./_domain";
 
 export class EventThread  {
     public currentEvent: SmEvent;
@@ -18,7 +18,7 @@ export class EventThread  {
     public addActionEvent(
         actionEventName: string,
         payload: any,
-        fork?: StateMachine<any, any>
+        fork?: SmController<any, any>
     ){
         let thisStage: Stage = {
             name: this.currentEvent.stageName,
@@ -36,7 +36,7 @@ export class EventThread  {
         stage: Stage,
         eventName: string,
         payload?: any,
-        fork?: StateMachine<any, any>
+        fork?: SmController<any, any>
     ): Stage {
 
         let currentEvent = {
