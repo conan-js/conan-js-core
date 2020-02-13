@@ -44,12 +44,12 @@ export class StateMachineFactory {
             stageStringDefs.push(description)
         });
 
-        stateMachine.addListener(ListenerType.ONCE, ['stop=>shutdown', {
+        stateMachine.addListener(['stop=>shutdown', {
             onStop: () => {
                 StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.currentEvent.stageName, EventType.STOP, ``, '', []);
                 stateMachine.shutdown();
             }
-        } as any as SM_LISTENER]);
+        } as any as SM_LISTENER], ListenerType.ONCE);
 
 
         StateMachineLogger.log(data.request.name, '', EventType.INIT, `starting SM: `, undefined, [

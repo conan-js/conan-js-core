@@ -43,15 +43,7 @@ export class StateMachineTreeBuilder<
     };
     private started: boolean = false;
 
-    always(listener: SmListenerDefLike<SM_ON_LISTENER>): this {
-        if (this.started) throw new Error("can't modify the behaviour of a state machine once that it has started");
-        this.data.request.stateMachineListeners.push(
-            this.smListenerDefLikeParser.parse(listener)
-        );
-        return this;
-    }
-
-    addListener(type: ListenerType, listener: SmListenerDefLike<SM_ON_LISTENER>): this {
+    addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
         this.data.request.nextReactionsQueue.push(
             this.smListenerDefLikeParser.parse(listener)
         );

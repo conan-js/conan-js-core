@@ -27,10 +27,10 @@ describe('test', () => {
 
     it("should start automatically initializing a state machine", (done) => {
         new MainSm((actions) => actions.doInitialise(TRANSLATIONS)).define()
-            .always(['testMainListener', {
+            .addListener(['testMainListener', {
                 onShowingLogin: (_, params) => params.sm.stop(),
-            }])
-            .addListener(ListenerType.ONCE, ['stop=>test', {
+            }], ListenerType.ALWAYS)
+            .addListener(['stop=>test', {
                 onStop: (_, params) => {
                     expect(params.sm.getEvents()).to.deep.eq([
                             {
@@ -64,22 +64,22 @@ describe('test', () => {
                     );
                     done();
                 }
-            }])
+            }], ListenerType.ONCE)
             .start('main-test1')
     });
 
     it("should join with an authentication sm", (done) => {
         new MainSm((actions) => actions.doInitialise(TRANSLATIONS)).define()
-            .always(['testMainListener', {
+            .addListener(['testMainListener', {
                 onShowingApp: (_, params) => params.sm.stop(),
-            }])
-            .addListener(ListenerType.ONCE, ['stop=>test', {
+            }], ListenerType.ALWAYS)
+            .addListener(['stop=>test', {
                 onStop: (_, params) => {
                     expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events(initializationFork));
                     done();
                 }
 
-            }])
+            }], ListenerType.ONCE)
             .sync <AuthenticationSmListener, AuthenticationSmJoiner>(
                 'sync-authentication',
                 new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith({})).newBuilder(),
@@ -88,9 +88,9 @@ describe('test', () => {
                         ifShowingLogin: (mainActions) => mainActions.doShowApp()
 
                     }
-                }, (authenticationSm) => authenticationSm.addListener(ListenerType.ONCE, ['notAuthenticated=>authenticated', {
+                }, (authenticationSm) => authenticationSm.addListener(['notAuthenticated=>authenticated', {
                     onNotAuthenticated: (actions) => actions.doAuthenticating({})
-                }]))
+                }], ListenerType.ONCE))
             .start('main-test2')
     })
 

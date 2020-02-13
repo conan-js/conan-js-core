@@ -5,7 +5,7 @@ import {Objects} from "../conan-utils/objects";
 import {Queue} from "./queue";
 import {StateMachineFactory} from "./stateMachineFactory";
 import {Stage, StageDef} from "./stage";
-import {SmEventCallback, SmListener, SmListenerDef, SmListenerDefList} from "./stateMachineListeners";
+import {ListenerType, SmEventCallback, SmListener, SmListenerDef, SmListenerDefList} from "./stateMachineListeners";
 
 export interface Synchronisation {
     syncDef: SyncStateMachineDef<any, any, any>;
@@ -24,11 +24,11 @@ export interface StateMachineStartRequest
 > {
     name: string,
     syncStateMachineDefs: SyncStateMachineDef<SM_IF_LISTENER, any, any> [],
-    stateMachineListeners: SmListenerDefList<SM_ON_LISTENER>
     stageDefs: StageDef<string, any, any, any> []
+    nextStagesQueue: Queue<Stage>
+    stateMachineListeners: SmListenerDefList<SM_ON_LISTENER>
     nextReactionsQueue: Queue<SmListenerDef<SM_ON_LISTENER>>
     nextConditionalReactionsQueue: Queue<SmListenerDef<SM_IF_LISTENER>>
-    nextStagesQueue: Queue<Stage>
 }
 
 
@@ -106,7 +106,7 @@ export class StateMachineTree<
                 }
             )
         );
-        sync.syncDef.stateMachineBuilder.always([`${sync.syncDef.syncName}`, syncListener]);
+        sync.syncDef.stateMachineBuilder.addListener([`${sync.syncDef.syncName}`, syncListener], ListenerType.ALWAYS);
     }
 
     create(stateMachineData: StateMachineData<any, any>, syncDef: SyncStateMachineDef<any, any, any>): StateMachine<SM_ON_LISTENER, SM_IF_LISTENER> {

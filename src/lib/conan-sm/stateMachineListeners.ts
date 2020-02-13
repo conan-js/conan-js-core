@@ -76,5 +76,5 @@ export class SmListenerDefLikeParser {
 
 export enum ListenerType {
     ONCE = 'ONCE',
-    CONDITIONALLY_NEXT = 'CONDITIONALLY_NEXT',
+    ALWAYS = 'ALWAYS',
 }

@@ -3,7 +3,6 @@ import {Authenticators} from "../../utils/authenticators";
 import {SerializedSmEvents} from "../../utils/serializedSmEvents";
 import {AppCredentials, UserNameAndPassword} from "../../../main/domain/domain";
 import {AuthenticationPrototype} from "../../../main/sm/authentication/authentication.sm";
-import {ListenerType} from "../../../lib/conan-sm/stateMachineListeners";
 
 describe('test', () => {
     const APP_CREDENTIALS: AppCredentials = {test: '1'};
@@ -26,11 +25,11 @@ describe('test', () => {
 
     it("should listen to stages and stop gracefully", (done) => {
         new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith(APP_CREDENTIALS)).newBuilder()
-            .always(['notAuth=>Authenticating, authenticated=>stop', {
+            .addListener(['notAuth=>Authenticating, authenticated=>stop', {
                 onNotAuthenticated: (actions) => actions.doAuthenticating(USERNAME_AND_PASSWORD),
                 onAuthenticated: (actions, params) => params.sm.stop(),
             }])
-            .addListener(ListenerType.ONCE, ['stop=>test', {
+            .addListener(['stop=>test', {
                 onStop: (actions, params) => {
                     expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events(authenticationFork, 'notAuthenticated'));
                     done();
@@ -42,12 +41,12 @@ describe('test', () => {
 
     it("should listen to stages and actions and stop gracefully", (done) => {
         new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith(APP_CREDENTIALS)).newBuilder()
-            .always(['notAuthenticated=>authenticating, authenticated=>doTimeout, doTimeout=>stop', {
+            .addListener(['notAuthenticated=>authenticating, authenticated=>doTimeout, doTimeout=>stop', {
                 onNotAuthenticated: (actions) => actions.doAuthenticating(USERNAME_AND_PASSWORD),
                 onAuthenticated: (actions, params) => setTimeout(() => actions.doTimeout()),
-                onDoTimeout: (actions, params)=> params.sm.stop()
+                onDoTimeout: (actions, params) => params.sm.stop()
             }])
-            .always(['stop => test', {
+            .addListener(['stop => test', {
                 onStop: (_, params) => {
                     {
                         expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events([
@@ -68,19 +67,19 @@ describe('test', () => {
 
     it("should queue a request", (done) => {
         new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith(APP_CREDENTIALS)).newBuilder()
-            .addListener(ListenerType.ONCE, ['onNotAuthenticated=>doAuthenticating', {
+            .addListener(['onNotAuthenticated=>doAuthenticating', {
                 onNotAuthenticated: (actions) => actions.doAuthenticating(USERNAME_AND_PASSWORD)
             }])
-            .always(['testMainListener', {
+            .addListener(['testMainListener', {
                 onAuthenticated: (actions, params) => params.sm.stop()
             }])
-            .always(['stop=>test', {
+            .addListener(['stop=>test', {
                 onStop: (_, params) => {
-                        expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events([
-                            ...authenticationFork,
-                        ], 'notAuthenticated'));
-                        done();
-                    }
+                    expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events([
+                        ...authenticationFork,
+                    ], 'notAuthenticated'));
+                    done();
+                }
 
             }])
             .start('auth-test4')
@@ -89,28 +88,28 @@ describe('test', () => {
     it("should call many times into a listener", (done) => {
         let calls: string [] = [];
         new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith(APP_CREDENTIALS)).newBuilder()
-            .always(['testMainListener', {
+            .addListener(['testMainListener', {
                 onNotAuthenticated: (actions) => {
-                        actions.doAuthenticating(USERNAME_AND_PASSWORD);
-                        calls.push('first not authenticated');
+                    actions.doAuthenticating(USERNAME_AND_PASSWORD);
+                    calls.push('first not authenticated');
                 },
                 onAuthenticated: (_, params) => {
-                        calls.push('authenticated');
-                        params.sm.stop();
+                    calls.push('authenticated');
+                    params.sm.stop();
                 }
             }])
-            .always(['testMainListener - dupe', {
+            .addListener(['testMainListener - dupe', {
                 onNotAuthenticated: () => calls.push('second not authenticated'),
             }])
-            .always(['stop=>test', {
+            .addListener(['stop=>test', {
                 onStop: () => {
-                        expect(calls).to.deep.eq([
-                            'first not authenticated',
-                            'second not authenticated',
-                            'authenticated',
-                        ]);
-                        done();
-                    }
+                    expect(calls).to.deep.eq([
+                        'first not authenticated',
+                        'second not authenticated',
+                        'authenticated',
+                    ]);
+                    done();
+                }
             }])
             .start('auth-test5');
     });

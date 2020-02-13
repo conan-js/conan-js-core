@@ -20,7 +20,7 @@ export interface SmEventsPublisher<
     SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
 > {
-    addListener(type: ListenerType, listener: SmListenerDefLike<SM_ON_LISTENER>): this;
+    addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type?: ListenerType): this;
 }
 
 export interface StateMachine<
@@ -106,7 +106,7 @@ export class StateMachineImpl<
         throw new Error('TBI');
     }
 
-    addListener(type: ListenerType, listener: SmListenerDefLike<SM_ON_LISTENER>): this {
+    addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
         this.assertNotClosed();
         let listenerDef = this.smListenerDefLikeParser.parse(listener);
         StateMachineLogger.log(this.data.request.name, this.eventThread && this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '', EventType.ADDING_REACTION, `adding ASAP reaction: ${listenerDef.metadata}`);
@@ -183,14 +183,14 @@ export class StateMachineImpl<
         StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '-', EventType.REQUEST_ACTION, `=>processing action [${actionToProcess.actionName}]`);
 
         let eventName = Strings.camelCaseWithPrefix('on', actionToProcess.actionName);
-        this.addListener(ListenerType.ONCE, [
+        this.addListener([
             `${eventName}=>${actionToProcess.into.name}`,
             {
                 [eventName]: () => this.requestStage(
                     actionToProcess.into
                 )
             } as any as SM_ON_LISTENER
-        ]);
+        ], ListenerType.ONCE);
 
         this.eventThread.addActionEvent(
             eventName,
@@ -206,14 +206,14 @@ export class StateMachineImpl<
         if (this.parent && this.parent.joinsInto.indexOf(stageToProcess.stage.name) !== -1) {
             StateMachineLogger.log(this.data.request.name, this.eventThread.currentEvent ? this.eventThread.currentEvent.stageName : '-', EventType.FORK_STOP, `=>joining back ${intoStageName}`);
             this.requestStage({name: 'stop'});
-            this.addListener(ListenerType.ONCE, [
+            this.addListener([
                 `(continueOnParent=>${stageToProcess.stage.name})`,
                 {
                     onStop: () => {
                         this.parent.stateMachine.requestStage(stageToProcess.stage);
                     }
                 } as any as SM_ON_LISTENER
-            ]);
+            ], ListenerType.ONCE);
             return
         }
 
