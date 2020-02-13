@@ -4,22 +4,21 @@ import {StageDef} from "./stage";
 
 export interface SmEventsPublisher<
     SM_ON_LISTENER extends SmListener,
-    SM_IF_LISTENER extends SmListener,
+    SM_INTERCEPTOR extends SmListener,
 > {
     addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type?: ListenerType): this;
+
+    addInterceptor (interceptor: SmListenerDefLike<SM_INTERCEPTOR>): this;
 }
 
-export interface SmRequestsQueue<
-    SM_ON_LISTENER extends SmListener,
-    SM_IF_LISTENER extends SmListener,
-> {
+export interface SmRequestsQueue {
     requestTransition(transition: SmTransition): this;
 }
 
 export interface SmController<
     SM_ON_LISTENER extends SmListener,
-    SM_IF_LISTENER extends SmListener,
-> extends SmEventsPublisher<SM_ON_LISTENER, SM_IF_LISTENER>, SmRequestsQueue<SM_ON_LISTENER, SM_IF_LISTENER> {
+    SM_INTERCEPTOR extends SmListener,
+> extends SmEventsPublisher<SM_ON_LISTENER, SM_INTERCEPTOR>, SmRequestsQueue {
 
     stop(): this;
 

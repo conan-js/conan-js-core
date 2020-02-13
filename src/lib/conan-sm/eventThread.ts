@@ -1,35 +1,38 @@
 import {Stage} from "./stage";
-import {SerializedSmEvent, SmEvent} from "./stateMachineEvents";
+import {
+    ifTransitionTypeIs,
+    SerializedSmEvent,
+    SmEventType, SmTransition,
+    StageSmEvent,
+    TransitionSmEvent
+} from "./stateMachineEvents";
 import {SmController} from "./_domain";
+import {Strings} from "../conan-utils/strings";
 
 export class EventThread  {
-    public currentEvent: SmEvent;
-    private readonly events: SmEvent[] = [];
+    public currentStageEvent: StageSmEvent;
+    public currentEvent: TransitionSmEvent | StageSmEvent;
+    private readonly events: (TransitionSmEvent | StageSmEvent)[] = [];
 
     serialize(): SerializedSmEvent[] {
         return this.events.map(event=> ({
-            stageName: event.stageName,
+            stageName: ifTransitionTypeIs (event, event=> event.data.name, event=> event.data.into.name),
             eventName: event.eventName,
-            ...(event.payload ? {payload:event.payload}: undefined),
+            ...(ifTransitionTypeIs (event, event=> undefined, event=> event.data.payload)),
             ...(event.fork ? {fork:event.fork.getEvents()}: undefined),
         }));
     }
 
     public addActionEvent(
-        actionEventName: string,
-        payload: any,
+        transitionEvent: SmTransition,
         fork?: SmController<any, any>
     ){
-        let thisStage: Stage = {
-            name: this.currentEvent.stageName,
-            requirements: payload
-        };
-        this.addStageEvent(
-            thisStage,
-            actionEventName,
-            payload,
-            fork
-        )
+        this.addEvent({
+            eventName: transitionEvent.path,
+            type: SmEventType.TRANSITION,
+            data: transitionEvent,
+            fork: fork
+        });
     }
 
     public addStageEvent(
@@ -37,16 +40,24 @@ export class EventThread  {
         eventName: string,
         payload?: any,
         fork?: SmController<any, any>
-    ): Stage {
-
-        let currentEvent = {
-            stageName: stage.name,
-            eventName: eventName,
-            payload: payload ? payload : stage.requirements,
-            ...fork ? {fork} : undefined
+    ): void {
+        let event: StageSmEvent = {
+            eventName: Strings.camelCaseWithPrefix('on', stage.name),
+            type: SmEventType.STAGE,
+            data: stage,
+            fork: fork,
         };
-        this.currentEvent = currentEvent;
-        this.events.push(currentEvent);
-        return stage;
+        this.addEvent(event);
+        this.currentStageEvent =event;
+    }
+
+    getCurrentStageName() {
+        if (this.currentStageEvent == null) return '-';
+        return this.currentStageEvent.data.name;
+    }
+
+    private addEvent(event: TransitionSmEvent | StageSmEvent) {
+        this.events.push(event);
+        this.currentEvent = event;
     }
 }

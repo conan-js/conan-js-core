@@ -36,6 +36,7 @@ export class StateMachineTreeBuilder<
             nextConditionalReactionsQueue: new Queue<WithMetadata<SM_IF_LISTENER, string>>(),
             nextStagesQueue: new Queue<Stage>(),
             stateMachineListeners: [],
+            stateMachineInterceptors: [],
             name: undefined,
             syncStateMachineDefs: [],
             stageDefs: [],
@@ -48,6 +49,10 @@ export class StateMachineTreeBuilder<
             this.smListenerDefLikeParser.parse(listener)
         );
         return this;
+    }
+
+    addInterceptor(interceptor: [string, SM_IF_LISTENER] | SM_IF_LISTENER): this {
+        throw new Error ('TBI');
     }
 
     withStage<
@@ -64,6 +69,8 @@ export class StateMachineTreeBuilder<
         });
         return this;
     }
+
+
 
     withDeferredStage<
         NAME extends string,
@@ -85,8 +92,6 @@ export class StateMachineTreeBuilder<
         });
         return this;
     }
-
-
 
     requestStage(stage: Stage): this {
         this.data.request.nextStagesQueue.push(stage);

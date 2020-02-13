@@ -1,17 +1,18 @@
-import {ParentStateMachineInfo, StateMachineImpl} from "./stateMachine";
+import {ParentStateMachineInfo, StateMachine} from "./stateMachine";
 import {IKeyValuePairs} from "../conan-utils/typesHelper";
 import {StateMachineData} from "./stateMachineTree";
 import {StageDef} from "./stage";
 import {Objects} from "../conan-utils/objects";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {ListenerType, SmListener} from "./stateMachineListeners";
+import {Strings} from "../conan-utils/strings";
 
 export class StateMachineFactory {
     static create<
         SM_ON_LISTENER extends SmListener,
         SM_IF_LISTENER extends SmListener,
         ACTIONS
-    >(data: StateMachineData<SM_ON_LISTENER, SM_IF_LISTENER>): StateMachineImpl<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS> {
+    >(data: StateMachineData<SM_ON_LISTENER, SM_IF_LISTENER>): StateMachine<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS> {
         return this.doCreate(data);
     }
 
@@ -29,9 +30,9 @@ export class StateMachineFactory {
     >(
         data: StateMachineData<SM_LISTENER, JOIN_LISTENER>,
         parent?: ParentStateMachineInfo<any, any>
-    ): StateMachineImpl<SM_LISTENER, JOIN_LISTENER, ACTIONS> {
+    ): StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> {
         let actionsByStage: IKeyValuePairs<StageDef<string, any, any, any>> = Objects.keyfy(data.request.stageDefs, (it) => it.name);
-        let stateMachine: StateMachineImpl<SM_LISTENER, JOIN_LISTENER, ACTIONS> = new StateMachineImpl(data, actionsByStage, parent);
+        let stateMachine: StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> = new StateMachine(data, actionsByStage, parent);
 
         let initialStages = data.request.nextStagesQueue.read();
         let stageStringDefs: string [] = [];
@@ -46,7 +47,7 @@ export class StateMachineFactory {
 
         stateMachine.addListener(['stop=>shutdown', {
             onStop: () => {
-                StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.currentEvent.stageName, EventType.STOP, ``, '', []);
+                StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.getCurrentStageName(), EventType.STOP, ``, '', []);
                 stateMachine.shutdown();
             }
         } as any as SM_LISTENER], ListenerType.ONCE);
@@ -60,7 +61,10 @@ export class StateMachineFactory {
         ]);
 
         initialStages.forEach(it => {
-            stateMachine.requestStage(it);
+            stateMachine.requestTransition({
+                path: `${Strings.camelCaseWithPrefix('doInit', it.name)}`,
+                into: it
+            });
 
         });
 

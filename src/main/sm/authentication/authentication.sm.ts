@@ -100,6 +100,13 @@ export class AuthenticationPrototype {
                 AuthenticatedActionsLogic,
             )
             .requestStage({name: 'start'})
-            .requestStage({name: 'notAuthenticated'})
+            .addListener([`onStart=>notAuthenticated`, {
+                onStart: (_, params)=> params.sm.requestTransition({
+                    into: {
+                        name: 'notAuthenticated'
+                    },
+                    path: 'defaultNotAuthenticated'
+                })
+            }])
     }
 }

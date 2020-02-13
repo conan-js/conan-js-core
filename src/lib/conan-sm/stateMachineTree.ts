@@ -27,6 +27,7 @@ export interface StateMachineStartRequest
     stageDefs: StageDef<string, any, any, any> []
     nextStagesQueue: Queue<Stage>
     stateMachineListeners: SmListenerDefList<SM_ON_LISTENER>
+    stateMachineInterceptors: SmListenerDefList<SM_IF_LISTENER>
     nextReactionsQueue: Queue<SmListenerDef<SM_ON_LISTENER>>
     nextConditionalReactionsQueue: Queue<SmListenerDef<SM_IF_LISTENER>>
 }
