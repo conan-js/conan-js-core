@@ -32,9 +32,6 @@ export class StateMachineTreeBuilder<
 
     public data: StateMachineData<SM_ON_LISTENER, SM_IF_LISTENER> = {
         request: {
-            nextReactionsQueue: new Queue<WithMetadata<SM_ON_LISTENER, string>>(),
-            nextConditionalReactionsQueue: new Queue<WithMetadata<SM_IF_LISTENER, string>>(),
-            nextStagesQueue: new Queue<Stage>(),
             stateMachineListeners: [],
             stateMachineInterceptors: [],
             name: undefined,
@@ -45,7 +42,7 @@ export class StateMachineTreeBuilder<
     private started: boolean = false;
 
     addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
-        this.data.request.nextReactionsQueue.push(
+        this.data.request.stateMachineListeners.push(
             this.smListenerDefLikeParser.parse(listener)
         );
         return this;
@@ -93,16 +90,9 @@ export class StateMachineTreeBuilder<
         return this;
     }
 
-    requestStage(stage: Stage): this {
-        this.data.request.nextStagesQueue.push(stage);
-        return this;
-    }
 
     nextConditionally(ifStageListeners: SmListenerDefLike<SM_IF_LISTENER>): this {
-        this.data.request.nextConditionalReactionsQueue.push(
-            this.smListenerDefLikeParser.parse(ifStageListeners)
-        );
-        return this;
+        throw new Error('TBI')
     }
 
     sync<

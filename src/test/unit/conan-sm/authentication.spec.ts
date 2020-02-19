@@ -25,11 +25,11 @@ describe('test', () => {
 
     it("should listen to stages and stop gracefully", (done) => {
         new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith(APP_CREDENTIALS)).newBuilder()
-            .addListener(['notAuth=>Authenticating, authenticated=>stop', {
+            .addListener(['::notAuth=>doAuth,::auth=>stop', {
                 onNotAuthenticated: (actions) => actions.doAuthenticating(USERNAME_AND_PASSWORD),
                 onAuthenticated: (actions, params) => params.sm.stop(),
             }])
-            .addListener(['stop=>test', {
+            .addListener(['::stop->test', {
                 onStop: (actions, params) => {
                     expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events(authenticationFork, 'notAuthenticated'));
                     done();

@@ -57,8 +57,13 @@ export class MainSm {
                 ShowingLoginActions,
                 ShowingLoginStage
             >('showingLogin', ShowingLoginActionsLogic)
-            .requestStage({name: 'start'})
-            .requestStage({name: 'initializing'})
-
+            .addListener([`onStart=>initializing`, {
+                onStart: (_, params)=> params.sm.requestTransition({
+                    into: {
+                        name: 'initializing'
+                    },
+                    path: 'defaultInitializing'
+                })
+            }])
     }
 }

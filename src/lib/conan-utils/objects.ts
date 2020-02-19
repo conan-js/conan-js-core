@@ -32,4 +32,20 @@ export class Objects {
             };
         }, {} as IKeyValuePairs<ARRAY_TYPE>);
     }
+
+    public static navigate<
+        START,
+    > (from: START, iterator: IFunction<START, START | null>): START[] {
+        let result : START[] = [];
+        let next = from;
+        while (next) {
+            next = iterator(next);
+            if (next !== null) {
+                result.push(next);
+            }
+        }
+
+
+        return result;
+    }
 }
