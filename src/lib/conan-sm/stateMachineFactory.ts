@@ -4,7 +4,7 @@ import {StateMachineData} from "./stateMachineTree";
 import {StageDef} from "./stage";
 import {Objects} from "../conan-utils/objects";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
-import {ListenerType, SmListener} from "./stateMachineListeners";
+import {ListenerType, SmListener, SmListenerDefLikeParser} from "./stateMachineListeners";
 
 export class StateMachineFactory {
     static create<SM_ON_LISTENER extends SmListener,
@@ -27,6 +27,32 @@ export class StateMachineFactory {
         parent?: ParentStateMachineInfo<any, any>
     ): StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> {
         let actionsByStage: IKeyValuePairs<StageDef<string, any, any, any>> = Objects.keyfy(data.request.stageDefs, (it) => it.name);
+
+        data.request.stateMachineListeners.push(
+            new SmListenerDefLikeParser().parse([
+                '::init=>doStart', {
+                    onInit: ()=>{
+                        stateMachine.requestTransition({
+                            path: `doStart`,
+                            into: {
+                                name: 'start'
+                            }
+                        })
+                    }
+                } as any as SM_LISTENER
+            ])
+        );
+
+        data.request.stateMachineListeners.push(
+            new SmListenerDefLikeParser().parse(['::stop->shutdown', {
+                onStop: () => {
+                    StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.getCurrentStageName(), EventType.STOP, `-`, '', []);
+                    stateMachine.shutdown();
+                }
+            } as any as SM_LISTENER])
+        );
+
+
         let stateMachine: StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> = new StateMachine(data, actionsByStage, parent);
 
         let stageStringDefs: string [] = [];
@@ -48,24 +74,6 @@ export class StateMachineFactory {
             [`stage defs`, `${stageStringDefs.join(', ')}`],
         ]);
 
-
-        stateMachine.addListener(['::init=>doStart', {
-            onInit: ()=>{
-                stateMachine.requestTransition({
-                    path: `doStart`,
-                    into: {
-                        name: 'start'
-                    }
-                })
-            }
-        } as any as SM_LISTENER], ListenerType.ONCE);
-
-        stateMachine.addListener(['::stop=>doShutdown', {
-            onStop: () => {
-                StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.getCurrentStageName(), EventType.STOP, `-`, '', []);
-                stateMachine.shutdown();
-            }
-        } as any as SM_LISTENER], ListenerType.ONCE);
 
         stateMachine.requestStage ({
             description: '::init',
