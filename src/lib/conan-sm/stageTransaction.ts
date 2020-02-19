@@ -97,10 +97,20 @@ export class StateMachineTransactions {
     retrieveCurrentStageTransaction(): StageTransaction {
         return this._currentTransaction;
     }
+
+    getCurrentTransactionId() {
+        if (!this._currentTransaction) return '-';
+
+        return this._currentTransaction._currentTransition ?
+            this._currentTransaction.id + '=>' + this._currentTransaction._currentTransition.path :
+            this._currentTransaction.id;
+    }
 }
 
 
 export class StageTransaction {
+    public _currentTransition: SmTransition;
+
     constructor(
         private readonly stage: Stage,
         private readonly stateMachine: StateMachine<any, any, any>,
@@ -111,6 +121,7 @@ export class StageTransaction {
     }
 
     createTransitionQueue(transition: SmTransition): SmRequestQueue {
+        this._currentTransition = transition;
         this.stateMachine.logTransitionQueueCreated (this, transition);
         return SmRequestQueueFactory.createTransitionQueue(this.stateMachine, transition);
     }

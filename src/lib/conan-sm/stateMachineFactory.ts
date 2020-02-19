@@ -40,7 +40,7 @@ export class StateMachineFactory {
         });
 
 
-        StateMachineLogger.log(data.request.name, '', EventType.INIT, `starting SM `, [
+        StateMachineLogger.log(data.request.name, '', EventType.INIT, '', 'starting SM', [
             [`listeners`, `${data.request.stateMachineListeners.map(it=>it.metadata).map(it => {
                 return it.split(',').map(it=>`(${it})`).join(',');
             })}`],
@@ -62,7 +62,7 @@ export class StateMachineFactory {
 
         stateMachine.addListener(['::stop=>doShutdown', {
             onStop: () => {
-                StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.getCurrentStageName(), EventType.STOP, ``, []);
+                StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.getCurrentStageName(), EventType.STOP, `-`, '', []);
                 stateMachine.shutdown();
             }
         } as any as SM_LISTENER], ListenerType.ONCE);
