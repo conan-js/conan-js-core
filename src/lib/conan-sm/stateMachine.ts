@@ -148,7 +148,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
                             path: 'doForkJoin',
                             into: stageToProcess.stage
                         });
-                        this.parent.stateMachine.stateMachineTransactions.retrieveCurrentStageTransaction().close();
+                        this.parent.stateMachine.stateMachineTransactions.closeCurrentTransaction();
                     }
                 } as any as SM_ON_LISTENER
             ], ListenerType.ONCE);
@@ -158,7 +158,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
                 },
                 path: 'doStop'
             });
-            this.stateMachineTransactions.retrieveCurrentStageTransaction().close();
+            this.stateMachineTransactions.closeCurrentTransaction();
             return
         }
 
@@ -227,7 +227,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
 
         // StateMachineLogger.log(this.data.request.name, currentStageName, this.currentTransitionId, EventType.REACTING, `pending reactions: [${reactions.length}]`);
         reactions.forEach((it, i) => {
-            StateMachineLogger.log(this.data.request.name, currentStageName, EventType.REACTION_START, this.stateMachineTransactions.getCurrentTransactionId(), `(${it.metadata}): reaction ${i + 1} of ${reactions.length}`);
+            StateMachineLogger.log(this.data.request.name, currentStageName, EventType.REACTION_START, this.stateMachineTransactions.getCurrentTransactionId(), `[${event.eventName}](${it.metadata}): reaction ${i + 1} of ${reactions.length}`);
             it.value(actions, {sm: this});
         });
     }

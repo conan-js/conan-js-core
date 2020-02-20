@@ -16,7 +16,7 @@ export interface AuthenticatedActionListener extends SmListener{
     onDoLogout?: SmEventCallback <AuthenticatedActions>
 }
 
-export interface AuthenticatedListener extends AuthenticatedActionListener {
+export interface AuthenticatedListener extends SmListener {
     onAuthenticated?: SmEventCallback <AuthenticatedActions>
 }
 
@@ -24,4 +24,4 @@ export interface AuthenticatedJoiner extends SmListener {
     ifAuthenticated?: SmEventCallback <AuthenticatedActions>
 }
 
-export interface AuthenticatedStage extends Stage <AuthenticatedStageName, AuthenticatedActions, AppCredentials>{}
+export interface AuthenticatedStage extends Stage <AuthenticatedStageName, AppCredentials>{}

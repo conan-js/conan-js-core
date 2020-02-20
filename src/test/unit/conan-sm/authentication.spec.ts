@@ -40,11 +40,18 @@ describe('test', () => {
     });
 
     it("should listen to stages and actions and stop gracefully", (done) => {
+        let attempts: number = 0;
         new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith(APP_CREDENTIALS)).newBuilder()
-            .addListener(['notAuthenticated=>authenticating, authenticated=>doTimeout, doTimeout=>stop', {
-                onNotAuthenticated: (actions) => actions.doAuthenticating(USERNAME_AND_PASSWORD),
+            .addListener(['::notAuthenticated=>[authenticating|stop], ::authenticated->[doTimeout]', {
+                onNotAuthenticated: (actions, params) => {
+                    if (attempts === 1) {
+                        params.sm.stop();
+                        return;
+                    }
+                    attempts++;
+                    actions.doAuthenticating(USERNAME_AND_PASSWORD);
+                },
                 onAuthenticated: (actions, params) => setTimeout(() => actions.doTimeout()),
-                onDoTimeout: (actions, params) => params.sm.stop()
             }])
             .addListener(['stop => test', {
                 onStop: (_, params) => {

@@ -16,8 +16,8 @@ export interface AuthenticatingActionsListener extends SmListener{
     onDoUnauthorised ?: SmEventCallback <AuthenticatingActions>;
 }
 
-export interface AuthenticatingListener extends AuthenticatingActionsListener{
+export interface AuthenticatingListener extends SmListener{
     onAuthenticating?: SmEventCallback <AuthenticatingActions>;
 }
 
-export interface AuthenticatingStage extends Stage <AuthenticatingStageName, AuthenticatingActions, UserNameAndPassword> {}
+export interface AuthenticatingStage extends Stage <AuthenticatingStageName, UserNameAndPassword> {}

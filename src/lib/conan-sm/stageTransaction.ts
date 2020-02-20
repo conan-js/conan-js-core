@@ -26,7 +26,7 @@ export class StateMachineTransactions {
     }
 
     isDetachedFromStage(): boolean {
-        return this._currentTransaction._closed;
+        return this._currentTransaction == null || this._currentTransaction._closed;
     }
 
     private refreshTransaction(stageToProcess: StageToProcess, actionsProcessor: (toConsume: SmQueueResult) => void) {
@@ -46,6 +46,20 @@ export class StateMachineTransactions {
         return this._currentTransaction._currentTransition ?
             this._currentTransaction.id + '=>' + this._currentTransaction._currentTransition.path :
             this._currentTransaction.id;
+    }
+
+    closeCurrentTransaction (): void{
+        if (!this._currentTransaction) {
+            throw new Error(`can't close the current transaction and there is no current transaction at the moment`)
+        }
+
+        this._currentTransaction.close();
+        if (this._currentTransaction.parent) {
+            this._currentTransaction = this._currentTransaction.parent;
+        } else {
+            this._currentTransaction = null;
+            this._currentRootTransaction = null;
+        }
     }
 }
 
@@ -72,7 +86,7 @@ export class StageTransaction {
         return this.smRequestQueue;
     }
 
-    close() {
+    close (): void{
         this._closed = true;
         this.actionsProcessor(this.smRequestQueue.result);
     }

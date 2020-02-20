@@ -13,7 +13,7 @@ export interface NotAuthenticatedActionsListener extends SmListener{
     onDoAuthenticating?: SmEventCallback <NotAuthenticatedActions>
 }
 
-export interface NotAuthenticatedListener extends NotAuthenticatedActionsListener{
+export interface NotAuthenticatedListener extends SmListener{
     onNotAuthenticated?: SmEventCallback <NotAuthenticatedActions>;
 }
 
