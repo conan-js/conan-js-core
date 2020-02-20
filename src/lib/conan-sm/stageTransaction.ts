@@ -14,23 +14,30 @@ export class StateMachineTransactions {
 
 
     createStageTransaction(stageToProcess: StageToProcess, stageProcessor: IConsumer<StageToProcess>, actionsProcessor: IConsumer<SmQueueResult>): StageTransaction {
-        let stage = stageToProcess.stage;
-        let thisId = `/::${stage.name}`;
-        if (this._currentRootTransaction == null) {
-            this._currentRootTransaction = new StageTransaction(stage, actionsProcessor, thisId);
-            this._currentTransaction = this._currentRootTransaction;
-        } else {
-            this._currentTransaction = new StageTransaction(stage, actionsProcessor, this._currentTransaction.id + thisId);
-        }
+        this.refreshTransaction(stageToProcess, actionsProcessor);
         this.stateMachine.logTransactionCreated (this._currentTransaction);
         stageProcessor(stageToProcess);
         return this._currentTransaction;
     }
 
 
-
     retrieveCurrentStageTransaction(): StageTransaction {
         return this._currentTransaction;
+    }
+
+    isDetachedFromStage(): boolean {
+        return this._currentTransaction._closed;
+    }
+
+    private refreshTransaction(stageToProcess: StageToProcess, actionsProcessor: (toConsume: SmQueueResult) => void) {
+        let stage = stageToProcess.stage;
+        let thisId = `/::${stage.name}`;
+        if (this._currentRootTransaction == null) {
+            this._currentRootTransaction = new StageTransaction(stage, actionsProcessor, thisId, new SmRequestQueue());
+            this._currentTransaction = this._currentRootTransaction;
+        } else {
+            this._currentTransaction = new StageTransaction(stage, actionsProcessor, this._currentTransaction.id + thisId, new SmRequestQueue());
+        }
     }
 
     getCurrentTransactionId() {
@@ -45,24 +52,29 @@ export class StateMachineTransactions {
 
 export class StageTransaction {
     public _currentTransition: SmTransition;
-    private _smRequestQueue = new SmRequestQueue();
+    _closed: boolean;
 
     constructor(
         private readonly stage: Stage,
         private readonly actionsProcessor: IConsumer<SmQueueResult>,
         public readonly id: string,
+        private readonly smRequestQueue: SmRequestQueue,
         public readonly parent?: StageTransaction
     ) {
     }
 
 
     retrieveTransitionQueue(currentTransition: SmTransition): SmRequestQueue {
+        if (this._closed) {
+            throw new Error(`can't retrieve transaction queue when the transaction is closed`);
+        }
         this._currentTransition = currentTransition;
-        return this._smRequestQueue;
+        return this.smRequestQueue;
     }
 
     close() {
-        this.actionsProcessor(this._smRequestQueue.result);
+        this._closed = true;
+        this.actionsProcessor(this.smRequestQueue.result);
     }
 }
 
@@ -75,7 +87,6 @@ export interface SmQueueResult {
 export class SmRequestQueue {
     private toProcessQueue: ToProcess[] = [];
     private processing: boolean = false;
-    private onCompletedCalled: boolean = false;
     result: SmQueueResult = {
         wasCancelled: false,
         cancelled: [],

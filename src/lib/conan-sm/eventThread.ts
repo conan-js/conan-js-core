@@ -51,7 +51,7 @@ export class EventThread  {
         this.currentStageEvent =event;
     }
 
-    getCurrentStageName() {
+    getCurrentStageName(): string {
         if (this.currentStageEvent == null) return '-';
         return this.currentStageEvent.data.name;
     }
@@ -59,5 +59,10 @@ export class EventThread  {
     private addEvent(event: TransitionSmEvent | StageSmEvent) {
         this.events.push(event);
         this.currentEvent = event;
+    }
+
+    getCurrentStage(): Stage {
+        if (this.currentStageEvent == null) return undefined;
+        return this.currentStageEvent.data;
     }
 }
