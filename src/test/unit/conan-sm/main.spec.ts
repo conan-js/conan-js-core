@@ -86,7 +86,6 @@ describe('test', () => {
                 {
                     onAuthenticated: {
                         ifShowingLogin: (mainActions) => mainActions.doShowApp()
-
                     }
                 }, (authenticationSm) => authenticationSm.addListener(['notAuthenticated=>authenticated', {
                     onNotAuthenticated: (actions) => actions.doAuthenticating({})
