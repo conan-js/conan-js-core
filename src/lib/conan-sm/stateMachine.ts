@@ -16,7 +16,7 @@ import {
 } from "./stateMachineListeners";
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
 import {SmController} from "./_domain";
-import {StateMachineTransactions} from "./smTransaction";
+import {SmTransactionRequest, StateMachineTransactions} from "./smTransaction";
 
 export enum ToProcessType {
     ACTION = 'ACTION',
@@ -98,6 +98,73 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
         this.stateMachineTransactions.createStageTransaction(this.createSmStageTransactionRequest(stageToProcess)).run();
     }
 
+    private createSmStageTransactionRequest(stageToProcess: StageToProcess): SmTransactionRequest {
+
+
+        let intoStageName = stageToProcess.stage.name;
+        let stageDef = this.stageDefsByKey [intoStageName];
+        let isDeferredStage: boolean = !!(stageDef && stageDef.deferredInfo);
+        let eventName = Strings.camelCaseWithPrefix('on', stageToProcess.stage.name);
+
+        let isOnForkJoiningBack = this.parent && this.parent.joinsInto.indexOf(stageToProcess.stage.name) !== -1;
+        let actions = this.createActions(this, this.stageDefsByKey, stageToProcess.stage.name, stageToProcess.stage.requirements);
+        if (isOnForkJoiningBack) {
+            StateMachineLogger.log(this.data.request.name, this.eventThread.getCurrentStageName(), EventType.FORK_STOP, this.stateMachineTransactions.getCurrentTransactionId(), `=>joining back ${intoStageName}`);
+            return {
+                stateMachine: this,
+                target: stageToProcess,
+                actions,
+                reactionsProducer: () => [{
+                    metadata: `[FORK_END]`, value: () =>
+                        this.requestTransition({into: {name: 'stop'}, path: 'doStop'})
+                }
+                ],
+                onDone: ({
+                    metadata: `[PARENT FORK JOIN]`, value: (): void => {
+                        this.parent.stateMachine.requestTransition({
+                            path: 'doForkJoin',
+                            into: stageToProcess.stage
+                        });
+                    }
+                })
+            };
+        }
+
+
+        if (isDeferredStage) {
+            StateMachineLogger.log(this.data.request.name, this.eventThread.getCurrentStageName(), EventType.FORK, this.stateMachineTransactions.getCurrentTransactionId(), `=>forking ${stageToProcess.stage.name}`);
+            return {
+                stateMachine: this,
+                target: stageToProcess,
+                actions,
+                onStart: {
+                    metadata: `([NOTIFY DEFERRED STAGE]::${stageToProcess.stage})`,
+                    value: () => {
+                        this.eventThread.addStageEvent(
+                            stageToProcess.stage,
+                            Strings.camelCaseWithPrefix('on', stageToProcess.stage.name)
+                        );
+                    }
+                },
+                reactionsProducer: () => [{
+                    metadata: `[DEFER]`, value: (actions) =>
+                        stageDef.deferredInfo.deferrer(actions, stageToProcess.stage.requirements)
+                }
+                ]
+            };
+        }
+
+        StateMachineLogger.log(this.data.request.name, this.eventThread.getCurrentStageName(), EventType.STAGE, this.stateMachineTransactions.getCurrentTransactionId(), `::${stageToProcess.stage.name}`);
+        return {
+            stateMachine: this,
+            target: stageToProcess,
+            actions,
+            reactionsProducer: () => {
+                return this.createReactions(eventName, this.data.request.stateMachineListeners);
+            }
+        };
+    }
+
     requestTransition(transition: SmTransition): this {
         this.assertNotClosed();
 
@@ -160,54 +227,6 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
 
     }
 
-    private createSmStageTransactionRequest(stageToProcess: StageToProcess) {
-        StateMachineLogger.log(this.data.request.name, this.eventThread.getCurrentStageName(), EventType.STAGE, this.stateMachineTransactions.getCurrentTransactionId(), `::${stageToProcess.stage.name}`);
-
-        let intoStageName = stageToProcess.stage.name;
-        let stageDef = this.stageDefsByKey [intoStageName];
-        let isDeferredStage: boolean = !! (stageDef && stageDef.deferredInfo);
-        let eventName = Strings.camelCaseWithPrefix('on', stageToProcess.stage.name);
-
-        if (this.parent && this.parent.joinsInto.indexOf(stageToProcess.stage.name) !== -1) {
-            this.forkClose(intoStageName, stageToProcess);
-            return
-        }
-
-
-        if (isDeferredStage) {
-            this.forkCreate(stageToProcess, stageDef);
-            return;
-        }
-
-        return {
-            stateMachine: this,
-            target: stageToProcess,
-            actions: this.createActions(this, this.stageDefsByKey, stageToProcess.stage.name, stageToProcess.stage.requirements),
-            ...isDeferredStage ? undefined : {
-                metadata: `([notify-deferred-stage]::${stageToProcess.stage})`, value: {
-                    onStart: () => {
-                        this.eventThread.addStageEvent(
-                            stageToProcess.stage,
-                            Strings.camelCaseWithPrefix('on', stageToProcess.stage.name)
-                        );
-                    }
-                }
-            },
-            reactionsProducer: () => {
-                return this.createReactions(eventName, this.data.request.stateMachineListeners);
-            }
-        };
-    }
-
-    private forkCreate(stageToProcess: StageToProcess, stageDef: StageDef<string, any, any, any>) {
-        StateMachineLogger.log(this.data.request.name, this.eventThread.getCurrentStageName(), EventType.FORK, this.stateMachineTransactions.getCurrentTransactionId(), `=>forking ${stageToProcess.stage.name}`);
-        this.eventThread.currentEvent.fork = this.fork(
-            stageToProcess.stage,
-            (actions) => stageDef.deferredInfo.deferrer(actions, stageToProcess.stage.requirements),
-            stageDef.deferredInfo.joinsInto
-        );
-    }
-
     getEvents(): SerializedSmEvent [] {
         return this.eventThread.serialize();
     }
@@ -225,28 +244,6 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
         if (this.closed) {
             throw new Error(`can't perform any actions in a SM once the SM is closed`);
         }
-    }
-
-    private forkClose(intoStageName: string, stageToProcess: StageToProcess) {
-        StateMachineLogger.log(this.data.request.name, this.eventThread.getCurrentStageName(), EventType.FORK_STOP, this.stateMachineTransactions.getCurrentTransactionId(), `=>joining back ${intoStageName}`);
-        this.addListener([
-            `(continueOnParent=>${stageToProcess.stage.name})`,
-            {
-                onStop: () => {
-                    this.parent.stateMachine.requestTransition({
-                        path: 'doForkJoin',
-                        into: stageToProcess.stage
-                    });
-                }
-            } as any as SM_ON_LISTENER
-        ], ListenerType.ONCE);
-        this.requestTransition({
-            into: {
-                name: 'stop'
-            },
-            path: 'doStop'
-        });
-        this.stateMachineTransactions.closeCurrentTransaction();
     }
 
     private fork(

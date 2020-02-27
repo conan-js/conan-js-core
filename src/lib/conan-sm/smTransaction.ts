@@ -15,7 +15,7 @@ export interface SmTransactionRequest {
     actions: any;
     onStart?: WithMetadata<ICallback, string>;
     reactionsProducer: IProducer<WithMetadataArray<SmEventCallback<any>, string>>;
-    onDone?: WithMetadata<IProducer<ChainRequest>, string>;
+    onDone?: WithMetadata<IProducer<ChainRequest | void>, string>;
 }
 
 export class StateMachineTransactions {
