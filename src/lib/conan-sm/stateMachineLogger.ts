@@ -1,20 +1,34 @@
 import {Strings} from "../conan-utils/strings";
 
 export enum EventType {
+    QUEUE = 'QUEUE',
+    REACTION = 'REACTION',
     ADD_LISTENER = '+LISTENER',
     ADD_INTERCEPTOR = '+INTERCEPT',
     STOP = 'STOP',
     FORK = 'FORK',
     FORK_STOP = 'FORK_STOP',
     STAGE = 'STAGE',
-    REACTION_START = '=>REACT',
-    PROXY = 'PROXY',
+    REQUEST = 'REQUEST',
     ACTION = 'ACTION',
     INIT = 'INIT'
 }
 
+export const toLog: EventType[] = [
+    EventType.INIT,
+    EventType.STAGE,
+    // EventType.QUEUE,
+    // EventType.REACTION,
+    // EventType.REQUEST,
+    EventType.FORK,
+    EventType.ACTION,
+    EventType.STOP
+];
+
 export class StateMachineLogger {
     static log(threadName: string, stageName: string, eventType: EventType, transactionId: string, details?: string, additionalLines?: [string, string][]): void {
+        if (toLog.indexOf(eventType) < 0) return;
+
         let eventTypeCol: string = `${eventType}`;
         let threadNameCol: string = `${threadName}`;
         let stageNameCol: string = `${stageName}`;
