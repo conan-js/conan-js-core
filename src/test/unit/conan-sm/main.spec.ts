@@ -72,14 +72,14 @@ describe('test', () => {
         new MainSm((actions) => actions.doInitialise(TRANSLATIONS)).define()
             .addListener(['testMainListener', {
                 onShowingApp: (_, params) => params.sm.stop(),
-            }], ListenerType.ALWAYS)
+            }])
             .addListener(['stop=>test', {
                 onStop: (_, params) => {
                     expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events(initializationFork));
                     done();
                 }
 
-            }], ListenerType.ONCE)
+            }])
             .sync <AuthenticationSmListener, AuthenticationSmJoiner>(
                 'sync-authentication',
                 new AuthenticationPrototype(Authenticators.alwaysAuthenticatesSuccessfullyWith({})).newBuilder(),
