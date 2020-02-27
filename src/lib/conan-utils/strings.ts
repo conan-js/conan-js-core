@@ -22,7 +22,11 @@ export class Strings {
     static padEnd (s: string, positions: number): string {
         let toAdd:number = positions - s.length;
         if (toAdd < 1) {
-            return s.substring(0, positions);
+            let middle = '...';
+            let toRemove = s.length + middle.length - positions;
+            let leftInsertionPoint = 1;
+            let rightInsertionPoint = leftInsertionPoint + toRemove;
+            return s.substring(0, leftInsertionPoint) + middle + s.substring(rightInsertionPoint, s.length);
         } else {
             return s + " ".repeat(toAdd)
 
