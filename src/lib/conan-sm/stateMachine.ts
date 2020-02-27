@@ -137,20 +137,14 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
                 stateMachine: this,
                 target: stageToProcess,
                 actions,
-                onStart: {
-                    metadata: `([NOTIFY DEFERRED STAGE]::${stageToProcess.stage})`,
-                    value: () => {
-                        this.eventThread.addStageEvent(
-                            stageToProcess.stage,
-                            Strings.camelCaseWithPrefix('on', stageToProcess.stage.name)
-                        );
-                    }
-                },
-                reactionsProducer: () => [{
-                    metadata: `[DEFER]`, value: (actions) =>
-                        stageDef.deferredInfo.deferrer(actions, stageToProcess.stage.requirements)
-                }
-                ]
+                reactionsProducer: ()=>[{
+                    metadata: `([FORK]::${stageToProcess.stage})`,
+                    value: () => this.fork(
+                        stageToProcess.stage,
+                        (actions) => stageDef.deferredInfo.deferrer(actions, stageToProcess.stage.requirements),
+                        stageDef.deferredInfo.joinsInto
+                    )
+                }]
             };
         }
 
