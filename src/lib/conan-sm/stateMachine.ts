@@ -95,23 +95,6 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
 
     requestStage(stageToProcess: StageToProcess): void {
         this.assertNotClosed();
-
-        let intoStageName = stageToProcess.stage.name;
-        let stageDef = this.stageDefsByKey [intoStageName];
-
-        if (this.parent && this.parent.joinsInto.indexOf(stageToProcess.stage.name) !== -1) {
-            this.forkClose(intoStageName, stageToProcess);
-            return
-        }
-
-
-        let isDeferredStage: boolean = !! (stageDef && stageDef.deferredInfo);
-        if (isDeferredStage) {
-            this.forkCreate(stageToProcess, stageDef);
-            return;
-        }
-
-
         this.stateMachineTransactions.createStageTransaction(this.createSmStageTransactionRequest(stageToProcess)).run();
     }
 
@@ -179,10 +162,22 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
 
     private createSmStageTransactionRequest(stageToProcess: StageToProcess) {
         StateMachineLogger.log(this.data.request.name, this.eventThread.getCurrentStageName(), EventType.STAGE, this.stateMachineTransactions.getCurrentTransactionId(), `::${stageToProcess.stage.name}`);
+
         let intoStageName = stageToProcess.stage.name;
         let stageDef = this.stageDefsByKey [intoStageName];
         let isDeferredStage: boolean = !! (stageDef && stageDef.deferredInfo);
         let eventName = Strings.camelCaseWithPrefix('on', stageToProcess.stage.name);
+
+        if (this.parent && this.parent.joinsInto.indexOf(stageToProcess.stage.name) !== -1) {
+            this.forkClose(intoStageName, stageToProcess);
+            return
+        }
+
+
+        if (isDeferredStage) {
+            this.forkCreate(stageToProcess, stageDef);
+            return;
+        }
 
         return {
             stateMachine: this,
