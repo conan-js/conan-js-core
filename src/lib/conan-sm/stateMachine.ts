@@ -139,11 +139,15 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
                 actions,
                 reactionsProducer: ()=>[{
                     metadata: `([FORK]::${stageToProcess.stage})`,
-                    value: () => this.fork(
-                        stageToProcess.stage,
-                        (actions) => stageDef.deferredInfo.deferrer(actions, stageToProcess.stage.requirements),
-                        stageDef.deferredInfo.joinsInto
-                    )
+                    value: () => {
+                        let forkSm = this.fork(
+                            stageToProcess.stage,
+                            (actions) => stageDef.deferredInfo.deferrer(actions, stageToProcess.stage.requirements),
+                            stageDef.deferredInfo.joinsInto
+                        );
+                        this.eventThread.addStageEvent(stageToProcess.stage, eventName, stageToProcess.stage.requirements, forkSm);
+                        return forkSm;
+                    }
                 }]
             };
         }
@@ -153,6 +157,10 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
             stateMachine: this,
             target: stageToProcess,
             actions,
+            onStart: {
+                metadata: `[ADDING STAGE TO THREAD EVENT]`,
+                value: ()=> this.eventThread.addStageEvent(stageToProcess.stage, eventName, stageToProcess.stage.requirements)
+            },
             reactionsProducer: () => {
                 return this.createReactions(eventName, this.data.request.stateMachineListeners);
             }
