@@ -50,15 +50,6 @@ export class StateMachineTransactions {
         if (!this.getCurrentExecution()) return '-';
         return this.getCurrentExecution().id ;
     }
-
-    closeCurrentTransaction (): void{
-        if (!this.getCurrentExecution()) {
-            throw new Error(`can't close the current transaction and there is no current transaction at the moment`)
-        }
-
-        this.getCurrentExecution().close();
-    }
-
     private isStopped() {
         return this._currentRootTransaction == null || this.getCurrentExecution() == null;
     }

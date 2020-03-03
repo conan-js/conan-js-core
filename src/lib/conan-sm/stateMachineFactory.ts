@@ -1,17 +1,17 @@
 import {ParentStateMachineInfo, StateMachine, StateMachineStatus, ToProcessType} from "./stateMachine";
 import {IKeyValuePairs} from "../conan-utils/typesHelper";
-import {StateMachineRequest} from "./stateMachineTree";
 import {StageDef} from "./stage";
 import {Objects} from "../conan-utils/objects";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {SmListener, SmListenerDefLikeParser} from "./stateMachineListeners";
+import {StateMachineTreeBuilderData} from "./_domain";
 
 export class StateMachineFactory {
     static create<
         SM_ON_LISTENER extends SmListener,
         SM_IF_LISTENER extends SmListener,
         ACTIONS
-    >(request: StateMachineRequest<SM_ON_LISTENER, SM_IF_LISTENER>): StateMachine<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS> {
+    >(request: StateMachineTreeBuilderData<SM_ON_LISTENER, SM_IF_LISTENER>): StateMachine<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS> {
         return this.doCreate(request);
     }
 
@@ -21,20 +21,22 @@ export class StateMachineFactory {
         JOIN_LISTENER extends SmListener,
     >(
         parent: ParentStateMachineInfo<any, any>,
-        request: StateMachineRequest<SM_LISTENER, JOIN_LISTENER>
+        request: StateMachineTreeBuilderData<SM_LISTENER, JOIN_LISTENER>
     ) {
         return this.doCreate(request, parent);
     }
 
-    private static doCreate<SM_LISTENER extends SmListener,
+    private static doCreate<
+        SM_LISTENER extends SmListener,
         JOIN_LISTENER extends SmListener,
-        ACTIONS>(
-        request: StateMachineRequest<SM_LISTENER, JOIN_LISTENER>,
+        ACTIONS
+    >(
+        treeBuilderData: StateMachineTreeBuilderData<SM_LISTENER, JOIN_LISTENER>,
         parent?: ParentStateMachineInfo<any, any>
     ): StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> {
-        let actionsByStage: IKeyValuePairs<StageDef<string, any, any, any>> = Objects.keyfy(request.stageDefs, (it) => it.name);
+        let stageDefsByKey: IKeyValuePairs<StageDef<string, any, any, any>> = Objects.keyfy(treeBuilderData.stageDefs, (it) => it.name);
 
-        request.stateMachineListeners.push(
+        treeBuilderData.listeners.push(
             new SmListenerDefLikeParser().parse([
                 '::init=>doStart', {
                     onInit: ()=>{
@@ -49,21 +51,25 @@ export class StateMachineFactory {
             ])
         );
 
-        request.stateMachineListeners.push(
+        treeBuilderData.listeners.push(
             new SmListenerDefLikeParser().parse(['::stop->shutdown', {
                 onStop: () => {
-                    StateMachineLogger.log(stateMachine.request.name, StateMachineStatus.RUNNING, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.STOP, `-`, '', []);
+                    StateMachineLogger.log(stateMachine.data.name, StateMachineStatus.RUNNING, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.SHUTDOWN, `-`, '', []);
                     stateMachine.shutdown();
                 }
             } as any as SM_LISTENER])
         );
 
 
-        let stateMachine: StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> = new StateMachine(request, actionsByStage, parent);
+        let stateMachine: StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> = new StateMachine({
+            ...treeBuilderData,
+            stageDefsByKey,
+            parent,
+        });
 
         let stageStringDefs: string [] = [];
-        Object.keys(stateMachine.stageDefsByKey).forEach(key => {
-            let stageDef = stateMachine.stageDefsByKey[key];
+        Object.keys(stateMachine.data.stageDefsByKey).forEach(key => {
+            let stageDef = stateMachine.data.stageDefsByKey[key];
             let description = `${stageDef.name}`;
             if (stageDef.deferredInfo) {
                 description += `[DEFERRED]`;
@@ -72,11 +78,11 @@ export class StateMachineFactory {
         });
 
 
-        StateMachineLogger.log(request.name, StateMachineStatus.IDLE, '', '', EventType.INIT, '', 'starting SM', [
-            [`listeners`, `${request.stateMachineListeners.map(it=>it.metadata).map(it => {
+        StateMachineLogger.log(treeBuilderData.name, StateMachineStatus.IDLE, '', '', EventType.INIT, '', 'starting SM', [
+            [`listeners`, `${treeBuilderData.listeners.map(it=>it.metadata).map(it => {
                 return it.split(',').map(it=>`(${it})`).join(',');
             })}`],
-            [`interceptors`, `${request.stateMachineInterceptors.map(it => it.metadata)}`],
+            [`interceptors`, `${treeBuilderData.interceptors.map(it => it.metadata)}`],
             [`stage defs`, `${stageStringDefs.join(', ')}`],
         ]);
 

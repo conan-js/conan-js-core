@@ -1,4 +1,3 @@
-import {StateMachineRequest} from "./stateMachineTree";
 import {EventThread} from "./eventThread";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {Stage, StageDef} from "./stage";
@@ -15,7 +14,7 @@ import {
     SmListenerDefList
 } from "./stateMachineListeners";
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
-import {SmController} from "./_domain";
+import {SmController, StateMachineData} from "./_domain";
 import {SmTransactionRequest, StateMachineTransactions} from "./smTransaction";
 
 export enum ToProcessType {
@@ -41,9 +40,10 @@ interface BaseToProcess {
     description: string;
 }
 
-export interface ParentStateMachineInfo<SM_LISTENER extends SmListener,
+export interface ParentStateMachineInfo<
+    SM_LISTENER extends SmListener,
     JOIN_LISTENER extends SmListener,
-    > {
+> {
     stateMachine: StateMachine<SM_LISTENER, JOIN_LISTENER, any>,
     joinsInto: string[]
 }
@@ -53,10 +53,11 @@ export enum StateMachineStatus {
     RUNNING = 'RUNNING',
 }
 
-export class StateMachine<SM_ON_LISTENER extends SmListener,
+export class StateMachine<
+    SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
     ACTIONS,
-    > implements SmController<SM_ON_LISTENER, SM_IF_LISTENER> {
+> implements SmController<SM_ON_LISTENER, SM_IF_LISTENER> {
     readonly eventThread: EventThread = new EventThread();
     private _status: StateMachineStatus = StateMachineStatus.IDLE;
 
@@ -65,24 +66,21 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
     private readonly stateMachineTransactions: StateMachineTransactions = new StateMachineTransactions();
 
     constructor(
-        readonly request: StateMachineRequest<SM_ON_LISTENER, SM_IF_LISTENER>,
-        readonly stageDefsByKey: IKeyValuePairs<StageDef<string, any, any, any>>,
-        private readonly parent?: ParentStateMachineInfo<any, any>,
-    ) {
-    }
+        readonly data: StateMachineData<SM_ON_LISTENER, SM_IF_LISTENER>,
+    ) {}
 
     addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
         this.assertNotClosed();
         let listenerDef = this.smListenerDefLikeParser.parse(listener);
-        StateMachineLogger.log(this.request.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.ADD_LISTENER, this.stateMachineTransactions.getCurrentTransactionId(), `(${listenerDef.metadata})[${type}]`);
-        this.request.stateMachineListeners.push(listenerDef);
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.ADD_LISTENER, this.stateMachineTransactions.getCurrentTransactionId(), `(${listenerDef.metadata})[${type}]`);
+        this.data.listeners.push(listenerDef);
         return this;
     }
 
     addInterceptor(interceptor: SmListenerDefLike<SM_IF_LISTENER>): this {
         let listenerDef = this.smListenerDefLikeParser.parse(interceptor);
-        StateMachineLogger.log(this.request.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.ADD_INTERCEPTOR, this.stateMachineTransactions.getCurrentTransactionId(), `(${listenerDef.metadata})`);
-        this.request.stateMachineInterceptors.push(
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.ADD_INTERCEPTOR, this.stateMachineTransactions.getCurrentTransactionId(), `(${listenerDef.metadata})`);
+        this.data.interceptors.push(
             this.smListenerDefLikeParser.parse(interceptor)
         );
         return this;
@@ -102,14 +100,14 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
     requestStage(stageToProcess: StageToProcess): void {
         this.assertNotClosed();
         this._status = StateMachineStatus.RUNNING;
-        StateMachineLogger.log(this.request.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.QUEUE, this.stateMachineTransactions.getCurrentTransactionId(), `::${stageToProcess.stage.name}`);
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.QUEUE, this.stateMachineTransactions.getCurrentTransactionId(), `::${stageToProcess.stage.name}`);
         this.stateMachineTransactions.createStageTransaction(this.createSmStageTransactionRequest(stageToProcess)).run();
     }
 
     requestTransition(transition: SmTransition): this {
         this.assertNotClosed();
 
-        StateMachineLogger.log(this.request.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.QUEUE, this.stateMachineTransactions.getCurrentTransactionId(), `=>${transition.path}`);
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.QUEUE, this.stateMachineTransactions.getCurrentTransactionId(), `=>${transition.path}`);
         let description = `=>${transition.path}`;
         let toProcess: ActionToProcess = {
             description,
@@ -124,18 +122,18 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
             .runTransitionTransaction(description, {
                 stateMachine: this,
                 target: transition,
-                actions: this.createActions(this, this.stageDefsByKey, transition.into.name, transition.payload),
+                actions: this.createActions(this, this.data.stageDefsByKey, transition.into.name, transition.payload),
                 onStart: {
                     metadata: `[notify-action]=>${transition.path}`,
                     value: () => {
                         this.eventThread.addActionEvent(
                             transition
                         );
-                        StateMachineLogger.log(this.request.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.ACTION, this.stateMachineTransactions.getCurrentTransactionId(), `=>${transition.path}`);
+                        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.ACTION, this.stateMachineTransactions.getCurrentTransactionId(), `=>${transition.path}`);
                     }
                 },
                 reactionsProducer: () => {
-                    return this.createReactions(eventName, this.request.stateMachineInterceptors);
+                    return this.createReactions(eventName, this.data.interceptors);
                 },
                 onDone: {
                     metadata: `[request-stage]::${toProcess.into.name}`,
@@ -164,7 +162,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
 
             reactions.push({
                 value: (actions, params) => {
-                    StateMachineLogger.log(this.request.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REACTION, this.stateMachineTransactions.getCurrentTransactionId(), `(${smListener.metadata})`);
+                    StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REACTION, this.stateMachineTransactions.getCurrentTransactionId(), `(${smListener.metadata})`);
                     actionListener(actions, params)
                 },
                 metadata: smListener.metadata
@@ -175,14 +173,22 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
 
     }
 
+    getStageDef(name: string): StageDef<any, any, any> {
+        return this.data.stageDefsByKey [name];
+    }
+
+    getEvents(): SerializedSmEvent [] {
+        return this.eventThread.serialize();
+    }
+
     private createSmStageTransactionRequest(stageToProcess: StageToProcess): SmTransactionRequest {
         let intoStageName = stageToProcess.stage.name;
-        let stageDef = this.stageDefsByKey [intoStageName];
+        let stageDef = this.data.stageDefsByKey [intoStageName];
         let isDeferredStage: boolean = !!(stageDef && stageDef.deferredInfo);
         let eventName = Strings.camelCaseWithPrefix('on', stageToProcess.stage.name);
 
-        let isOnForkJoiningBack = this.parent && this.parent.joinsInto.indexOf(stageToProcess.stage.name) !== -1;
-        let actions = this.createActions(this, this.stageDefsByKey, stageToProcess.stage.name, stageToProcess.stage.requirements);
+        let isOnForkJoiningBack = this.data.parent && this.data.parent.joinsInto.indexOf(stageToProcess.stage.name) !== -1;
+        let actions = this.createActions(this, this.data.stageDefsByKey, stageToProcess.stage.name, stageToProcess.stage.requirements);
 
         if (isDeferredStage) {
             return {
@@ -201,7 +207,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
         }
 
         if (isOnForkJoiningBack) {
-            StateMachineLogger.log(this.request.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.FORK_STOP, this.stateMachineTransactions.getCurrentTransactionId(), `=>joining back ${intoStageName}`);
+            StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.FORK_STOP, this.stateMachineTransactions.getCurrentTransactionId(), `=>joining back ${intoStageName}`);
             return {
                 stateMachine: this,
                 target: stageToProcess,
@@ -213,7 +219,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
                 ],
                 onDone: ({
                     metadata: `[PARENT FORK JOIN]`, value: (): void => {
-                        this.parent.stateMachine.requestTransition({
+                        this.data.parent.stateMachine.requestTransition({
                             path: 'doForkJoin',
                             into: stageToProcess.stage
                         });
@@ -230,22 +236,13 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
                 metadata: `[ADDING STAGE TO THREAD EVENT]`,
                 value: () => {
                     this.eventThread.addStageEvent(stageToProcess.stage, eventName, stageToProcess.stage.requirements);
-                    StateMachineLogger.log(this.request.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.STAGE, this.stateMachineTransactions.getCurrentTransactionId(), `::${stageToProcess.stage.name}`);
+                    StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.STAGE, this.stateMachineTransactions.getCurrentTransactionId(), `::${stageToProcess.stage.name}`);
                 }
             },
             reactionsProducer: () => {
-                return this.createReactions(eventName, this.request.stateMachineListeners);
+                return this.createReactions(eventName, this.data.listeners);
             }
         };
-    }
-
-    getEvents(): SerializedSmEvent [] {
-        return this.eventThread.serialize();
-    }
-
-
-    getStageDef(name: string): StageDef<any, any, any> {
-        return this.stageDefsByKey [name];
     }
 
     shutdown() {
@@ -263,19 +260,19 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
         defer: IConsumer<ACTIONS>,
         joinsInto: string []
     ): StateMachine<any, any, any> {
-        StateMachineLogger.log(this.request.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.FORK, this.stateMachineTransactions.getCurrentTransactionId(), `[FORK]::${nextStage.name}`);
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.FORK, this.stateMachineTransactions.getCurrentTransactionId(), `[FORK]::${nextStage.name}`);
         let deferEventName = Strings.camelCaseWithPrefix('on', nextStage.name);
         let deferPathName = Strings.camelCaseWithPrefix('do', nextStage.name);
         return StateMachineFactory.fork({
             stateMachine: this,
             joinsInto
         }, {
-            name: `${this.request.name}/${nextStage.name}`,
+            name: `${this.data.name}/${nextStage.name}`,
             stageDefs: [{
                 name: nextStage.name,
-                logic: this.stageDefsByKey[nextStage.name].logic
+                logic: this.data.stageDefsByKey[nextStage.name].logic
             }],
-            stateMachineListeners: [
+            listeners: [
                 {
                     metadata: `::${deferEventName}->[DEFERRED],::start=>${deferPathName}`,
                     value: {
@@ -287,8 +284,8 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
                     }
                 }
             ],
-            stateMachineInterceptors: [],
-            syncStateMachineDefs: undefined,
+            interceptors: [],
+            syncDefs: undefined,
         });
     }
 
@@ -312,18 +309,18 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
                 let nextStage: Stage = (actionsLogic as any)[key](payload);
                 let nextStageDef: StageDef<string, any, any, any> = actionsByStage [nextStage.name];
                 if (nextStageDef == null) {
-                    if (!this.parent) {
+                    if (!this.data.parent) {
                         throw new Error(`trying to move to a non existent stage: ${nextStage.name}`);
                     }
 
-                    nextStageDef = this.parent.stateMachine.getStageDef(nextStage.name);
+                    nextStageDef = this.data.parent.stateMachine.getStageDef(nextStage.name);
                     if (!nextStageDef) {
                         throw new Error(`trying to move to a non existent stage from a forked stateMachine: ${nextStage.name}`);
                     }
                 }
 
 
-                StateMachineLogger.log(this.request.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.stateMachineTransactions.getCurrentTransactionId(), `(proxy::${key})=>requesting::${nextStage.name}`);
+                StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.stateMachineTransactions.getCurrentTransactionId(), `(proxy::${key})=>requesting::${nextStage.name}`);
                 stateMachine.requestTransition({
                     path: key,
                     payload: payload,

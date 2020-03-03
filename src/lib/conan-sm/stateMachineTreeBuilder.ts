@@ -1,7 +1,7 @@
 import {IBiConsumer, IConstructor, IConsumer, IOptSetKeyValuePairs} from "../conan-utils/typesHelper";
-import {StateMachineRequest, StateMachineTree} from "./stateMachineTree";
+import {StateMachineTree} from "./stateMachineTree";
 import {ListenerType, SmListener, SmListenerDefLike, SmListenerDefLikeParser} from "./stateMachineListeners";
-import {SmController, SmEventsPublisher} from "./_domain";
+import {SmController, SmEventsPublisher, StateMachineTreeBuilderData} from "./_domain";
 
 
 export type SyncListener<INTO_SM_ON_LISTENER extends SmListener,
@@ -18,22 +18,24 @@ export interface SyncStateMachineDef<SM_IF_LISTENER extends SmListener,
     initCb?: IConsumer<StateMachineTreeBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>>
 }
 
-export class StateMachineTreeBuilder<SM_ON_LISTENER extends SmListener,
+export class StateMachineTreeBuilder<
+    SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
-    SM_ACTIONS> implements SmEventsPublisher <SM_ON_LISTENER, SM_IF_LISTENER> {
+    SM_ACTIONS
+> implements SmEventsPublisher <SM_ON_LISTENER, SM_IF_LISTENER> {
     private readonly smListenerDefLikeParser: SmListenerDefLikeParser = new SmListenerDefLikeParser();
 
-    public request: StateMachineRequest<SM_ON_LISTENER, SM_IF_LISTENER> = {
-        stateMachineListeners: [],
-        stateMachineInterceptors: [],
+    public request: StateMachineTreeBuilderData<SM_ON_LISTENER, SM_IF_LISTENER> = {
+        listeners: [],
+        interceptors: [],
         name: undefined,
-        syncStateMachineDefs: [],
+        syncDefs: [],
         stageDefs: [],
     };
     private started: boolean = false;
 
     addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
-        this.request.stateMachineListeners.push(
+        this.request.listeners.push(
             this.smListenerDefLikeParser.parse(listener)
         );
         return this;
@@ -89,7 +91,7 @@ export class StateMachineTreeBuilder<SM_ON_LISTENER extends SmListener,
         initCb?: IConsumer<StateMachineTreeBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>>
     ): this {
         if (this.started) throw new Error("can't modify the behaviour of a state machine once that it has started");
-        this.request.syncStateMachineDefs.push({
+        this.request.syncDefs.push({
             stateMachineBuilder: stateMachine,
             syncName: name,
             joiner: joiner as unknown as SyncListener<any, SM_IF_LISTENER>,

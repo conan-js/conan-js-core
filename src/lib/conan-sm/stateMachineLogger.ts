@@ -6,7 +6,7 @@ export enum EventType {
     REACTION = 'REACTION',
     ADD_LISTENER = '+LISTENER',
     ADD_INTERCEPTOR = '+INTERCEPT',
-    STOP = 'STOP',
+    SHUTDOWN = 'SHUTDOWN',
     FORK = 'FORK',
     FORK_STOP = 'FORK_STOP',
     STAGE = 'STAGE',
@@ -23,7 +23,7 @@ export const toLog: EventType[] = [
     // EventType.REQUEST,
     EventType.FORK,
     EventType.ACTION,
-    EventType.STOP
+    EventType.SHUTDOWN
 ];
 
 export class StateMachineLogger {
