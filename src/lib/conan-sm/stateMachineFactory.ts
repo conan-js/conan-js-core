@@ -3,7 +3,7 @@ import {IKeyValuePairs} from "../conan-utils/typesHelper";
 import {StageDef} from "./stage";
 import {Objects} from "../conan-utils/objects";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
-import {SmListener, SmListenerDefLikeParser} from "./stateMachineListeners";
+import {SmListener, SmListenerDefLikeParser, SmListenerDefList} from "./stateMachineListeners";
 import {StateMachineTreeBuilderData} from "./_domain";
 
 export class StateMachineFactory {
@@ -35,8 +35,10 @@ export class StateMachineFactory {
         parent?: ParentStateMachineInfo<any, any>
     ): StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> {
         let stageDefsByKey: IKeyValuePairs<StageDef<string, any, any, any>> = Objects.keyfy(treeBuilderData.stageDefs, (it) => it.name);
+        let systemListeners: SmListenerDefList<SM_LISTENER> = [];
+        let externalListeners: SmListenerDefList<SM_LISTENER> = treeBuilderData.listeners;
 
-        treeBuilderData.listeners.push(
+        systemListeners.push(
             new SmListenerDefLikeParser().parse([
                 '::init=>doStart', {
                     onInit: ()=>{
@@ -51,7 +53,7 @@ export class StateMachineFactory {
             ])
         );
 
-        treeBuilderData.listeners.push(
+        systemListeners.push(
             new SmListenerDefLikeParser().parse(['::stop->shutdown', {
                 onStop: () => {
                     StateMachineLogger.log(stateMachine.data.name, StateMachineStatus.RUNNING, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.SHUTDOWN, `-`, '', []);
@@ -63,6 +65,7 @@ export class StateMachineFactory {
 
         let stateMachine: StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> = new StateMachine({
             ...treeBuilderData,
+            listeners: [...treeBuilderData.listeners, ...systemListeners],
             stageDefsByKey,
             parent,
         });
@@ -79,7 +82,10 @@ export class StateMachineFactory {
 
 
         StateMachineLogger.log(treeBuilderData.name, StateMachineStatus.IDLE, '', '', EventType.INIT, '', 'starting SM', [
-            [`listeners`, `${treeBuilderData.listeners.map(it=>it.metadata).map(it => {
+            [`listeners`, `${externalListeners.map(it=>it.metadata).map(it => {
+                return it.split(',').map(it=>`(${it})`).join(',');
+            })}`],
+            [`system listeners`, `${systemListeners.map(it=>it.metadata).map(it => {
                 return it.split(',').map(it=>`(${it})`).join(',');
             })}`],
             [`interceptors`, `${treeBuilderData.interceptors.map(it => it.metadata)}`],
