@@ -213,7 +213,7 @@ export class SmTransaction {
     }
 
     private doChain(nextRequest: SmTransactionRequest) {
-        let smTransaction = new SmTransaction(nextRequest, this);
+        let smTransaction = new SmTransaction({...nextRequest, name: '/' + nextRequest.name}, this);
         this._chainedTransition = smTransaction;
         this._delegatedTransition = this._chainedTransition;
         smTransaction.doRun();
