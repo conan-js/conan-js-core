@@ -332,7 +332,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
                 }
 
 
-                StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.stateMachineTransactions.getCurrentTransactionId(), `(proxy::${key})=>requesting::${nextStage.name}`);
+                StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.PROXY, this.stateMachineTransactions.getCurrentTransactionId(), `(${key})=>::${nextStage.name}`);
                 stateMachine.requestTransition({
                     path: key,
                     payload: payload,

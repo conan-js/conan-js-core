@@ -2,6 +2,7 @@ import {Strings} from "../conan-utils/strings";
 import {StateMachineStatus} from "./stateMachine";
 
 export enum EventType {
+    PROXY = 'PROXY',
     REQUEST = 'REQUEST',
     REACTION = 'REACTION',
     ADD_LISTENER = '+LISTENER',
@@ -17,9 +18,12 @@ export enum EventType {
 export const eventTypesToLog: EventType[] = [
     EventType.INIT,
     EventType.STAGE,
+    EventType.FORK_STOP,
+    EventType.ADD_INTERCEPTOR,
+    EventType.ADD_LISTENER,
+    // EventType.PROXY,
     // EventType.REQUEST,
     EventType.REACTION,
-    // EventType.REQUEST,
     EventType.FORK,
     EventType.ACTION,
     EventType.SHUTDOWN
@@ -42,7 +46,7 @@ export const stagesToIgnore: string[] = [
 ];
 
 export const stagesToMute: string[]=[
-    'init'
+    'init', '-'
 ];
 
 export class StateMachineLogger {
