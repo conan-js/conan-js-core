@@ -49,6 +49,12 @@ export const stagesToMute: string[]=[
     'init', '-'
 ];
 
+export const redundantTransactionParts: string [] = [
+    '::init',
+    '=>doStart',
+    '::start'
+];
+
 export class StateMachineLogger {
     static log(smName: string, status: StateMachineStatus, stageName: string, actionName: string, eventType: EventType, transactionId: string, details?: string, additionalLines?: [string, string][]): void {
         if (eventTypesToLog.indexOf(eventType) < 0) return;
@@ -58,7 +64,26 @@ export class StateMachineLogger {
 
         let transactionSplit: string [] = transactionId.split('/');
         let transactionRoot: string = '/' + transactionSplit [0] + transactionSplit [1];
-        let transactionRemainder: string = transactionSplit.length < 3 ? '/' : transactionId.substring(transactionRoot.length, transactionId.length);
+        let transactionRemainder: string = transactionId;
+
+        let redundantAccumulated = '';
+        redundantTransactionParts.find(part=>{
+            let nextRedundantAccumulatedA = redundantAccumulated + '/' + part;
+            let nextRedundantAccumulatedB = redundantAccumulated + '//' + part;
+            let aIndex = transactionId.indexOf(nextRedundantAccumulatedA);
+            let bIndex = transactionId.indexOf(nextRedundantAccumulatedB);
+            if (
+                aIndex === -1 &&
+                bIndex === -1
+            ) return true;
+
+            redundantAccumulated = aIndex > -1 ? nextRedundantAccumulatedA : nextRedundantAccumulatedB;
+            return false;
+        });
+
+        if (redundantAccumulated !== '') {
+            transactionRemainder = transactionRemainder.substring(redundantAccumulated.length, transactionRemainder.length)
+        }
 
         if (additionalLines){
             console.log('--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
