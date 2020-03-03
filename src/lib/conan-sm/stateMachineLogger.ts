@@ -1,4 +1,5 @@
 import {Strings} from "../conan-utils/strings";
+import {StateMachineStatus} from "./stateMachine";
 
 export enum EventType {
     QUEUE = 'QUEUE',
@@ -26,7 +27,7 @@ export const toLog: EventType[] = [
 ];
 
 export class StateMachineLogger {
-    static log(smName: string, stageName: string, actionName: string, eventType: EventType, transactionId: string, details?: string, additionalLines?: [string, string][]): void {
+    static log(smName: string, status: StateMachineStatus, stageName: string, actionName: string, eventType: EventType, transactionId: string, details?: string, additionalLines?: [string, string][]): void {
         if (toLog.indexOf(eventType) < 0) return;
 
         let transactionSplit: string [] = transactionId.split('/');
@@ -39,6 +40,7 @@ export class StateMachineLogger {
 
         console.log(
             Strings.padEnd(`${smName}`, 30),
+            Strings.padEnd(status, 15),
             Strings.padEnd(transactionRoot, 15),
             Strings.padEnd(`${stageName}`, 25),
             Strings.padEnd(`${actionName}`, 25),

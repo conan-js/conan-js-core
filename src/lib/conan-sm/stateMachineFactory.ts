@@ -1,10 +1,10 @@
-import {ParentStateMachineInfo, StateMachine, ToProcessType} from "./stateMachine";
+import {ParentStateMachineInfo, StateMachine, StateMachineStatus, ToProcessType} from "./stateMachine";
 import {IKeyValuePairs} from "../conan-utils/typesHelper";
 import {StateMachineData} from "./stateMachineTree";
 import {StageDef} from "./stage";
 import {Objects} from "../conan-utils/objects";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
-import {ListenerType, SmListener, SmListenerDefLikeParser} from "./stateMachineListeners";
+import {SmListener, SmListenerDefLikeParser} from "./stateMachineListeners";
 
 export class StateMachineFactory {
     static create<SM_ON_LISTENER extends SmListener,
@@ -46,7 +46,7 @@ export class StateMachineFactory {
         data.request.stateMachineListeners.push(
             new SmListenerDefLikeParser().parse(['::stop->shutdown', {
                 onStop: () => {
-                    StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.STOP, `-`, '', []);
+                    StateMachineLogger.log(stateMachine.data.request.name, StateMachineStatus.RUNNING, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.STOP, `-`, '', []);
                     stateMachine.shutdown();
                 }
             } as any as SM_LISTENER])
@@ -66,7 +66,7 @@ export class StateMachineFactory {
         });
 
 
-        StateMachineLogger.log(data.request.name, '', '', EventType.INIT, '', 'starting SM', [
+        StateMachineLogger.log(data.request.name, StateMachineStatus.IDLE, '', '', EventType.INIT, '', 'starting SM', [
             [`listeners`, `${data.request.stateMachineListeners.map(it=>it.metadata).map(it => {
                 return it.split(',').map(it=>`(${it})`).join(',');
             })}`],
