@@ -46,7 +46,7 @@ export class StateMachineFactory {
         data.request.stateMachineListeners.push(
             new SmListenerDefLikeParser().parse(['::stop->shutdown', {
                 onStop: () => {
-                    StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.getCurrentStageName(), EventType.STOP, `-`, '', []);
+                    StateMachineLogger.log(stateMachine.data.request.name, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.STOP, `-`, '', []);
                     stateMachine.shutdown();
                 }
             } as any as SM_LISTENER])
@@ -66,7 +66,7 @@ export class StateMachineFactory {
         });
 
 
-        StateMachineLogger.log(data.request.name, '', EventType.INIT, '', 'starting SM', [
+        StateMachineLogger.log(data.request.name, '', '', EventType.INIT, '', 'starting SM', [
             [`listeners`, `${data.request.stateMachineListeners.map(it=>it.metadata).map(it => {
                 return it.split(',').map(it=>`(${it})`).join(',');
             })}`],

@@ -26,22 +26,24 @@ export const toLog: EventType[] = [
 ];
 
 export class StateMachineLogger {
-    static log(threadName: string, stageName: string, eventType: EventType, transactionId: string, details?: string, additionalLines?: [string, string][]): void {
+    static log(smName: string, stageName: string, actionName: string, eventType: EventType, transactionId: string, details?: string, additionalLines?: [string, string][]): void {
         if (toLog.indexOf(eventType) < 0) return;
 
-        let eventTypeCol: string = `${eventType}`;
-        let threadNameCol: string = `${threadName}`;
-        let stageNameCol: string = `${stageName}`;
+        let transactionSplit: string [] = transactionId.split('/');
+        let transactionRoot: string = '/' + transactionSplit [0] + transactionSplit [1];
+        let transactionRemainder: string = transactionSplit.length < 3 ? '/' : transactionId.substring(transactionRoot.length, transactionId.length);
 
         if (additionalLines){
             console.log('--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
         }
 
         console.log(
-            Strings.padEnd(threadNameCol, 30),
-            Strings.padEnd(stageNameCol, 25),
-            Strings.padEnd(eventTypeCol, 14),
-            Strings.padEnd(transactionId, 90),
+            Strings.padEnd(`${smName}`, 30),
+            Strings.padEnd(transactionRoot, 15),
+            Strings.padEnd(`${stageName}`, 25),
+            Strings.padEnd(`${actionName}`, 25),
+            Strings.padEnd(`${eventType}`, 14),
+            Strings.padEnd(transactionRemainder, 90),
             details
         );
 

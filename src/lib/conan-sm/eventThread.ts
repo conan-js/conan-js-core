@@ -10,6 +10,7 @@ import {SmController} from "./_domain";
 import {Strings} from "../conan-utils/strings";
 
 export class EventThread  {
+    public currentActionEvent: TransitionSmEvent;
     public currentStageEvent: StageSmEvent;
     public currentEvent: TransitionSmEvent | StageSmEvent;
     private readonly events: (TransitionSmEvent | StageSmEvent)[] = [];
@@ -27,12 +28,14 @@ export class EventThread  {
         transitionEvent: SmTransition,
         fork?: SmController<any, any>
     ){
-        this.addEvent({
+        let event:TransitionSmEvent = {
             eventName: transitionEvent.path,
             type: SmEventType.TRANSITION,
             data: transitionEvent,
             fork: fork
-        });
+        };
+        this.currentActionEvent = event;
+        this.addEvent(event);
     }
 
     public addStageEvent(
@@ -47,8 +50,8 @@ export class EventThread  {
             data: stage,
             fork: fork,
         };
-        this.addEvent(event);
         this.currentStageEvent =event;
+        this.addEvent(event);
     }
 
     getCurrentStageName(): string {
@@ -61,8 +64,8 @@ export class EventThread  {
         this.currentEvent = event;
     }
 
-    getCurrentStage(): Stage {
-        if (this.currentStageEvent == null) return undefined;
-        return this.currentStageEvent.data;
+    getCurrentActionName() {
+        if (this.currentActionEvent == null) return '-';
+        return this.currentActionEvent.data.path;
     }
 }
