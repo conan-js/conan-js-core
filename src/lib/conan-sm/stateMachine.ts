@@ -109,7 +109,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
             throw new Error(`can't move sm: [${this.data.name}] to ::${stageName} and is not a valid stage, ie one of: (${Object.keys(this.data.stageDefsByKey).join(', ')})`)
         }
 
-        this.stateMachineTransactions.createStageTransaction(this.createSmStageTransactionRequest(stageToProcess)).run();
+        this.stateMachineTransactions.createAndRunStageTransaction(this.createSmStageTransactionRequest(stageToProcess));
     }
 
     requestTransition(transition: SmTransition): this {
@@ -201,7 +201,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
 
         if (isDeferredStage) {
             return {
-                name: `!:${stageToProcess.stage.name}`,
+                name: `->::${stageToProcess.stage.name}`,
                 stateMachine: this,
                 target: stageToProcess,
                 actions,
@@ -217,23 +217,20 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
         }
 
         if (isOnForkJoiningBack) {
-            StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.FORK_STOP, this.stateMachineTransactions.getCurrentTransactionId(), `=>joining back ${intoStageName}`);
             return {
-                name: `!!:${stageToProcess.stage.name}`,
+                name: `<-::${stageToProcess.stage.name}`,
                 stateMachine: this,
                 target: stageToProcess,
                 actions,
                 reactionsProducer: () => [{
-                    metadata: `[FORK_END]`, value: () =>
-                        this.requestTransition({into: {name: 'stop'}, path: 'doStop'})
-                }
-                ],
+                    metadata: `[FORK_END]`,
+                    value: () =>
+                        this.requestStage({stage: {name: 'stop'}, description: '::stop', eventType: EventType.FORK_STOP, type: ToProcessType.STAGE})
+                }],
                 onDone: ({
                     metadata: `[PARENT FORK JOIN]`, value: (): void => {
-                        this.data.parent.stateMachine.requestTransition({
-                            path: 'doForkJoin',
-                            into: stageToProcess.stage
-                        });
+                        let parentSm = this.data.parent.stateMachine;
+                        parentSm.requestResume (this, stageToProcess);
                     }
                 })
             };
@@ -349,5 +346,22 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
             }
         });
         return proxy;
+    }
+
+    private requestResume(from: StateMachine<any, any, any>, stageToProcess: StageToProcess): void {
+        from.addListener(['FORK-JOIN', {
+            onStop: () => {
+                this._status = StateMachineStatus.RUNNING;
+                let stageName = stageToProcess.stage.name;
+                let stageDescriptor = `::${stageName}`;
+                StateMachineLogger.log(this.data.name, this._status, stageName, this.eventThread.getCurrentStageName(), EventType.FORK_JOIN, this.stateMachineTransactions.getCurrentTransactionId(), `->::${stageName}`);
+                this.requestStage({
+                    type: ToProcessType.STAGE,
+                    eventType: EventType.FORK_JOIN,
+                    description: stageDescriptor,
+                    stage: stageToProcess.stage
+                });
+            }
+        } as SmListener]);
     }
 }

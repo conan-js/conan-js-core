@@ -22,7 +22,7 @@ export interface SmTransactionRequest {
 export class StateMachineTransactions {
     private _currentRootTransaction: SmTransaction;
 
-    createStageTransaction(
+    createAndRunStageTransaction(
         request: SmTransactionRequest
     ): SmTransaction {
         if (! this.getCurrentExecution()) {
@@ -31,7 +31,11 @@ export class StateMachineTransactions {
             this.getCurrentExecution().fork (request);
         }
 
-        return this.getCurrentExecution();
+        let currentExecution = this.getCurrentExecution();
+        if (currentExecution.status === SmTransactionStatus.IDLE){
+            currentExecution.run();
+        }
+        return currentExecution;
     }
 
 
@@ -134,6 +138,35 @@ export class SmTransaction {
         return current;
     }
 
+    get status(): SmTransactionStatus {
+        return this._status;
+    }
+
+    private doChain(nextRequest: SmTransactionRequest) {
+        let smTransaction = new SmTransaction({...nextRequest, name: '/' + nextRequest.name}, this);
+        this._chainedTransition = smTransaction;
+        this._delegatedTransition = this._chainedTransition;
+        smTransaction.doRun();
+    }
+
+    private assertAcceptingFork (forkId: string): void{
+        if (this._status !== SmTransactionStatus.IDLE  && this._status !== SmTransactionStatus.RUNNING) {
+            throw new Error(`ERROR FORKING ${this.request.name}/${forkId} this operation can only be performed when transaction is IDLE or RUNNING, currently the status of ${this.request.name} is ${this._status}`);
+        }
+    }
+
+    private assertIdle (): void{
+        if (this._status !== SmTransactionStatus.IDLE) {
+            throw new Error(`this operation can only be performed when transaction is IDLE, currently the status is ${this._status}`);
+        }
+    }
+
+    private assertNotClosed (): void{
+        if (this._status === SmTransactionStatus.CLOSED) {
+            throw new Error(`can't perform this operation on a transaction that has been already closed`);
+        }
+    }
+
     private doRun() {
         let processedReactions: WithMetadataArray<SmEventCallback<any>, string> = [];
         let currentReaction:WithMetadata<SmEventCallback<any>, string> = null;
@@ -187,7 +220,7 @@ export class SmTransaction {
             console.error(e.message);
             console.error('--------');
             while (pointer){
-                console.error(`${Strings.padEnd(pointer._status, 12)} ${pointer.request.name}`);
+                console.error(`${Strings.padEnd(pointer._status, 12)} ${pointer.getId()}`);
 
                 if (pointer._status === SmTransactionStatus.POST_RUNNING) {
                     console.error(`         ERROR ON THE POST RUNNING (onDone - ${pointer.request.onDone.metadata})`);
@@ -209,31 +242,6 @@ export class SmTransaction {
             console.error( e.stack );
 
             throw new SmTransactionError(e.message);
-        }
-    }
-
-    private doChain(nextRequest: SmTransactionRequest) {
-        let smTransaction = new SmTransaction({...nextRequest, name: '/' + nextRequest.name}, this);
-        this._chainedTransition = smTransaction;
-        this._delegatedTransition = this._chainedTransition;
-        smTransaction.doRun();
-    }
-
-    private assertAcceptingFork (forkId: string): void{
-        if (this._status !== SmTransactionStatus.IDLE  && this._status !== SmTransactionStatus.RUNNING) {
-            throw new Error(`ERROR FORKING ${this.request.name}/${forkId} this operation can only be performed when transaction is IDLE or RUNNING, currently the status of ${this.request.name} is ${this._status}`);
-        }
-    }
-
-    private assertIdle (): void{
-        if (this._status !== SmTransactionStatus.IDLE) {
-            throw new Error(`this operation can only be performed when transaction is IDLE, currently the status is ${this._status}`);
-        }
-    }
-
-    private assertNotClosed (): void{
-        if (this._status === SmTransactionStatus.CLOSED) {
-            throw new Error(`can't perform this operation on a transaction that has been already closed`);
         }
     }
 }

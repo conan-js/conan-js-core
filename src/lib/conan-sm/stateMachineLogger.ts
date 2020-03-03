@@ -2,6 +2,7 @@ import {Strings} from "../conan-utils/strings";
 import {StateMachineStatus} from "./stateMachine";
 
 export enum EventType {
+    FORK_JOIN = "FORK_JOIN",
     PROXY = 'PROXY',
     REQUEST = 'REQUEST',
     REACTION = 'REACTION',
@@ -25,6 +26,7 @@ export const eventTypesToLog: EventType[] = [
     // EventType.REQUEST,
     EventType.REACTION,
     EventType.FORK,
+    EventType.FORK_JOIN,
     EventType.ACTION,
     EventType.SHUTDOWN
 ];
