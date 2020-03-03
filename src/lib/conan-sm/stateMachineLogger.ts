@@ -14,20 +14,28 @@ export enum EventType {
     INIT = 'INIT'
 }
 
-export const toLog: EventType[] = [
+export const eventTypesToLog: EventType[] = [
     EventType.INIT,
     EventType.STAGE,
-    EventType.REQUEST,
-    EventType.REACTION,
-    EventType.REQUEST,
+    // EventType.REQUEST,
+    // EventType.REACTION,
+    // EventType.REQUEST,
     EventType.FORK,
     EventType.ACTION,
     EventType.SHUTDOWN
 ];
 
+export const detailLinesToLog: string[] = [
+    // 'init listeners',
+    'listeners',
+    // 'system listeners',
+    'stages',
+    // 'system stages '
+];
+
 export class StateMachineLogger {
     static log(smName: string, status: StateMachineStatus, stageName: string, actionName: string, eventType: EventType, transactionId: string, details?: string, additionalLines?: [string, string][]): void {
-        if (toLog.indexOf(eventType) < 0) return;
+        if (eventTypesToLog.indexOf(eventType) < 0) return;
 
         let transactionSplit: string [] = transactionId.split('/');
         let transactionRoot: string = '/' + transactionSplit [0] + transactionSplit [1];
@@ -53,7 +61,10 @@ export class StateMachineLogger {
 
         additionalLines.forEach(it => {
             if (it[1] == null || it[1] === '{}' || it[1] == '') return;
-            console.log("=>", Strings.padEnd(it [0], 18), it [1]);
+            let detailLineName = it[0];
+            if (detailLinesToLog.indexOf(detailLineName) > -1) {
+                console.log("=>", Strings.padEnd(detailLineName, 18), it [1]);
+            }
         });
         console.log('--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
     }

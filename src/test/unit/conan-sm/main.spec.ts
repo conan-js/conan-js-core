@@ -78,7 +78,6 @@ describe('test', () => {
                     expect(params.sm.getEvents()).to.deep.eq(SerializedSmEvents.events(initializationFork));
                     done();
                 }
-
             }])
             .sync <AuthenticationSmListener, AuthenticationSmJoiner>(
                 'sync-authentication',

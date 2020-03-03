@@ -35,8 +35,24 @@ export class StateMachineFactory {
         parent?: ParentStateMachineInfo<any, any>
     ): StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> {
         let stageDefsByKey: IKeyValuePairs<StageDef<string, any, any, any>> = Objects.keyfy(treeBuilderData.stageDefs, (it) => it.name);
+        let systemStages: IKeyValuePairs<StageDef<string, any, any, any>> = Objects.keyfy(treeBuilderData.stageDefs, (it) => it.name);
         let systemListeners: SmListenerDefList<SM_LISTENER> = [];
         let externalListeners: SmListenerDefList<SM_LISTENER> = treeBuilderData.listeners;
+
+        systemStages = {
+            init: {
+                name: 'init',
+                logic: undefined
+            },
+            start: {
+                name: 'start',
+                logic: undefined
+            },
+            stop: {
+                name: 'stop',
+                logic: undefined
+            }
+        };
 
         systemListeners.push(
             new SmListenerDefLikeParser().parse([
@@ -62,24 +78,15 @@ export class StateMachineFactory {
             } as any as SM_LISTENER])
         );
 
-
-        let stateMachine: StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> = new StateMachine({
-            ...treeBuilderData,
-            listeners: [...treeBuilderData.listeners, ...systemListeners, treeBuilderData.initialListener],
-            stageDefsByKey,
-            parent,
-        });
-
         let stageStringDefs: string [] = [];
-        Object.keys(stateMachine.data.stageDefsByKey).forEach(key => {
-            let stageDef = stateMachine.data.stageDefsByKey[key];
+        Object.keys(stageDefsByKey).forEach(key => {
+            let stageDef = stageDefsByKey[key];
             let description = `${stageDef.name}`;
             if (stageDef.deferredInfo) {
                 description += `[DEFERRED]`;
             }
             stageStringDefs.push(description)
         });
-
 
         StateMachineLogger.log(treeBuilderData.name, StateMachineStatus.IDLE, '', '', EventType.INIT, '', 'starting SM', [
             [`init listeners`, `(${treeBuilderData.initialListener.metadata})`],
@@ -90,8 +97,17 @@ export class StateMachineFactory {
                 return it.split(',').map(it=>`(${it})`).join(',');
             })}`],
             [`interceptors`, `${treeBuilderData.interceptors.map(it => it.metadata)}`],
-            [`stage defs`, `${stageStringDefs.join(', ')}`],
+            [`stages`, `${stageStringDefs.join(', ')}`],
+            [`system stages`, 'init, start, stop'],
         ]);
+
+        let stateMachine: StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> = new StateMachine({
+            ...treeBuilderData,
+            listeners: [...treeBuilderData.listeners, ...systemListeners, treeBuilderData.initialListener],
+            stageDefsByKey: {...stageDefsByKey, ...systemStages},
+            parent,
+        });
+
 
 
         stateMachine.requestStage ({

@@ -99,7 +99,13 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
     requestStage(stageToProcess: StageToProcess): void {
         this.assertNotClosed();
         this._status = StateMachineStatus.RUNNING;
-        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.stateMachineTransactions.getCurrentTransactionId(), `::${stageToProcess.stage.name}`);
+        let stageName = stageToProcess.stage.name;
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.stateMachineTransactions.getCurrentTransactionId(), `::${stageName}`);
+
+        if (this.data.stageDefsByKey [stageName] == null) {
+            throw new Error(`can't move sm: [${this.data.name}] to ::${stageName} and is not a valid stage, ie one of: (${Object.keys(this.data.stageDefsByKey).join(', ')})`)
+        }
+
         this.stateMachineTransactions.createStageTransaction(this.createSmStageTransactionRequest(stageToProcess)).run();
     }
 
@@ -298,7 +304,8 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
         stagePayload: any,
     ) {
         let stageDef: StageDef<string, any, any, any> = actionsByStage [stageName];
-        if (!stageDef) return {};
+        if (!stageDef || !stageDef.logic) return {};
+
         let actionsLogic: any = new stageDef.logic(stagePayload);
         let proxy: any = {} as any;
         let prototype = Object.getPrototypeOf(actionsLogic);
