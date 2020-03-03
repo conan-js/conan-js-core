@@ -48,6 +48,7 @@ export interface ParentStateMachineInfo<SM_LISTENER extends SmListener,
 }
 
 export enum StateMachineStatus {
+    PAUSED = 'PAUSED',
     STOPPED = 'STOPPED',
     IDLE = 'IDLE',
     RUNNING = 'RUNNING',
@@ -68,6 +69,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
         readonly data: StateMachineData<SM_ON_LISTENER, SM_IF_LISTENER>,
     ) {
     }
+
 
     addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
         this.assertNotClosed();
@@ -125,7 +127,8 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
         };
         let eventName = Strings.camelCaseWithPrefix('on', transition.path);
         this.stateMachineTransactions
-            .runTransitionTransaction(description, {
+            .runTransitionTransaction({
+                name: description,
                 stateMachine: this,
                 target: transition,
                 actions: this.createActions(this, this.data.stageDefsByKey, transition.into.name, transition.payload),
@@ -198,6 +201,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
 
         if (isDeferredStage) {
             return {
+                name: `!:${stageToProcess.stage.name}`,
                 stateMachine: this,
                 target: stageToProcess,
                 actions,
@@ -215,6 +219,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
         if (isOnForkJoiningBack) {
             StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.FORK_STOP, this.stateMachineTransactions.getCurrentTransactionId(), `=>joining back ${intoStageName}`);
             return {
+                name: `!!:${stageToProcess.stage.name}`,
                 stateMachine: this,
                 target: stageToProcess,
                 actions,
@@ -235,6 +240,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
         }
 
         return {
+            name: `::${stageToProcess.stage.name}`,
             stateMachine: this,
             target: stageToProcess,
             actions,
@@ -268,7 +274,9 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
         defer: IConsumer<ACTIONS>,
         joinsInto: string []
     ): StateMachine<any, any, any> {
-        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.FORK, this.stateMachineTransactions.getCurrentTransactionId(), `[FORK]::${nextStage.name}`);
+        this._status = StateMachineStatus.PAUSED;
+        let forkSmName = `${this.data.name}/${nextStage.name}`;
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.FORK, this.stateMachineTransactions.getCurrentTransactionId(), `[FORK]::${forkSmName}`);
         let deferEventName = Strings.camelCaseWithPrefix('on', nextStage.name);
         let deferPathName = Strings.camelCaseWithPrefix('do', nextStage.name);
         return StateMachineFactory.fork({
@@ -284,7 +292,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
                     })
                 }
             },
-            name: `${this.data.name}/${nextStage.name}`,
+            name: forkSmName,
             stageDefs: [{
                 name: nextStage.name,
                 logic: this.data.stageDefsByKey[nextStage.name].logic

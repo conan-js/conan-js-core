@@ -10,6 +10,7 @@ export interface ChainRequest {
 }
 
 export interface SmTransactionRequest {
+    name: string;
     stateMachine: StateMachine<any, any, any>;
     target: StageToProcess | SmTransition;
     actions: any;
@@ -24,31 +25,29 @@ export class StateMachineTransactions {
     createStageTransaction(
         request: SmTransactionRequest
     ): SmTransaction {
-        let stage = (request.target as StageToProcess).stage;
-        let thisId = `::${stage.name}`;
         if (! this.getCurrentExecution()) {
-            this._currentRootTransaction = new SmTransaction('/' + thisId, request);
+            this._currentRootTransaction = new SmTransaction(request);
         } else {
-            this.getCurrentExecution().fork (thisId, request);
+            this.getCurrentExecution().fork (request);
         }
 
         return this.getCurrentExecution();
     }
 
 
-    runTransitionTransaction(id: string, request: SmTransactionRequest): void {
+    runTransitionTransaction(request: SmTransactionRequest): void {
         let smTransaction: SmTransaction;
         if (this.isStopped()) {
-            smTransaction = new SmTransaction(id, request);
+            smTransaction = new SmTransaction(request);
             smTransaction.run();
         } else {
-            this.getCurrentExecution().fork(id, request);
+            this.getCurrentExecution().fork(request);
         }
     }
 
     getCurrentTransactionId() {
         if (!this.getCurrentExecution()) return '-';
-        return this.getCurrentExecution().id ;
+        return this.getCurrentExecution().getId() ;
     }
     private isStopped() {
         return this._currentRootTransaction == null || this.getCurrentExecution() == null;
@@ -82,12 +81,24 @@ export class SmTransaction {
     private _delegatedTransition: SmTransaction = undefined;
 
     constructor(
-        public readonly id: string,
         private readonly request: SmTransactionRequest,
         public readonly parent?: SmTransaction
     ) {
     }
 
+    getId (): string{
+        let current: SmTransaction = this;
+        let all: SmTransaction[] = [];
+        while (current){
+            all.push(current);
+            current = current.parent;
+        }
+        return all.reverse().map(it=>it.getThisName()).join('');
+    }
+
+    getThisName (): string{
+        return '/' + this.request.name;
+    }
 
     close (): void{
         this.assertNotClosed();
@@ -95,10 +106,10 @@ export class SmTransaction {
         this._delegatedTransition = null;
     }
 
-    fork(forkId: string, request: SmTransactionRequest) {
-        this.assertAcceptingFork(forkId);
+    fork(forkRequest: SmTransactionRequest) {
+        this.assertAcceptingFork(forkRequest.name);
 
-        let smTransaction = new SmTransaction(this.id + '/' + forkId, request, this);
+        let smTransaction = new SmTransaction(forkRequest, this);
         this._forkedTransitions.push(smTransaction);
         return smTransaction;
     }
@@ -163,7 +174,7 @@ export class SmTransaction {
             this._status = SmTransactionStatus.CHAINING;
 
             if (chainRequest) {
-                this.doChain (chainRequest.chainRequest, chainRequest.chainId)
+                this.doChain (chainRequest.chainRequest)
             }
 
             this.close();
@@ -176,7 +187,7 @@ export class SmTransaction {
             console.error(e.message);
             console.error('--------');
             while (pointer){
-                console.error(`${Strings.padEnd(pointer._status, 12)} ${pointer.id}`);
+                console.error(`${Strings.padEnd(pointer._status, 12)} ${pointer.request.name}`);
 
                 if (pointer._status === SmTransactionStatus.POST_RUNNING) {
                     console.error(`         ERROR ON THE POST RUNNING (onDone - ${pointer.request.onDone.metadata})`);
@@ -201,8 +212,8 @@ export class SmTransaction {
         }
     }
 
-    private doChain(nextRequest: SmTransactionRequest, chainId: string) {
-        let smTransaction = new SmTransaction(this.id + '//' + chainId, nextRequest, this);
+    private doChain(nextRequest: SmTransactionRequest) {
+        let smTransaction = new SmTransaction(nextRequest, this);
         this._chainedTransition = smTransaction;
         this._delegatedTransition = this._chainedTransition;
         smTransaction.doRun();
@@ -210,7 +221,7 @@ export class SmTransaction {
 
     private assertAcceptingFork (forkId: string): void{
         if (this._status !== SmTransactionStatus.IDLE  && this._status !== SmTransactionStatus.RUNNING) {
-            throw new Error(`ERROR FORKING ${this.id}/${forkId} this operation can only be performed when transaction is IDLE or RUNNING, currently the status of ${this.id} is ${this._status}`);
+            throw new Error(`ERROR FORKING ${this.request.name}/${forkId} this operation can only be performed when transaction is IDLE or RUNNING, currently the status of ${this.request.name} is ${this._status}`);
         }
     }
 
