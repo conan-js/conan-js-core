@@ -40,10 +40,9 @@ interface BaseToProcess {
     description: string;
 }
 
-export interface ParentStateMachineInfo<
-    SM_LISTENER extends SmListener,
+export interface ParentStateMachineInfo<SM_LISTENER extends SmListener,
     JOIN_LISTENER extends SmListener,
-> {
+    > {
     stateMachine: StateMachine<SM_LISTENER, JOIN_LISTENER, any>,
     joinsInto: string[]
 }
@@ -53,11 +52,10 @@ export enum StateMachineStatus {
     RUNNING = 'RUNNING',
 }
 
-export class StateMachine<
-    SM_ON_LISTENER extends SmListener,
+export class StateMachine<SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
     ACTIONS,
-> implements SmController<SM_ON_LISTENER, SM_IF_LISTENER> {
+    > implements SmController<SM_ON_LISTENER, SM_IF_LISTENER> {
     readonly eventThread: EventThread = new EventThread();
     private _status: StateMachineStatus = StateMachineStatus.IDLE;
 
@@ -67,7 +65,8 @@ export class StateMachine<
 
     constructor(
         readonly data: StateMachineData<SM_ON_LISTENER, SM_IF_LISTENER>,
-    ) {}
+    ) {
+    }
 
     addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
         this.assertNotClosed();
@@ -100,14 +99,14 @@ export class StateMachine<
     requestStage(stageToProcess: StageToProcess): void {
         this.assertNotClosed();
         this._status = StateMachineStatus.RUNNING;
-        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.QUEUE, this.stateMachineTransactions.getCurrentTransactionId(), `::${stageToProcess.stage.name}`);
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.stateMachineTransactions.getCurrentTransactionId(), `::${stageToProcess.stage.name}`);
         this.stateMachineTransactions.createStageTransaction(this.createSmStageTransactionRequest(stageToProcess)).run();
     }
 
     requestTransition(transition: SmTransition): this {
         this.assertNotClosed();
 
-        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.QUEUE, this.stateMachineTransactions.getCurrentTransactionId(), `=>${transition.path}`);
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.stateMachineTransactions.getCurrentTransactionId(), `=>${transition.path}`);
         let description = `=>${transition.path}`;
         let toProcess: ActionToProcess = {
             description,
@@ -267,23 +266,26 @@ export class StateMachine<
             stateMachine: this,
             joinsInto
         }, {
+            initialListener: {
+                metadata: `::start=>${deferPathName}`,
+                value: {
+                    onStart: (_: any, params: SmEventCallbackParams) => params.sm.requestTransition({
+                        path: deferPathName,
+                        into: nextStage,
+                    })
+                }
+            },
             name: `${this.data.name}/${nextStage.name}`,
             stageDefs: [{
                 name: nextStage.name,
                 logic: this.data.stageDefsByKey[nextStage.name].logic
             }],
-            listeners: [
-                {
-                    metadata: `::${deferEventName}->[DEFERRED],::start=>${deferPathName}`,
-                    value: {
-                        onStart: (_: any, params: SmEventCallbackParams) => params.sm.requestTransition({
-                            path: deferPathName,
-                            into: nextStage,
-                        }),
-                        [deferEventName]: (actions: any) => defer(actions)
-                    }
+            listeners: [{
+                metadata: `::${deferEventName}->[DEFERRED]`,
+                value: {
+                    [deferEventName]: (actions: any) => defer(actions)
                 }
-            ],
+            }],
             interceptors: [],
             syncDefs: undefined,
         });

@@ -65,7 +65,7 @@ export class StateMachineFactory {
 
         let stateMachine: StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> = new StateMachine({
             ...treeBuilderData,
-            listeners: [...treeBuilderData.listeners, ...systemListeners],
+            listeners: [...treeBuilderData.listeners, ...systemListeners, treeBuilderData.initialListener],
             stageDefsByKey,
             parent,
         });
@@ -82,6 +82,7 @@ export class StateMachineFactory {
 
 
         StateMachineLogger.log(treeBuilderData.name, StateMachineStatus.IDLE, '', '', EventType.INIT, '', 'starting SM', [
+            [`init listeners`, `(${treeBuilderData.initialListener.metadata})`],
             [`listeners`, `${externalListeners.map(it=>it.metadata).map(it => {
                 return it.split(',').map(it=>`(${it})`).join(',');
             })}`],

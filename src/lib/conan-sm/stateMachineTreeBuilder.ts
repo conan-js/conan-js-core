@@ -26,12 +26,19 @@ export class StateMachineTreeBuilder<
     private readonly smListenerDefLikeParser: SmListenerDefLikeParser = new SmListenerDefLikeParser();
 
     public request: StateMachineTreeBuilderData<SM_ON_LISTENER, SM_IF_LISTENER> = {
+        initialListener: undefined,
         listeners: [],
         interceptors: [],
         name: undefined,
         syncDefs: [],
         stageDefs: [],
     };
+
+    constructor(
+        private readonly initialListener: SmListenerDefLike<SM_ON_LISTENER>
+    ) {
+        this.request.initialListener = this.smListenerDefLikeParser.parse(initialListener);
+    }
     private started: boolean = false;
 
     addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {

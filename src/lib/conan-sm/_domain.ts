@@ -1,4 +1,4 @@
-import {ListenerType, SmListener, SmListenerDefLike, SmListenerDefList} from "./stateMachineListeners";
+import {ListenerType, SmListener, SmListenerDef, SmListenerDefLike, SmListenerDefList} from "./stateMachineListeners";
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
 import {StageDef} from "./stage";
 import {SyncStateMachineDef} from "./stateMachineTreeBuilder";
@@ -42,6 +42,7 @@ export interface StateMachineTreeBuilderData<
     SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
 > extends StateMachineBaseData<SM_ON_LISTENER, SM_IF_LISTENER>{
+    initialListener: SmListenerDef<SM_ON_LISTENER>
     stageDefs: StageDef<string, any, any, any> []
     syncDefs: SyncStateMachineDef<SM_IF_LISTENER, any, any> [],
 }

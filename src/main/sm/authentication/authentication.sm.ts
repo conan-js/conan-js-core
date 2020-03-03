@@ -53,6 +53,7 @@ export class AuthenticatingActionsLogic implements AuthenticatingActions {
     }
 
 }
+
 export class NotAuthenticatedActionsLogic implements NotAuthenticatedActions {
     doAuthenticating(userNameAndPassword: UserNameAndPassword): AuthenticatingStage {
         return {
@@ -63,49 +64,48 @@ export class NotAuthenticatedActionsLogic implements NotAuthenticatedActions {
 }
 
 export type Authenticator = IBiConsumer<AuthenticatingActions, UserNameAndPassword>;
-export interface AuthenticationSmActions extends NotAuthenticatedActions, AuthenticatedActions {}
-export interface AuthenticationSmListener extends NotAuthenticatedListener, AuthenticatingListener, AuthenticatedListener, BasicSmListener {}
-export interface AuthenticationSmJoiner extends AuthenticatedJoiner {}
+
+export interface AuthenticationSmActions extends NotAuthenticatedActions, AuthenticatedActions {
+}
+
+export interface AuthenticationSmListener extends NotAuthenticatedListener, AuthenticatingListener, AuthenticatedListener, BasicSmListener {
+}
+
+export interface AuthenticationSmJoiner extends AuthenticatedJoiner {
+}
 
 export class AuthenticationPrototype {
     constructor(
         private readonly authenticator: Authenticator,
-    ) {}
+    ) {
+    }
 
-    newBuilder (): StateMachineTreeBuilder <AuthenticationSmListener, AuthenticationSmJoiner, AuthenticationSmActions> {
-        return new StateMachineTreeBuilder ()
-            .withStage<
-                NotAuthenticatedStageName,
-                NotAuthenticatedActions
-            > (
+    newBuilder(): StateMachineTreeBuilder<AuthenticationSmListener, AuthenticationSmJoiner, AuthenticationSmActions> {
+        return new StateMachineTreeBuilder([`::start=>doNotAuth`, {
+            onStart: (_, params) => params.sm.requestTransition({
+                into: {
+                    name: 'notAuthenticated'
+                },
+                path: 'doNotAuthenticated'
+            })
+        }])
+            .withStage<NotAuthenticatedStageName,
+                NotAuthenticatedActions>(
                 'notAuthenticated',
                 NotAuthenticatedActionsLogic,
             )
-            .withDeferredStage<
-                AuthenticatingStageName,
+            .withDeferredStage<AuthenticatingStageName,
                 AuthenticatingActions,
-                UserNameAndPassword
-            >(
+                UserNameAndPassword>(
                 "authenticating",
                 AuthenticatingActionsLogic,
                 this.authenticator,
                 ['authenticated']
-            ).
-            withStage<
-                AuthenticatedStageName,
+            ).withStage<AuthenticatedStageName,
                 AuthenticatedActions,
-                AppCredentials
-            >(
+                AppCredentials>(
                 "authenticated",
                 AuthenticatedActionsLogic,
             )
-            .addListener([`::start=>doNotAuth`, {
-                onStart: (_, params)=> params.sm.requestTransition({
-                    into: {
-                        name: 'notAuthenticated'
-                    },
-                    path: 'doNotAuthenticated'
-                })
-            }])
     }
 }
