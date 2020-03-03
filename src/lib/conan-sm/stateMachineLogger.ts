@@ -18,7 +18,7 @@ export const eventTypesToLog: EventType[] = [
     EventType.INIT,
     EventType.STAGE,
     // EventType.REQUEST,
-    // EventType.REACTION,
+    EventType.REACTION,
     // EventType.REQUEST,
     EventType.FORK,
     EventType.ACTION,
@@ -33,9 +33,24 @@ export const detailLinesToLog: string[] = [
     // 'system stages '
 ];
 
+export const actionsToIgnore: string[] = [
+    'doStart'
+];
+
+export const stagesToIgnore: string[] = [
+    'init', 'stop', 'start'
+];
+
+export const stagesToMute: string[]=[
+    'init'
+];
+
 export class StateMachineLogger {
     static log(smName: string, status: StateMachineStatus, stageName: string, actionName: string, eventType: EventType, transactionId: string, details?: string, additionalLines?: [string, string][]): void {
         if (eventTypesToLog.indexOf(eventType) < 0) return;
+        if (stagesToMute.indexOf(stageName) > -1) return;
+        if (eventType === EventType.STAGE && stagesToIgnore.indexOf(stageName) > -1) return;
+        if ((eventType === EventType.ACTION || eventType === EventType.REACTION) && actionsToIgnore.indexOf(actionName) > -1) return;
 
         let transactionSplit: string [] = transactionId.split('/');
         let transactionRoot: string = '/' + transactionSplit [0] + transactionSplit [1];
@@ -56,7 +71,6 @@ export class StateMachineLogger {
             details
         );
 
-        if (!additionalLines) return;
         if (!additionalLines) return;
 
         additionalLines.forEach(it => {

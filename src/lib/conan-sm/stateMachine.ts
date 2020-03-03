@@ -48,6 +48,7 @@ export interface ParentStateMachineInfo<SM_LISTENER extends SmListener,
 }
 
 export enum StateMachineStatus {
+    STOPPED = 'STOPPED',
     IDLE = 'IDLE',
     RUNNING = 'RUNNING',
 }
@@ -252,6 +253,8 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
 
     shutdown() {
         this.closed = true;
+        this._status = StateMachineStatus.STOPPED;
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.SHUTDOWN, `-`, '', []);
     }
 
     private assertNotClosed() {

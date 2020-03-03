@@ -72,7 +72,6 @@ export class StateMachineFactory {
         systemListeners.push(
             new SmListenerDefLikeParser().parse(['::stop->shutdown', {
                 onStop: () => {
-                    StateMachineLogger.log(stateMachine.data.name, StateMachineStatus.RUNNING, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.SHUTDOWN, `-`, '', []);
                     stateMachine.shutdown();
                 }
             } as any as SM_LISTENER])
