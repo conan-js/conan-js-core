@@ -2,18 +2,18 @@ import {Transaction, TransactionRequest, TransactionStatus} from "./transaction"
 
 
 export class TransactionTree {
-    private _currentRootTransaction: Transaction;
+    private _root: Transaction;
 
     createOrForkTransaction(
         request: TransactionRequest
     ): Transaction {
-        if (!this.getCurrentExecution()) {
-            this._currentRootTransaction = new Transaction(request);
+        if (!this.getCurrentTransaction()) {
+            this._root = new Transaction(request);
         } else {
-            this.getCurrentExecution().fork(request);
+            this.getCurrentTransaction().fork(request);
         }
 
-        let currentExecution = this.getCurrentExecution();
+        let currentExecution = this.getCurrentTransaction();
         if (currentExecution.status === TransactionStatus.IDLE) {
             currentExecution.run();
         }
@@ -21,12 +21,12 @@ export class TransactionTree {
     }
 
     getCurrentTransactionId() {
-        if (!this.getCurrentExecution()) return '-';
-        return this.getCurrentExecution().getId();
+        if (!this.getCurrentTransaction()) return '-';
+        return this.getCurrentTransaction().getId();
     }
 
 
-    private getCurrentExecution(): Transaction {
-        return this._currentRootTransaction == null ? null : this._currentRootTransaction.getCurrentRunningTransaction()
+    private getCurrentTransaction(): Transaction {
+        return this._root == null ? null : this._root.getCurrentRunningTransaction()
     }
 }
