@@ -16,7 +16,8 @@ export interface SmTransactionRequest {
     actions: any;
     onStart?: WithMetadata<ICallback, string>;
     reactionsProducer: IProducer<WithMetadataArray<SmEventCallback<any>, string>>;
-    onDone?: WithMetadata<IProducer<ChainRequest | void>, string>;
+    doChain?: WithMetadata<IProducer<ChainRequest>, string>;
+    onDone?: WithMetadata<ICallback, string>;
 }
 
 export class StateMachineTransactions {
@@ -189,9 +190,12 @@ export class SmTransaction {
 
 
             let chainRequest = undefined;
-            if (this.request.onDone) {
+            if (this.request.doChain) {
                 this._status = SmTransactionStatus.POST_RUNNING;
-                chainRequest = this.request.onDone.value();
+                chainRequest = this.request.doChain.value();
+                if (chainRequest == null) {
+                    throw new Error(`Error chaining, no chain provided on ${this.request.doChain.metadata} if you want to just have a callback at the end of the transaction, use onDone instead`);
+                }
             }
 
 
@@ -210,6 +214,9 @@ export class SmTransaction {
                 this.doChain (chainRequest.chainRequest)
             }
 
+            if(this.request.onDone) {
+                this.request.onDone.value ();
+            }
             this.close();
         } catch (e) {
             if (e instanceof SmTransactionError) throw e;
@@ -223,7 +230,7 @@ export class SmTransaction {
                 console.error(`${Strings.padEnd(pointer._status, 12)} ${pointer.getId()}`);
 
                 if (pointer._status === SmTransactionStatus.POST_RUNNING) {
-                    console.error(`         ERROR ON THE POST RUNNING (onDone - ${pointer.request.onDone.metadata})`);
+                    console.error(`         ERROR ON THE POST RUNNING (onDone - ${pointer.request.doChain.metadata})`);
                 }
                 if (pointer._status === SmTransactionStatus.CLOSING) {
                     console.error(`         ERROR PROCESSING CHILD FORKED TRANSACTIONS`);

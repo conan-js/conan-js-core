@@ -144,7 +144,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
                 reactionsProducer: () => {
                     return this.createReactions(eventName, this.data.interceptors);
                 },
-                onDone: {
+                doChain: {
                     metadata: `[request-stage]::${toProcess.into.name}`,
                     value: () => ({
                         chainId: `::${toProcess.into.name}`,
@@ -225,12 +225,17 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
                 reactionsProducer: () => [{
                     metadata: `[FORK_END]`,
                     value: () =>
-                        this.requestStage({stage: {name: 'stop'}, description: '::stop', eventType: EventType.FORK_STOP, type: ToProcessType.STAGE})
+                        this.requestStage({
+                            stage: {name: 'stop'},
+                            description: '::stop',
+                            eventType: EventType.FORK_STOP,
+                            type: ToProcessType.STAGE
+                        })
                 }],
                 onDone: ({
                     metadata: `[PARENT FORK JOIN]`, value: (): void => {
                         let parentSm = this.data.parent.stateMachine;
-                        parentSm.requestResume (this, stageToProcess);
+                        parentSm.requestResume(this, stageToProcess);
                     }
                 })
             };
@@ -349,19 +354,14 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
     }
 
     private requestResume(from: StateMachine<any, any, any>, stageToProcess: StageToProcess): void {
-        from.addListener(['FORK-JOIN', {
-            onStop: () => {
-                this._status = StateMachineStatus.RUNNING;
-                let stageName = stageToProcess.stage.name;
-                let stageDescriptor = `::${stageName}`;
-                StateMachineLogger.log(this.data.name, this._status, stageName, this.eventThread.getCurrentStageName(), EventType.FORK_JOIN, this.stateMachineTransactions.getCurrentTransactionId(), `->::${stageName}`);
-                this.requestStage({
-                    type: ToProcessType.STAGE,
-                    eventType: EventType.FORK_JOIN,
-                    description: stageDescriptor,
-                    stage: stageToProcess.stage
-                });
-            }
-        } as SmListener]);
+        this._status = StateMachineStatus.RUNNING;
+        let stageName = stageToProcess.stage.name;
+        let stageDescriptor = `::${stageName}`;
+        this.requestStage({
+            type: ToProcessType.STAGE,
+            eventType: EventType.FORK_JOIN,
+            description: stageDescriptor,
+            stage: stageToProcess.stage
+        });
     }
 }
