@@ -1,10 +1,11 @@
 import {ParentStateMachineInfo, StateMachine, StateMachineStatus, ToProcessType} from "./stateMachine";
-import {IKeyValuePairs} from "../conan-utils/typesHelper";
-import {StageDef} from "./stage";
+import {IConsumer, IKeyValuePairs} from "../conan-utils/typesHelper";
+import {Stage, StageDef} from "./stage";
 import {Objects} from "../conan-utils/objects";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
-import {SmListener, SmListenerDefLikeParser, SmListenerDefList} from "./stateMachineListeners";
+import {SmEventCallbackParams, SmListener, SmListenerDefLikeParser, SmListenerDefList} from "./stateMachineListeners";
 import {StateMachineTreeBuilderData} from "./_domain";
+import {Strings} from "../conan-utils/strings";
 
 export class StateMachineFactory {
     static create<
@@ -20,10 +21,39 @@ export class StateMachineFactory {
         SM_LISTENER extends SmListener,
         JOIN_LISTENER extends SmListener,
     >(
+        forkName: string,
         parent: ParentStateMachineInfo<any, any>,
-        request: StateMachineTreeBuilderData<SM_LISTENER, JOIN_LISTENER>
+        forkIntoStage: Stage,
+        forkIntoStageDef: StageDef<any, any, any>,
+        defer: IConsumer<any>
     ) {
-        return this.doCreate(request, parent);
+        let deferEventName = Strings.camelCaseWithPrefix('on', forkIntoStage.name);
+        let deferPathName = Strings.camelCaseWithPrefix('do', forkIntoStage.name);
+
+        return this.doCreate({
+            initialListener: {
+                metadata: `::start=>${deferPathName}`,
+                value: {
+                    onStart: (_: any, params: SmEventCallbackParams) => params.sm.requestTransition({
+                        path: deferPathName,
+                        into: forkIntoStage,
+                    })
+                }
+            },
+            name: forkName,
+            stageDefs: [{
+                name: forkIntoStage.name,
+                logic: forkIntoStageDef.logic
+            }],
+            listeners: [{
+                metadata: `::${deferEventName}->[DEFERRED]`,
+                value: {
+                    [deferEventName]: (actions: any) => defer(actions)
+                }
+            }],
+            interceptors: [],
+            syncDefs: undefined,
+        }, parent);
     }
 
     private static doCreate<

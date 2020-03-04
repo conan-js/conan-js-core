@@ -7,7 +7,6 @@ import {StateMachineFactory} from "./stateMachineFactory";
 import {
     ListenerType,
     SmEventCallback,
-    SmEventCallbackParams,
     SmListener,
     SmListenerDefLike,
     SmListenerDefLikeParser,
@@ -119,15 +118,6 @@ export class StateMachine<
         this.assertNotClosed();
 
         StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.transactionTree.getCurrentTransactionId(), `=>${transition.path}`);
-        let description = `=>${transition.path}`;
-        let toProcess: ActionToProcess = {
-            description,
-            actionName: transition.path,
-            into: transition.into,
-            payload: transition.payload,
-            eventType: EventType.ACTION,
-            type: ToProcessType.ACTION,
-        };
         let actions = this.createActions(this, this.data.stageDefsByKey, transition.into.name, transition.payload);
         let eventName = Strings.camelCaseWithPrefix('on', transition.path);
         this.transactionTree
@@ -190,35 +180,17 @@ export class StateMachine<
         this._status = StateMachineStatus.PAUSED;
         let forkSmName = `${this.data.name}/${nextStage.name}`;
         StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.FORK, this.transactionTree.getCurrentTransactionId(), `[FORK]::${forkSmName}`);
-        let deferEventName = Strings.camelCaseWithPrefix('on', nextStage.name);
-        let deferPathName = Strings.camelCaseWithPrefix('do', nextStage.name);
-        return StateMachineFactory.fork({
-            stateMachine: this,
-            joinsInto
-        }, {
-            initialListener: {
-                metadata: `::start=>${deferPathName}`,
-                value: {
-                    onStart: (_: any, params: SmEventCallbackParams) => params.sm.requestTransition({
-                        path: deferPathName,
-                        into: nextStage,
-                    })
-                }
+
+        return StateMachineFactory.fork(
+            forkSmName,
+            {
+                stateMachine: this,
+                joinsInto
             },
-            name: forkSmName,
-            stageDefs: [{
-                name: nextStage.name,
-                logic: this.data.stageDefsByKey[nextStage.name].logic
-            }],
-            listeners: [{
-                metadata: `::${deferEventName}->[DEFERRED]`,
-                value: {
-                    [deferEventName]: (actions: any) => defer(actions)
-                }
-            }],
-            interceptors: [],
-            syncDefs: undefined,
-        });
+            nextStage,
+            this.data.stageDefsByKey[nextStage.name],
+            defer
+        );
     }
 
     createActions(
