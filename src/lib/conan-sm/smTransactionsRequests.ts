@@ -86,13 +86,15 @@ export class SmTransactionsRequests {
             name: `<-::${stage.name}`,
             reactionsProducer: () => [{
                 metadata: `[stop-child-fork]`,
-                value: () =>
+                value: () => {
+                    StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.FORK_STOP, stateMachine.transactionTree.getCurrentTransactionId(), `!::${stage.name}`);
                     stateMachine.requestStage({
                         stage: {name: 'stop'},
                         description: '::stop',
                         eventType: EventType.FORK_STOP,
                         type: ToProcessType.STAGE
-                    })
+                    });
+                }
             }],
             onDone: ({
                 metadata: `[parent-join]`, value: (): void => {
