@@ -7,7 +7,7 @@ import {SmEventCallback} from "./stateMachineListeners";
 import {SmTransition} from "./stateMachineEvents";
 import {Strings} from "../conan-utils/strings";
 
-export class SmTransactions {
+export class SmTransactionsRequests {
     createStageTransactionRequest(stateMachine: StateMachine<any, any, any>, stageToProcess: StageToProcess): TransactionRequest {
         let intoStageName = stageToProcess.stage.name;
         let stageDef = stateMachine.data.stageDefsByKey [intoStageName];
@@ -41,12 +41,15 @@ export class SmTransactions {
             reactionsProducer: () => this.reactionsAsCallbacks(stateMachine, reactions, actions),
             doChain: {
                 metadata: `[request-stage]::${transition.into.name}`,
-                value: () => this.createStageTransactionRequest(stateMachine, {
-                    description: `=>${transition.path}`,
-                    eventType: EventType.STAGE,
-                    stage: transition.into,
-                    type: ToProcessType.STAGE
-                })
+                value: () => {
+                    StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.CHAIN, stateMachine.transactionTree.getCurrentTransactionId(), `//::${transition.into.name}`);
+                    return this.createStageTransactionRequest(stateMachine, {
+                        description: `=>${transition.path}`,
+                        eventType: EventType.STAGE,
+                        stage: transition.into,
+                        type: ToProcessType.STAGE
+                    });
+                }
             }
         }
     }

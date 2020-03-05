@@ -15,20 +15,12 @@ import {
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
 import {SmController, StateMachineData} from "./_domain";
 import {TransactionTree} from "../conan-tx/transactionTree";
-import {SmTransactions} from "./smTransactions";
+import {SmTransactionsRequests} from "./smTransactionsRequests";
 
 export enum ToProcessType {
     ACTION = 'ACTION',
     STAGE = 'STAGE'
 }
-
-interface ActionToProcess extends BaseToProcess {
-    type: ToProcessType.ACTION;
-    actionName: string;
-    payload?: any;
-    into: Stage;
-}
-
 export interface StageToProcess extends BaseToProcess {
     type: ToProcessType.STAGE;
     stage: Stage;
@@ -59,7 +51,7 @@ export class StateMachine<
     SM_IF_LISTENER extends SmListener,
     ACTIONS,
 > implements SmController<SM_ON_LISTENER, SM_IF_LISTENER> {
-    readonly smTransactions: SmTransactions = new SmTransactions ();
+    readonly smTransactions: SmTransactionsRequests = new SmTransactionsRequests ();
     readonly eventThread: EventThread = new EventThread();
     _status: StateMachineStatus = StateMachineStatus.IDLE;
 
@@ -112,7 +104,7 @@ export class StateMachine<
         this.transactionTree.createOrForkTransaction(
             this.smTransactions.createStageTransactionRequest(this, stageToProcess),
             ()=>{
-                StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.transactionTree.getCurrentTransactionId(), `::${stageName}`);
+                StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.transactionTree.getCurrentTransactionId(), `+::${stageName}`);
                 this._status = StateMachineStatus.RUNNING;
             }
         );
@@ -121,7 +113,7 @@ export class StateMachine<
     requestTransition(transition: SmTransition): this {
         this.assertNotClosed();
 
-        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.transactionTree.getCurrentTransactionId(), `=>${transition.path}`);
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.transactionTree.getCurrentTransactionId(), `+=>${transition.path}`);
         let actions = this.createActions(this, this.data.stageDefsByKey, transition.into.name, transition.payload);
         let eventName = Strings.camelCaseWithPrefix('on', transition.path);
         this.transactionTree

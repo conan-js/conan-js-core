@@ -117,7 +117,7 @@ export class StateMachineFactory {
             stageStringDefs.push(description)
         });
 
-        StateMachineLogger.log(treeBuilderData.name, StateMachineStatus.IDLE, '', '', EventType.INIT, '', 'starting SM', [
+        StateMachineLogger.log(treeBuilderData.name, StateMachineStatus.IDLE, '', '', EventType.INIT, undefined, '', [
             [`init listeners`, `(${treeBuilderData.initialListener.metadata})`],
             [`listeners`, `${externalListeners.map(it=>it.metadata).map(it => {
                 return it.split(',').map(it=>`(${it})`).join(',');
