@@ -2,7 +2,7 @@ import {Transaction, TransactionRequest} from "../conan-tx/transaction";
 import {Stage, StageDef} from "./stage";
 import {StageToProcess, StateMachine, ToProcessType} from "./stateMachine";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
-import {ICallback, IConsumer, WithMetadataArray} from "../conan-utils/typesHelper";
+import {ICallback, WithMetadataArray} from "../conan-utils/typesHelper";
 import {SmEventCallback} from "./stateMachineListeners";
 import {SmTransition} from "./stateMachineEvents";
 import {Strings} from "../conan-utils/strings";
@@ -114,11 +114,6 @@ export class SmTransactionsRequests {
             'onDone', (tx) => this.doLog(stateMachine, tx, EventType.TR_CLOSE)),
             'onStart', (tx) => this.doLog(stateMachine, tx, EventType.TR_OPEN)
         );
-        //{
-        //             ...toEnrich,
-        //             onDone: TransactionRequests.enrich(toEnrich, 'onDone', (tx) => this.doLog(stateMachine, tx, EventType.TR_CLOSE)),
-        //             onStart: TransactionRequests.enrich(toEnrich, 'onStart', (tx) => this.doLog(stateMachine, tx, EventType.TR_OPEN)),
-        //         };
     }
 
 

@@ -110,7 +110,6 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
     requestTransition(transition: SmTransition): this {
         this.assertNotClosed();
 
-        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.transactionTree.getCurrentTransactionId(), `+=>${transition.path}`);
         let actions = this.createActions(this, this.data.stageDefsByKey, transition.into.name, transition.payload);
         let eventName = Strings.camelCaseWithPrefix('on', transition.path);
         this.transactionTree
@@ -246,9 +245,9 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
     }
 
     join(stageToProcess: StageToProcess): void {
-        this._status = StateMachineStatus.RUNNING;
         let stageName = stageToProcess.stage.name;
         let stageDescriptor = `::${stageName}`;
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.FORK_JOIN, this.transactionTree.getCurrentTransactionId(), `<-::${stageName}`);
         this.requestStage({
             type: ToProcessType.STAGE,
             eventType: EventType.FORK_JOIN,
