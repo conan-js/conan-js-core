@@ -103,15 +103,19 @@ export class StateMachine<
 
     requestStage(stageToProcess: StageToProcess): void {
         this.assertNotClosed();
-        this._status = StateMachineStatus.RUNNING;
-        let stageName = stageToProcess.stage.name;
-        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.transactionTree.getCurrentTransactionId(), `::${stageName}`);
 
+        let stageName = stageToProcess.stage.name;
         if (this.data.stageDefsByKey [stageName] == null) {
             throw new Error(`can't move sm: [${this.data.name}] to ::${stageName} and is not a valid stage, ie one of: (${Object.keys(this.data.stageDefsByKey).join(', ')})`)
         }
 
-        this.transactionTree.createOrForkTransaction(this.smTransactions.createStageTransactionRequest(this, stageToProcess));
+        this.transactionTree.createOrForkTransaction(
+            this.smTransactions.createStageTransactionRequest(this, stageToProcess),
+            ()=>{
+                StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.transactionTree.getCurrentTransactionId(), `::${stageName}`);
+                this._status = StateMachineStatus.RUNNING;
+            }
+        );
     }
 
     requestTransition(transition: SmTransition): this {

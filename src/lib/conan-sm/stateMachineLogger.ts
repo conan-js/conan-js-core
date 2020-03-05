@@ -22,8 +22,8 @@ export const eventTypesToLog: EventType[] = [
     EventType.FORK_STOP,
     EventType.ADD_INTERCEPTOR,
     EventType.ADD_LISTENER,
-    // EventType.PROXY,
-    // EventType.REQUEST,
+    EventType.PROXY,
+    EventType.REQUEST,
     EventType.REACTION,
     EventType.FORK,
     EventType.FORK_JOIN,
@@ -32,29 +32,29 @@ export const eventTypesToLog: EventType[] = [
 ];
 
 export const detailLinesToLog: string[] = [
-    // 'init listeners',
+    'init listeners',
     'listeners',
-    // 'system listeners',
+    'system listeners',
     'stages',
-    // 'system stages '
+    'system stages '
 ];
 
 export const actionsToIgnore: string[] = [
-    'doStart'
+    // 'doStart'
 ];
 
 export const stagesToIgnore: string[] = [
-    'init', 'stop', 'start'
+    // 'init', 'stop', 'start'
 ];
 
 export const stagesToMute: string[]=[
-    'init', '-'
+    // 'init', '-'
 ];
 
 export const redundantTransactionParts: string [] = [
-    '::init',
-    '=>doStart',
-    '::start'
+    // '::init',
+    // '=>doStart',
+    // '::start'
 ];
 
 export class StateMachineLogger {
@@ -64,27 +64,31 @@ export class StateMachineLogger {
         if (eventType === EventType.STAGE && stagesToIgnore.indexOf(stageName) > -1) return;
         if ((eventType === EventType.ACTION || eventType === EventType.REACTION) && actionsToIgnore.indexOf(actionName) > -1) return;
 
-        let transactionSplit: string [] = transactionId.split('/');
-        let transactionRoot: string = '/' + transactionSplit [0] + transactionSplit [1];
-        let transactionRemainder: string = transactionId;
+        let transactionRoot: string = '-';
+        let transactionRemainder: string = '';
+        if (transactionId != null) {
+            let transactionSplit: string [] = transactionId.split('/');
+            transactionRoot = '/' + transactionSplit [0] + transactionSplit [1];
+            transactionRemainder = transactionId;
 
-        let redundantAccumulated = '';
-        redundantTransactionParts.find(part=>{
-            let nextRedundantAccumulatedA = redundantAccumulated + '/' + part;
-            let nextRedundantAccumulatedB = redundantAccumulated + '//' + part;
-            let aIndex = transactionId.indexOf(nextRedundantAccumulatedA);
-            let bIndex = transactionId.indexOf(nextRedundantAccumulatedB);
-            if (
-                aIndex === -1 &&
-                bIndex === -1
-            ) return true;
+            let redundantAccumulated = '';
+            redundantTransactionParts.find(part=>{
+                let nextRedundantAccumulatedA = redundantAccumulated + '/' + part;
+                let nextRedundantAccumulatedB = redundantAccumulated + '//' + part;
+                let aIndex = transactionId.indexOf(nextRedundantAccumulatedA);
+                let bIndex = transactionId.indexOf(nextRedundantAccumulatedB);
+                if (
+                    aIndex === -1 &&
+                    bIndex === -1
+                ) return true;
 
-            redundantAccumulated = aIndex > -1 ? nextRedundantAccumulatedA : nextRedundantAccumulatedB;
-            return false;
-        });
+                redundantAccumulated = aIndex > -1 ? nextRedundantAccumulatedA : nextRedundantAccumulatedB;
+                return false;
+            });
 
-        if (redundantAccumulated !== '') {
-            transactionRemainder = transactionRemainder.substring(redundantAccumulated.length, transactionRemainder.length)
+            if (redundantAccumulated !== '') {
+                transactionRemainder = transactionRemainder.substring(redundantAccumulated.length, transactionRemainder.length)
+            }
         }
 
         if (additionalLines){
@@ -94,12 +98,12 @@ export class StateMachineLogger {
         console.log(
             Strings.padEnd(`${smName}`, 30),
             Strings.padEnd(status, 15),
-            Strings.padEnd(transactionRoot, 15),
+            Strings.padEnd(transactionRoot, 28),
             Strings.padEnd(`${stageName}`, 25),
             Strings.padEnd(`${actionName}`, 25),
             Strings.padEnd(`${eventType}`, 14),
-            Strings.padEnd(transactionRemainder, 90),
-            details
+            Strings.padEnd(details, 50),
+            transactionRemainder,
         );
 
         if (!additionalLines) return;
