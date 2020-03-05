@@ -1,21 +1,22 @@
-import {ICallback, IProducer, WithMetadata, WithMetadataArray} from "../conan-utils/typesHelper";
+import {ICallback, IConsumer, IProducer, WithMetadata, WithMetadataArray} from "../conan-utils/typesHelper";
 import {SmEventCallback} from "../conan-sm/stateMachineListeners";
 import {Strings} from "../conan-utils/strings";
 
 export interface TransactionRequest {
     name: string;
-    onStart?: WithMetadata<ICallback, string>;
+    onStart?: WithMetadata<IConsumer<Transaction>, string>;
     reactionsProducer: IProducer<WithMetadataArray<ICallback, string>>;
     doChain?: WithMetadata<IProducer<TransactionRequest>, string>;
-    onDone?: WithMetadata<ICallback, string>;
+    onDone?: WithMetadata<IConsumer<Transaction>, string>;
 }
 
 export enum TransactionStatus {
-    CHAINING = 'CHAINING',
     IDLE = 'IDLE',
     STARTING = 'STARTING',
     RUNNING = 'RUNNING',
-    POST_RUNNING = 'POST_RUNNING',
+    RETRIEVING_CHAIN = 'RETRIEVING_CHAIN',
+    PROCESSING_QUEUE = 'PROCESSING_QUEUE',
+    CHAINING = 'CHAINING',
     CLOSING = 'CLOSING',
     CLOSED = 'CLOSED',
 }
@@ -27,7 +28,7 @@ export class TransactionError extends Error {
 }
 
 export class Transaction {
-    private _forkedTransitions: Transaction[] = [];
+    private _queueTransactions: Transaction[] = [];
     private _chainedTransition: Transaction;
     private _delegatedTransition: Transaction = undefined;
 
@@ -67,7 +68,7 @@ export class Transaction {
         this.assertAcceptingFork(forkRequest.name);
 
         let smTransaction = new Transaction(forkRequest, this);
-        this._forkedTransitions.push(smTransaction);
+        this._queueTransactions.push(smTransaction);
         return smTransaction;
     }
 
@@ -124,7 +125,7 @@ export class Transaction {
 
             if (this.request.onStart) {
                 this._status = TransactionStatus.STARTING;
-                this.request.onStart.value();
+                this.request.onStart.value(this);
             }
             this._status = TransactionStatus.RUNNING;
 
@@ -139,7 +140,7 @@ export class Transaction {
 
             let chainRequest = undefined;
             if (this.request.doChain) {
-                this._status = TransactionStatus.POST_RUNNING;
+                this._status = TransactionStatus.RETRIEVING_CHAIN;
                 chainRequest = this.request.doChain.value();
                 if (chainRequest == null) {
                     // noinspection ExceptionCaughtLocallyJS
@@ -148,10 +149,8 @@ export class Transaction {
             }
 
 
-            this._status = TransactionStatus.CLOSING;
-
-
-            this._forkedTransitions.forEach(it => {
+            this._status = TransactionStatus.PROCESSING_QUEUE;
+            this._queueTransactions.forEach(it => {
                 this._delegatedTransition = it;
                 it.doRun();
             });
@@ -163,8 +162,9 @@ export class Transaction {
                 this.doChain(chainRequest)
             }
 
+            this._status = TransactionStatus.CLOSING;
             if (this.request.onDone) {
-                this.request.onDone.value();
+                this.request.onDone.value(this);
             }
             this.close();
         } catch (e) {
@@ -178,10 +178,10 @@ export class Transaction {
             while (pointer) {
                 console.error(`${Strings.padEnd(pointer._status, 12)} ${pointer.getId()}`);
 
-                if (pointer._status === TransactionStatus.POST_RUNNING) {
+                if (pointer._status === TransactionStatus.RETRIEVING_CHAIN) {
                     console.error(`         ERROR ON THE POST RUNNING (onDone - ${pointer.request.doChain.metadata})`);
                 }
-                if (pointer._status === TransactionStatus.CLOSING) {
+                if (pointer._status === TransactionStatus.PROCESSING_QUEUE) {
                     console.error(`         ERROR PROCESSING CHILD FORKED TRANSACTIONS`);
                 }
                 if (currentReaction && this === pointer) {

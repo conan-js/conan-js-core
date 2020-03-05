@@ -5,7 +5,7 @@ import {ICallback} from "../conan-utils/typesHelper";
 export class TransactionTree {
     private _root: Transaction;
 
-    createOrForkTransaction(
+    createOrQueueTransaction(
         request: TransactionRequest,
         onCreatingNewTree?: ICallback
     ): Transaction {
@@ -30,6 +30,11 @@ export class TransactionTree {
         return this.getCurrentTransaction().getId();
     }
 
+
+    getCurrentTransactionName() {
+        if (!this.getCurrentTransaction()) return undefined;
+        return this.getCurrentTransaction().getThisName();
+    }
 
     private getCurrentTransaction(): Transaction {
         return this._root == null ? null : this._root.getCurrentRunningTransaction()

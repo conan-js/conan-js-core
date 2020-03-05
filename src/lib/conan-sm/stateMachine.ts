@@ -101,7 +101,7 @@ export class StateMachine<
             throw new Error(`can't move sm: [${this.data.name}] to ::${stageName} and is not a valid stage, ie one of: (${Object.keys(this.data.stageDefsByKey).join(', ')})`)
         }
 
-        this.transactionTree.createOrForkTransaction(
+        this.transactionTree.createOrQueueTransaction(
             this.smTransactions.createStageTransactionRequest(this, stageToProcess),
             ()=>{
                 StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.transactionTree.getCurrentTransactionId(), `+::${stageName}`);
@@ -117,7 +117,7 @@ export class StateMachine<
         let actions = this.createActions(this, this.data.stageDefsByKey, transition.into.name, transition.payload);
         let eventName = Strings.camelCaseWithPrefix('on', transition.path);
         this.transactionTree
-            .createOrForkTransaction(this.smTransactions.createActionTransactionRequest(this, transition, actions, this.createReactions(eventName, this.data.listeners), ()=>{
+            .createOrQueueTransaction(this.smTransactions.createActionTransactionRequest(this, transition, actions, this.createReactions(eventName, this.data.listeners), ()=>{
                 this.eventThread.addActionEvent(
                     transition
                 );

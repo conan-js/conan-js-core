@@ -11,8 +11,10 @@ export enum EventType {
     SHUTDOWN = 'SHUTDOWN',
     FORK = 'FORK',
     FORK_STOP = 'FORK_STOP',
-    CHAIN = 'CHAIN',
+    TR_CHAIN = 'TR_CHAIN',
     STAGE = 'STAGE',
+    TR_OPEN = 'TR_OPEN',
+    TR_CLOSE = 'TR_CLOSE',
     ACTION = 'ACTION',
     INIT = 'INIT'
 }
@@ -30,7 +32,9 @@ export const eventTypesToLog: EventType[] = [
     EventType.FORK_JOIN,
     EventType.ACTION,
     EventType.SHUTDOWN,
-    EventType.CHAIN,
+    EventType.TR_CHAIN,
+    EventType.TR_CLOSE,
+    EventType.TR_OPEN,
 ];
 
 export const detailLinesToLog: string[] = [
