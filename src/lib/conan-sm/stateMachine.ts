@@ -18,9 +18,9 @@ import {TransactionTree} from "../conan-tx/transactionTree";
 import {SmTransactionsRequests} from "./smTransactionsRequests";
 
 export enum ToProcessType {
-    ACTION = 'ACTION',
     STAGE = 'STAGE'
 }
+
 export interface StageToProcess extends BaseToProcess {
     type: ToProcessType.STAGE;
     stage: Stage;
@@ -46,12 +46,11 @@ export enum StateMachineStatus {
     RUNNING = 'RUNNING',
 }
 
-export class StateMachine<
-    SM_ON_LISTENER extends SmListener,
+export class StateMachine<SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
     ACTIONS,
-> implements SmController<SM_ON_LISTENER, SM_IF_LISTENER> {
-    readonly smTransactions: SmTransactionsRequests = new SmTransactionsRequests ();
+    > implements SmController<SM_ON_LISTENER, SM_IF_LISTENER> {
+    readonly smTransactions: SmTransactionsRequests = new SmTransactionsRequests();
     readonly eventThread: EventThread = new EventThread();
     _status: StateMachineStatus = StateMachineStatus.IDLE;
 
@@ -103,10 +102,8 @@ export class StateMachine<
 
         this.transactionTree.createOrQueueTransaction(
             this.smTransactions.createStageTransactionRequest(this, stageToProcess),
-            ()=>{
-                StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.transactionTree.getCurrentTransactionId(), `+::${stageName}`);
-                this._status = StateMachineStatus.RUNNING;
-            }
+            ()=> this.sleep(),
+            () => this.flagAsRunning(stageName)
         );
     }
 
@@ -117,13 +114,29 @@ export class StateMachine<
         let actions = this.createActions(this, this.data.stageDefsByKey, transition.into.name, transition.payload);
         let eventName = Strings.camelCaseWithPrefix('on', transition.path);
         this.transactionTree
-            .createOrQueueTransaction(this.smTransactions.createActionTransactionRequest(this, transition, actions, this.createReactions(eventName, this.data.listeners), ()=>{
-                this.eventThread.addActionEvent(
-                    transition
-                );
-                StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.ACTION, this.transactionTree.getCurrentTransactionId(), `=>${transition.path}`);
-            }));
+            .createOrQueueTransaction(
+                this.smTransactions.createActionTransactionRequest(this, transition, actions, this.createReactions(eventName, this.data.listeners),
+                    () => {
+                        this.eventThread.addActionEvent(
+                            transition
+                        );
+                        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.ACTION, this.transactionTree.getCurrentTransactionId(), `=>${transition.path}`);
+                    }
+                ),
+                ()=> this.sleep(),
+                () => this.flagAsRunning(transition.path)
+            );
         return this;
+    }
+
+    private flagAsRunning(details: string) {
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.REQUEST, this.transactionTree.getCurrentTransactionId(), `+::${details}`);
+        this._status = StateMachineStatus.RUNNING;
+    }
+
+    private sleep() {
+        this._status = StateMachineStatus.IDLE;
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.IDLE, this.transactionTree.getCurrentTransactionId(), ``);
     }
 
     createReactions(eventName: string, smListeners: SmListenerDefList<any>): WithMetadataArray<SmEventCallback<ACTIONS>, string> {
@@ -151,10 +164,10 @@ export class StateMachine<
         return this.data.stageDefsByKey [name];
     }
 
+
     getEvents(): SerializedSmEvent [] {
         return this.eventThread.serialize();
     }
-
 
     shutdown() {
         this.closed = true;

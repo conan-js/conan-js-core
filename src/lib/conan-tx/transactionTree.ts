@@ -1,5 +1,6 @@
 import {Transaction, TransactionRequest, TransactionStatus} from "./transaction";
 import {ICallback} from "../conan-utils/typesHelper";
+import {TransactionRequests} from "./transactionRequests";
 
 
 export class TransactionTree {
@@ -7,13 +8,14 @@ export class TransactionTree {
 
     createOrQueueTransaction(
         request: TransactionRequest,
-        onCreatingNewTree?: ICallback
+        onRootTransactionCompleted: ICallback,
+        onCreatingNewTree?: ICallback,
     ): Transaction {
         if (!this.getCurrentTransaction()) {
             if (onCreatingNewTree) {
                 onCreatingNewTree();
             }
-            this._root = new Transaction(request);
+            this._root = new Transaction(TransactionRequests.enrich(request, 'onDone', onRootTransactionCompleted, true));
         } else {
             this.getCurrentTransaction().fork(request);
         }

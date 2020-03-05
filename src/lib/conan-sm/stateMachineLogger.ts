@@ -2,6 +2,7 @@ import {Strings} from "../conan-utils/strings";
 import {StateMachineStatus} from "./stateMachine";
 
 export enum EventType {
+    IDLE='IDLE',
     FORK_JOIN = "FORK_JOIN",
     PROXY = 'PROXY',
     REQUEST = 'REQUEST',
@@ -35,6 +36,7 @@ export const eventTypesToLog: EventType[] = [
     EventType.TR_CHAIN,
     EventType.TR_CLOSE,
     EventType.TR_OPEN,
+    EventType.IDLE,
 ];
 
 export const detailLinesToLog: string[] = [

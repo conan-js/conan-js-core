@@ -6,6 +6,7 @@ import {ICallback, IConsumer, WithMetadataArray} from "../conan-utils/typesHelpe
 import {SmEventCallback} from "./stateMachineListeners";
 import {SmTransition} from "./stateMachineEvents";
 import {Strings} from "../conan-utils/strings";
+import {TransactionRequests} from "../conan-tx/transactionRequests";
 
 export class SmTransactionsRequests {
     createStageTransactionRequest(stateMachine: StateMachine<any, any, any>, stageToProcess: StageToProcess): TransactionRequest {
@@ -25,7 +26,7 @@ export class SmTransactionsRequests {
             return this.createJoinTransactionRequest(stateMachine, stageToProcess.stage, stateMachine.data.parent.stateMachine);
         }
 
-        return this.createNormalStageTransactionRequest (stateMachine, stageToProcess.stage, actions, stateMachine.createReactions(eventName, stateMachine.data.listeners), () => {
+        return this.createNormalStageTransactionRequest(stateMachine, stageToProcess.stage, actions, stateMachine.createReactions(eventName, stateMachine.data.listeners), () => {
             stateMachine.eventThread.addStageEvent(stageToProcess.stage, eventName, stageToProcess.stage.requirements);
             StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.STAGE, stateMachine.transactionTree.getCurrentTransactionId(), `::${stageToProcess.stage.name}`);
         });
@@ -107,26 +108,19 @@ export class SmTransactionsRequests {
     }
 
     private doEnrich(stateMachine: StateMachine<any, any, any>, toEnrich: TransactionRequest): TransactionRequest {
-        return {
-            ...toEnrich,
-            onDone: this.enrich(toEnrich, stateMachine, 'onDone', (tx)=>this.doLog(stateMachine, tx, EventType.TR_CLOSE)),
-            onStart: this.enrich(toEnrich, stateMachine, 'onStart', (tx)=>this.doLog(stateMachine, tx, EventType.TR_OPEN)),
-        };
+        return TransactionRequests.enrich(
+            TransactionRequests.enrich(
+                toEnrich,
+            'onDone', (tx) => this.doLog(stateMachine, tx, EventType.TR_CLOSE)),
+            'onStart', (tx) => this.doLog(stateMachine, tx, EventType.TR_OPEN)
+        );
+        //{
+        //             ...toEnrich,
+        //             onDone: TransactionRequests.enrich(toEnrich, 'onDone', (tx) => this.doLog(stateMachine, tx, EventType.TR_CLOSE)),
+        //             onStart: TransactionRequests.enrich(toEnrich, 'onStart', (tx) => this.doLog(stateMachine, tx, EventType.TR_OPEN)),
+        //         };
     }
 
-    private enrich(toEnrich: TransactionRequest, stateMachine: StateMachine<any, any, any>, eventName :string, enrichedFn: IConsumer<Transaction>) {
-        // @ts-ignore
-        return !toEnrich[eventName] ? {metadata: `[log-${eventName}]`, value: enrichedFn} : {
-            // @ts-ignore
-            metadata: toEnrich[eventName].metadata,
-            value: (tx: Transaction) => {
-                enrichedFn(tx);
-                // @ts-ignore
-                toEnrich[eventName].value()
-            }
-
-        };
-    }
 
     private doLog(stateMachine: StateMachine<any, any, any>, transaction: Transaction, eventType: EventType) {
         StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), eventType, transaction.getId(), transaction.getThisName());
