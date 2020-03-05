@@ -2,7 +2,7 @@ import {Strings} from "../conan-utils/strings";
 import {StateMachineStatus} from "./stateMachine";
 
 export enum EventType {
-    IDLE='IDLE',
+    SLEEP='SLEEP',
     FORK_JOIN = "FORK_JOIN",
     PROXY = 'PROXY',
     REQUEST = 'REQUEST',
@@ -33,30 +33,30 @@ export const eventTypesToLog: EventType[] = [
     EventType.FORK_JOIN,
     EventType.ACTION,
     EventType.SHUTDOWN,
-    EventType.TR_CHAIN,
-    EventType.TR_CLOSE,
-    EventType.TR_OPEN,
-    EventType.IDLE,
+    // EventType.TR_CHAIN,
+    // EventType.TR_CLOSE,
+    // EventType.TR_OPEN,
+    EventType.SLEEP,
 ];
 
 export const detailLinesToLog: string[] = [
-    'init listeners',
+    // 'init listeners',
     'listeners',
-    'system listeners',
+    // 'system listeners',
     'stages',
-    'system stages '
+    // 'system stages '
 ];
 
 export const actionsToIgnore: string[] = [
-    // 'doStart'
+    'doStart'
 ];
 
 export const stagesToIgnore: string[] = [
-    // 'init', 'stop', 'start'
+    'init', 'stop', 'start'
 ];
 
 export const stagesToMute: string[]=[
-    // 'init', '-'
+    'init', '-'
 ];
 
 export const redundantTransactionParts: string [] = [

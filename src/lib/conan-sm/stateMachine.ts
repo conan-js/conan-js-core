@@ -135,7 +135,7 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
 
     private sleep() {
         this._status = StateMachineStatus.IDLE;
-        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.IDLE, this.transactionTree.getCurrentTransactionId(), ``);
+        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.SLEEP, this.transactionTree.getCurrentTransactionId(), ``);
     }
 
     createReactions(eventName: string, smListeners: SmListenerDefList<any>): WithMetadataArray<SmEventCallback<ACTIONS>, string> {
