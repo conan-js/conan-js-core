@@ -37,13 +37,14 @@ export class StateMachineController<
     constructor(
         private readonly initialListener: SmListenerDefLike<SM_ON_LISTENER>
     ) {
-        this.request.initialListener = this.smListenerDefLikeParser.parse(initialListener);
+        this.request.initialListener = this.smListenerDefLikeParser.parse(initialListener, ListenerType.ONCE);
     }
+
     private started: boolean = false;
 
     addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
         this.request.listeners.push(
-            this.smListenerDefLikeParser.parse(listener)
+            this.smListenerDefLikeParser.parse(listener, type)
         );
         return this;
     }

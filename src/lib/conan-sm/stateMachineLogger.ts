@@ -23,42 +23,42 @@ export enum EventType {
 export const eventTypesToLog: EventType[] = [
     EventType.INIT,
     EventType.STAGE,
-    // EventType.FORK_STOP,
-    // EventType.ADD_INTERCEPTOR,
-    // EventType.ADD_LISTENER,
-    // EventType.PROXY,
-    // EventType.REQUEST,
-    // EventType.REACTION,
-    // EventType.FORK,
-    // EventType.FORK_JOIN,
+    EventType.FORK_STOP,
+    EventType.ADD_INTERCEPTOR,
+    EventType.ADD_LISTENER,
+    EventType.PROXY,
+    EventType.REQUEST,
+    EventType.REACTION,
+    EventType.FORK,
+    EventType.FORK_JOIN,
     EventType.ACTION,
     EventType.SHUTDOWN,
-    // EventType.TR_CHAIN,
-    // EventType.TR_CLOSE,
-    // EventType.TR_OPEN,
+    EventType.TR_CHAIN,
+    EventType.TR_CLOSE,
+    EventType.TR_OPEN,
     EventType.SLEEP,
 ];
 
 export const detailLinesToLog: string[] = [
-    // 'init listeners',
+    'init listeners',
     'listeners',
-    // 'system listeners',
+    'system listeners',
     'stages',
-    // 'system stages ',
+    'system stages ',
     'current state',
     'payload'
 ];
 
 export const actionsToIgnore: string[] = [
-    'doStart'
+    // 'doStart'
 ];
 
 export const stagesToIgnore: string[] = [
-    'init', 'stop', 'start'
+    // 'init', 'stop', 'start'
 ];
 
 export const stagesToMute: string[]=[
-    'init', '-'
+    // 'init', '-'
 ];
 
 export const redundantTransactionParts: string [] = [

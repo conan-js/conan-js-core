@@ -3,7 +3,13 @@ import {IConsumer, IKeyValuePairs} from "../conan-utils/typesHelper";
 import {Stage, StageDef} from "./stage";
 import {Objects} from "../conan-utils/objects";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
-import {SmEventCallbackParams, SmListener, SmListenerDefLikeParser, SmListenerDefList} from "./stateMachineListeners";
+import {
+    ListenerType,
+    SmEventCallbackParams,
+    SmListener,
+    SmListenerDefLikeParser,
+    SmListenerDefList
+} from "./stateMachineListeners";
 import {StateMachineTreeBuilderData} from "./_domain";
 import {Strings} from "../conan-utils/strings";
 
@@ -32,7 +38,10 @@ export class StateMachineFactory {
 
         return this.doCreate({
             initialListener: {
-                metadata: `::start=>${deferPathName}`,
+                metadata: {
+                    name: `::start=>${deferPathName}`,
+                    executionType: ListenerType.ONCE,
+                },
                 value: {
                     onStart: (_: any, params: SmEventCallbackParams) => params.sm.requestTransition({
                         actionName: deferPathName,
@@ -46,7 +55,10 @@ export class StateMachineFactory {
                 logic: forkIntoStageDef.logic
             }],
             listeners: [{
-                metadata: `::${deferEventName}->[DEFERRED]`,
+                metadata: {
+                    name: `::${deferEventName}->[DEFERRED]`,
+                    executionType: ListenerType.ALWAYS
+                },
                 value: {
                     [deferEventName]: (actions: any) => defer(actions)
                 }
@@ -96,7 +108,7 @@ export class StateMachineFactory {
                         })
                     }
                 } as any as SM_LISTENER
-            ])
+            ], ListenerType.ONCE)
         );
 
         systemListeners.push(
@@ -104,7 +116,7 @@ export class StateMachineFactory {
                 onStop: () => {
                     stateMachine.shutdown();
                 }
-            } as any as SM_LISTENER])
+            } as any as SM_LISTENER], ListenerType.ONCE)
         );
 
         let stageStringDefs: string [] = [];
@@ -120,10 +132,10 @@ export class StateMachineFactory {
         StateMachineLogger.log(treeBuilderData.name, StateMachineStatus.IDLE, '', '', EventType.INIT, undefined, '', [
             [`init listeners`, `(${treeBuilderData.initialListener.metadata})`],
             [`listeners`, `${externalListeners.map(it=>it.metadata).map(it => {
-                return it.split(',').map(it=>`(${it})`).join(',');
+                return it.name.split(',').map(it=>`(${it})`).join(',');
             })}`],
             [`system listeners`, `${systemListeners.map(it=>it.metadata).map(it => {
-                return it.split(',').map(it=>`(${it})`).join(',');
+                return it.name.split(',').map(it=>`(${it})`).join(',');
             })}`],
             [`interceptors`, `${treeBuilderData.interceptors.map(it => it.metadata)}`],
             [`stages`, `${stageStringDefs.join(', ')}`],

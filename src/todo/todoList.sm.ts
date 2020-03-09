@@ -61,19 +61,20 @@ export class TodoListActionsImpl implements TodoListActions{
 // BOILERPLATE TBR
 
 export class TodoListStoreFactory {
+    constructor(
+        private readonly initialState: TodoListState
+    ) {}
+
     create(): StateMachineController<TodoListListener, {}, TodoListActions> {
         return new StateMachineController([
-            `::start=>doUpdate`,
+            `::start=>doInitialState`,
             {
                 onStart: (_, params)=>
                     params.sm.requestTransition({
                         actionName: 'doInitialState',
                         transition: {
                             stage: 'todoListUpdated',
-                            state: {
-                                todos: [],
-                                appliedFilter: undefined
-                            } as any
+                            state: this.initialState as any
                         }
                     })
             }

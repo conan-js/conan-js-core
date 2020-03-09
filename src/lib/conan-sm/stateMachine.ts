@@ -46,6 +46,11 @@ export enum StateMachineStatus {
     RUNNING = 'RUNNING',
 }
 
+export interface ListenerMetadata {
+    name: string,
+    executionType: ListenerType,
+}
+
 export class StateMachine<SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
     ACTIONS,
@@ -69,17 +74,17 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
 
     addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
         this.assertNotClosed();
-        let listenerDef = this.smListenerDefLikeParser.parse(listener);
+        let listenerDef = this.smListenerDefLikeParser.parse(listener, type);
         StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.ADD_LISTENER, this.transactionTree.getCurrentTransactionId(), `(${listenerDef.metadata})[${type}]`);
         this.data.listeners.push(listenerDef);
         return this;
     }
 
-    addInterceptor(interceptor: SmListenerDefLike<SM_IF_LISTENER>): this {
-        let listenerDef = this.smListenerDefLikeParser.parse(interceptor);
+    addInterceptor(interceptor: SmListenerDefLike<SM_IF_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
+        let listenerDef = this.smListenerDefLikeParser.parse(interceptor, type);
         StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.ADD_INTERCEPTOR, this.transactionTree.getCurrentTransactionId(), `(${listenerDef.metadata})`);
         this.data.interceptors.push(
-            this.smListenerDefLikeParser.parse(interceptor)
+            this.smListenerDefLikeParser.parse(interceptor, type)
         );
         return this;
     }
@@ -144,10 +149,10 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
         StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.SLEEP, this.transactionTree.getCurrentTransactionId(), ``);
     }
 
-    createReactions(eventName: string, smListeners: SmListenerDefList<any>): WithMetadataArray<OnEventCallback<ACTIONS>, string> {
+    createReactions(eventName: string, smListeners: SmListenerDefList<any>): WithMetadataArray<OnEventCallback<ACTIONS>, ListenerMetadata> {
         if (smListeners == null || smListeners.length === 0) return [];
 
-        let reactions: WithMetadataArray<OnEventCallback<ACTIONS>, string> = [];
+        let reactions: WithMetadataArray<OnEventCallback<ACTIONS>, ListenerMetadata> = [];
         smListeners.forEach(smListener => {
             let actionListener: OnEventCallback<ACTIONS> = smListener.value[eventName];
             if (!actionListener) return undefined;

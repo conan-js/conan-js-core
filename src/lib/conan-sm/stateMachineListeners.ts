@@ -1,5 +1,6 @@
 import {IBiConsumer, IKeyValuePairs, WithMetadata, WithMetadataArray} from "../conan-utils/typesHelper";
 import {SmController} from "./_domain";
+import {ListenerMetadata} from "./stateMachine";
 
 export interface SmEventCallbackParams {
     sm: SmController<any, any>;
@@ -11,12 +12,12 @@ export type SmListener<ACTIONS = any> = IKeyValuePairs<OnEventCallback<ACTIONS>>
 export type SmListenerDef<
     LISTENER extends SmListener<ACTIONS>,
     ACTIONS = any
-> = WithMetadata<LISTENER, string>;
+> = WithMetadata<LISTENER, ListenerMetadata>;
 
 export type SmListenerDefList<
     LISTENER extends SmListener<ACTIONS>,
     ACTIONS = any
-> = WithMetadataArray<LISTENER, string>;
+> = WithMetadataArray<LISTENER, ListenerMetadata>;
 
 export interface BasicSmListener extends SmListener {
     onStart?: OnEventCallback<void>;
@@ -55,13 +56,13 @@ export class SmListenerDefLikeParser {
         return !Array.isArray(toTransform) && (!(toTransform as any).metadata);
     }
 
-    parse <T extends SmListener>(toParse: SmListenerDefLike<T>): SmListenerDef<T> {
+    parse <T extends SmListener>(toParse: SmListenerDefLike<T>, type: ListenerType): SmListenerDef<T> {
         if (this.isDef(toParse)) {
             return toParse;
         } else if (this.isAnonymous(toParse)){
-            return {metadata: 'anonymous', value: toParse}
+            return {metadata: {name: 'anonymous', executionType: ListenerType.ALWAYS}, value: toParse}
         } else if (this.isTuple(toParse)) {
-            return {metadata: toParse[0], value: toParse[1]};
+            return {metadata: {name: toParse[0], executionType: type}, value: toParse[1]};
         } else {
             throw new Error(`error parsing as SmListenerDef: ${toParse}`)
         }

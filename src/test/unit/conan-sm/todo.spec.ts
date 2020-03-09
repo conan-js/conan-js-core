@@ -1,39 +1,33 @@
 import {TodoListState, TodoListStoreFactory} from "../../../todo/todoList.sm";
 import {expect} from "chai";
-import {ToDoStatus} from "../../../todo/domain";
+import {ToDo, ToDoStatus} from "../../../todo/domain";
+import {ListenerType} from "../../../lib/conan-sm/stateMachineListeners";
+import {SmController} from "../../../lib/conan-sm/_domain";
 
 describe('test todo list as in redux GS', () => {
-    const INITIAL_TODO = {
+    const INITIAL_STATE: TodoListState = {
+        todos: [],
+        appliedFilter: undefined
+    };
+
+    const INITIAL_TODO: ToDo = {
         description: 'new',
         status: ToDoStatus.PENDING
     };
 
-    it ('should work', (done)=>{
-
-        let firstTimeUpdated: boolean = true;
-
-
-        new TodoListStoreFactory ()
+    it('should work', () => {
+        let sm: SmController<any, any> = new TodoListStoreFactory(INITIAL_STATE)
             .create()
-            .addListener([`:todoListUpdated=>stop`, {
-                onTodoListUpdated: (actions, params) => {
-                    if (firstTimeUpdated) {
-                        firstTimeUpdated = false;
-                        actions.addTodo(INITIAL_TODO);
-                        return;
-                    }
-                    return params.sm.stop();
-                }
-            }])
-            .addListener([`::stop->test`, {
-                onStop: (_, params)=> {
-                    expect(params.sm.getState()).to.deep.eq ({
-                        todos: [INITIAL_TODO],
-                        appliedFilter: undefined
-                    });
-                    done();
-                }
-            }])
-            .start('todo-list-store');
+            .addListener([`::todoListUpdated=>addTodo[1]`, {
+                onTodoListUpdated: (actions, params) => actions.addTodo(INITIAL_TODO)
+            }], ListenerType.ONCE)
+            .start('todo-list-store')
+            .stop();
+
+        expect(sm.getState()).to.deep.eq({
+            todos: [INITIAL_TODO],
+            appliedFilter: undefined
+        });
+
     })
 });
