@@ -54,10 +54,10 @@ export class MainSm {
     define(): StateMachineController<MainSmListener, MainSmJoiner, MainSmActions> {
         return new StateMachineController([`onStart=>initializing`, {
             onStart: (_, params) => params.sm.requestTransition({
-                into: {
+                transition: {
                     stage: 'initializing'
                 },
-                path: 'defaultInitializing'
+                actionName: 'defaultInitializing'
             })
         }])
             .withDeferredStage<InitializingStageName,

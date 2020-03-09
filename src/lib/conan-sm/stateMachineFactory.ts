@@ -35,8 +35,8 @@ export class StateMachineFactory {
                 metadata: `::start=>${deferPathName}`,
                 value: {
                     onStart: (_: any, params: SmEventCallbackParams) => params.sm.requestTransition({
-                        path: deferPathName,
-                        into: forkIntoStage,
+                        actionName: deferPathName,
+                        transition: forkIntoStage,
                     })
                 }
             },
@@ -89,8 +89,8 @@ export class StateMachineFactory {
                 '::init=>doStart', {
                     onInit: ()=>{
                         stateMachine.requestTransition({
-                            path: `doStart`,
-                            into: {
+                            actionName: `doStart`,
+                            transition: {
                                 stage: 'start'
                             }
                         })

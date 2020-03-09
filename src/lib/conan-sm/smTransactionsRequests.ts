@@ -28,26 +28,29 @@ export class SmTransactionsRequests {
 
         return this.createNormalStageTransactionRequest(stateMachine, stageToProcess.stage, actions, stateMachine.createReactions(eventName, stateMachine.data.listeners), () => {
             stateMachine.eventThread.addStageEvent(stageToProcess.stage, eventName, stageToProcess.stage.state);
-            StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.STAGE, stateMachine.transactionTree.getCurrentTransactionId(), `::${stageToProcess.stage.stage}`);
+            let state = stateMachine.getState();
+            StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.STAGE, stateMachine.transactionTree.getCurrentTransactionId(), `::${stageToProcess.stage.stage}`, [
+                [`current state`, state == null ? undefined : JSON.stringify(state)]
+            ]);
         });
     }
 
     createActionTransactionRequest(stateMachine: StateMachine<any, any, any>, transition: SmTransition, actions: any, reactions: WithMetadataArray<OnEventCallback<any>, string>, onStart: ICallback): TransactionRequest {
         return this.doEnrich(stateMachine, {
-            name: `=>${transition.path}`,
+            name: `=>${transition.actionName}`,
             onStart: {
-                metadata: `[start-action]>${transition.path}`,
+                metadata: `[start-action]>${transition.actionName}`,
                 value: onStart,
             },
             reactionsProducer: () => this.reactionsAsCallbacks(stateMachine, reactions, actions),
             doChain: {
-                metadata: `[request-stage]::${transition.into.stage}`,
+                metadata: `[request-stage]::${transition.transition.stage}`,
                 value: () => {
-                    StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.TR_CHAIN, stateMachine.transactionTree.getCurrentTransactionId(), `//::${transition.into.stage}`);
+                    StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.TR_CHAIN, stateMachine.transactionTree.getCurrentTransactionId(), `//::${transition.transition.stage}`);
                     return this.createStageTransactionRequest(stateMachine, {
-                        description: `=>${transition.path}`,
+                        description: `=>${transition.actionName}`,
                         eventType: EventType.STAGE,
-                        stage: transition.into,
+                        stage: transition.transition,
                         type: ToProcessType.STAGE
                     });
                 }

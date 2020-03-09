@@ -3,9 +3,9 @@ import {IFunction} from "../conan-utils/typesHelper";
 import {SmController} from "./_domain";
 
 export interface SmTransition {
-    path: string;
+    actionName: string;
     payload?: any;
-    into: Stage;
+    transition: Stage;
 }
 
 export interface BaseSmEvent {

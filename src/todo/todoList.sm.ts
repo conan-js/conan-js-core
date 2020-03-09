@@ -67,8 +67,8 @@ export class TodoListStoreFactory {
             {
                 onStart: (_, params)=>
                     params.sm.requestTransition({
-                        path: 'doUpdate',
-                        into: {
+                        actionName: 'doInitialState',
+                        transition: {
                             stage: 'todoListUpdated',
                             state: {
                                 todos: [],

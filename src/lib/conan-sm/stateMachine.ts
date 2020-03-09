@@ -87,11 +87,11 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
     stop(): this {
         this.assertNotClosed();
         this.requestTransition({
-            into: {
+            transition: {
                 stage: 'stop',
                 state: ((this.eventThread.currentEvent.data) as any ).state
             },
-            path: 'doStop',
+            actionName: 'doStop',
         });
         return this;
     }
@@ -114,8 +114,8 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
     requestTransition(transition: SmTransition): this {
         this.assertNotClosed();
 
-        let actions = this.createActions(this, this.data.stageDefsByKey, transition.into.stage, transition.payload);
-        let eventName = Strings.camelCaseWithPrefix('on', transition.path);
+        let actions = this.createActions(this, this.data.stageDefsByKey, transition.transition.stage, transition.payload);
+        let eventName = Strings.camelCaseWithPrefix('on', transition.actionName);
         this.transactionTree
             .createOrQueueTransaction(
                 this.smTransactions.createActionTransactionRequest(this, transition, actions, this.createReactions(eventName, this.data.listeners),
@@ -123,11 +123,13 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
                         this.eventThread.addActionEvent(
                             transition
                         );
-                        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.ACTION, this.transactionTree.getCurrentTransactionId(), `=>${transition.path}`);
+                        StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.ACTION, this.transactionTree.getCurrentTransactionId(), `=>${transition.actionName}`, [
+                            [`payload`, transition.payload == null ? undefined : JSON.stringify(transition.payload)]
+                        ]);
                     }
                 ),
                 ()=> this.sleep(),
-                () => this.flagAsRunning(transition.path)
+                () => this.flagAsRunning(transition.actionName)
             );
         return this;
     }
@@ -239,9 +241,9 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
 
                 StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.PROXY, this.transactionTree.getCurrentTransactionId(), `(${key})=>::${nextStage.stage}`);
                 stateMachine.requestTransition({
-                    path: key,
+                    actionName: key,
                     payload: payload,
-                    into: nextStage,
+                    transition: nextStage,
                 });
             }
         });

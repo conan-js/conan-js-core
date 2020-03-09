@@ -83,10 +83,10 @@ export class AuthenticationPrototype {
     newBuilder(): StateMachineController<AuthenticationSmListener, AuthenticationSmJoiner, AuthenticationSmActions> {
         return new StateMachineController([`::start=>doNotAuth`, {
             onStart: (_, params) => params.sm.requestTransition({
-                into: {
+                transition: {
                     stage: 'notAuthenticated'
                 },
-                path: 'doNotAuthenticated'
+                actionName: 'doNotAuthenticated'
             })
         }])
             .withStage<NotAuthenticatedStageName,
