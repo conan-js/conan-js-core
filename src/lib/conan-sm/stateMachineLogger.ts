@@ -7,6 +7,7 @@ export enum EventType {
     PROXY = 'PROXY',
     REQUEST = 'REQUEST',
     REACTION = 'REACTION',
+    DELETE_LISTENER = "-LISTENER",
     ADD_LISTENER = '+LISTENER',
     ADD_INTERCEPTOR = '+INTERCEPT',
     SHUTDOWN = 'SHUTDOWN',
@@ -37,6 +38,7 @@ export const eventTypesToLog: EventType[] = [
     EventType.TR_CLOSE,
     EventType.TR_OPEN,
     EventType.SLEEP,
+    EventType.DELETE_LISTENER,
 ];
 
 export const detailLinesToLog: string[] = [

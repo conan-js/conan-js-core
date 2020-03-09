@@ -9,6 +9,7 @@ export interface TransactionRequest {
     reactionsProducer: IProducer<WithMetadataArray<ICallback, ListenerMetadata>>;
     doChain?: WithMetadata<IProducer<TransactionRequest>, string>;
     onDone?: WithMetadata<IConsumer<Transaction>, string>;
+    onReactionsProcessed: IConsumer<WithMetadataArray<OnEventCallback<any>, ListenerMetadata>>;
 }
 
 export enum TransactionStatus {
@@ -136,6 +137,7 @@ export class Transaction {
                 reaction.value();
                 processedReactions.push(reaction);
             });
+            this.request.onReactionsProcessed (processedReactions);
             currentReaction = undefined;
 
 

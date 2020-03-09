@@ -54,7 +54,8 @@ export class SmTransactionsRequests {
                         type: ToProcessType.STAGE
                     });
                 }
-            }
+            },
+            onReactionsProcessed: (reactionsProcessed)=>this.onReactionsProcessed(stateMachine, reactionsProcessed)
         })
     }
 
@@ -65,10 +66,10 @@ export class SmTransactionsRequests {
                 metadata: `[start-stage]>`,
                 value: onStart
             },
-            reactionsProducer: () => this.reactionsAsCallbacks(stateMachine, reactions, actions)
+            reactionsProducer: () => this.reactionsAsCallbacks(stateMachine, reactions, actions),
+            onReactionsProcessed: (reactionsProcessed)=>this.onReactionsProcessed(stateMachine, reactionsProcessed)
         });
     }
-
 
     createForkTransactionRequest(stateMachine: StateMachine<any, any, any>, stage: Stage, stageDef: StageDef<any, any, any>): TransactionRequest {
         return this.doEnrich(stateMachine, {
@@ -83,9 +84,11 @@ export class SmTransactionsRequests {
                     (actions) => stageDef.deferredInfo.deferrer(actions, stage.state),
                     stageDef.deferredInfo.joinsInto
                 )
-            }]
+            }],
+            onReactionsProcessed: (reactionsProcessed)=>this.onReactionsProcessed(stateMachine, reactionsProcessed)
         })
     }
+
 
     createJoinTransactionRequest(stateMachine: StateMachine<any, any, any>, stage: Stage, parentSm: StateMachine<any, any, any>): TransactionRequest {
         return this.doEnrich(stateMachine, {
@@ -114,8 +117,15 @@ export class SmTransactionsRequests {
                         type: ToProcessType.STAGE
                     });
                 }
-            })
+            }),
+            onReactionsProcessed: (reactionsProcessed)=>this.onReactionsProcessed(stateMachine, reactionsProcessed)
         })
+    }
+
+    private onReactionsProcessed(stateMachine: StateMachine<any, any, any>, processedReactions: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>): void {
+        return stateMachine.deleteListeners(processedReactions
+            .filter(it => it.metadata.executionType === ListenerType.ONCE)
+            .map(it => it.metadata.name));
     }
 
     private doEnrich(stateMachine: StateMachine<any, any, any>, toEnrich: TransactionRequest): TransactionRequest {

@@ -266,4 +266,18 @@ export class StateMachine<SM_ON_LISTENER extends SmListener,
             stage: stageToProcess.stage
         });
     }
+
+    deleteListeners(listenerNames: string[]) {
+        if (listenerNames.length === 0) return;
+
+        let newListeners: SmListenerDefList<SM_ON_LISTENER> = [];
+        this.data.listeners.forEach(currentListener=>{
+            if (listenerNames.indexOf(currentListener.metadata.name) > -1) {
+                StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.DELETE_LISTENER, this.transactionTree.getCurrentTransactionId(), `-(${currentListener.metadata.name})[${currentListener.metadata.executionType}]`);
+            } else {
+                newListeners.push(currentListener)
+            }
+        });
+        this.data.listeners = newListeners;
+    }
 }
