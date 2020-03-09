@@ -1,4 +1,4 @@
-import {StateMachineTreeBuilder} from "../../../lib/conan-sm/stateMachineTreeBuilder";
+import {StateMachineController} from "../../../lib/conan-sm/stateMachineController";
 import {
     InitializingActions,
     InitializingListener,
@@ -31,7 +31,7 @@ export interface MainSmJoiner extends ShowingAppJoiner, ShowingLoginJoiner {
 class InitializingActionsLogic implements InitializingActions {
     doInitialise(translations: Translations): ShowingLoginStage {
         return {
-            name: 'showingLogin'
+            stage: 'showingLogin'
         };
     }
 }
@@ -39,7 +39,7 @@ class InitializingActionsLogic implements InitializingActions {
 class ShowingLoginActionsLogic implements ShowingLoginActions {
     doShowApp(): ShowingAppStage {
         return {
-            name: 'showingApp'
+            stage: 'showingApp'
         };
     }
 
@@ -51,11 +51,11 @@ export class MainSm {
     ) {
     }
 
-    define(): StateMachineTreeBuilder<MainSmListener, MainSmJoiner, MainSmActions> {
-        return new StateMachineTreeBuilder([`onStart=>initializing`, {
+    define(): StateMachineController<MainSmListener, MainSmJoiner, MainSmActions> {
+        return new StateMachineController([`onStart=>initializing`, {
             onStart: (_, params) => params.sm.requestTransition({
                 into: {
-                    name: 'initializing'
+                    stage: 'initializing'
                 },
                 path: 'defaultInitializing'
             })

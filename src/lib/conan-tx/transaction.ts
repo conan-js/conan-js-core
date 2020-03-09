@@ -1,5 +1,5 @@
 import {ICallback, IConsumer, IProducer, WithMetadata, WithMetadataArray} from "../conan-utils/typesHelper";
-import {SmEventCallback} from "../conan-sm/stateMachineListeners";
+import {OnEventCallback} from "../conan-sm/stateMachineListeners";
 import {Strings} from "../conan-utils/strings";
 
 export interface TransactionRequest {
@@ -118,8 +118,8 @@ export class Transaction {
     }
 
     private doRun() {
-        let processedReactions: WithMetadataArray<SmEventCallback<any>, string> = [];
-        let currentReaction: WithMetadata<SmEventCallback<any>, string> = null;
+        let processedReactions: WithMetadataArray<OnEventCallback<any>, string> = [];
+        let currentReaction: WithMetadata<OnEventCallback<any>, string> = null;
         try {
             this.assertIdle();
 

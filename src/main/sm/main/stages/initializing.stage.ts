@@ -1,7 +1,7 @@
 import {ShowingLoginStage} from "./showingLoginStage";
 import {Translations} from "../../../domain/translations";
 import {Stage} from "../../../../lib/conan-sm/stage";
-import {SmEventCallback, SmListener} from "../../../../lib/conan-sm/stateMachineListeners";
+import {OnEventCallback, SmListener} from "../../../../lib/conan-sm/stateMachineListeners";
 
 export type InitializingStageName = 'initializing';
 
@@ -10,11 +10,11 @@ export interface InitializingActions {
 }
 
 export interface InitializingActionsListener extends SmListener{
-    onDoInitialise?: SmEventCallback<InitializingActions>
+    onDoInitialise?: OnEventCallback<InitializingActions>
 }
 
 export interface InitializingListener extends InitializingActionsListener{
-    onInitializing?: SmEventCallback<InitializingActions>;
+    onInitializing?: OnEventCallback<InitializingActions>;
 }
 
 export interface InitializingStage extends Stage <InitializingStageName, InitializingActions> {}

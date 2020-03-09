@@ -1,7 +1,7 @@
 import {ListenerType, SmListener, SmListenerDef, SmListenerDefLike, SmListenerDefList} from "./stateMachineListeners";
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
 import {StageDef} from "./stage";
-import {SyncStateMachineDef} from "./stateMachineTreeBuilder";
+import {SyncStateMachineDef} from "./stateMachineController";
 import {IKeyValuePairs} from "../conan-utils/typesHelper";
 import {ParentStateMachineInfo} from "./stateMachine";
 
@@ -27,6 +27,8 @@ export interface SmController<
     getEvents(): SerializedSmEvent [];
 
     getStageDef(name: string): StageDef<any, any, any>;
+
+    getState(): any;
 }
 
 export interface StateMachineBaseData<

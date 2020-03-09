@@ -1,8 +1,8 @@
 import {IBiConsumer, IBiFunction} from "../conan-utils/typesHelper";
-import {StateMachineTreeBuilder, SyncStateMachineDef} from "./stateMachineTreeBuilder";
+import {StateMachineController, SyncStateMachineDef} from "./stateMachineController";
 import {Objects} from "../conan-utils/objects";
 import {StateMachineFactory} from "./stateMachineFactory";
-import {ListenerType, SmEventCallback, SmListener} from "./stateMachineListeners";
+import {ListenerType, OnEventCallback, SmListener} from "./stateMachineListeners";
 import {SmController, StateMachineTreeBuilderData} from "./_domain";
 
 export interface Synchronisation {
@@ -11,7 +11,7 @@ export interface Synchronisation {
 }
 
 export interface StartSmTree {
-    stateMachineBuilder: StateMachineTreeBuilder<any, any, any>;
+    stateMachineBuilder: StateMachineController<any, any, any>;
     downSyncs: Synchronisation[];
 }
 
@@ -20,7 +20,7 @@ export class StateMachineTree<SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
     ACTIONS,
     > {
-    start(builder: StateMachineTreeBuilder<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS>): SmController<SM_ON_LISTENER, SM_IF_LISTENER> {
+    start(builder: StateMachineController<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS>): SmController<SM_ON_LISTENER, SM_IF_LISTENER> {
         let root: StartSmTree = this.createSyncSmTree(builder);
         this.childrenFirst(root, (data, synchronisation) => this.doSyncListeners(data, synchronisation));
         return this.parentFirst<SmController<SM_ON_LISTENER, SM_IF_LISTENER>>(root, undefined, (startTree, syncDef) => {
@@ -28,7 +28,7 @@ export class StateMachineTree<SM_ON_LISTENER extends SmListener,
         });
     }
 
-    private doSyncListeners(data: StateMachineTreeBuilder<any, any, any>, sync: Synchronisation): void {
+    private doSyncListeners(data: StateMachineController<any, any, any>, sync: Synchronisation): void {
         this.syncSm(data, sync);
         if (sync.syncDef.initCb) {
             sync.syncDef.initCb(sync.syncDef.stateMachineBuilder);
@@ -44,7 +44,7 @@ export class StateMachineTree<SM_ON_LISTENER extends SmListener,
         return StateMachineFactory.create<any, any, any>(finalSMData);
     }
 
-    private childrenFirst(tree: StartSmTree, action: IBiConsumer<StateMachineTreeBuilder<any, any, any>, Synchronisation>): void {
+    private childrenFirst(tree: StartSmTree, action: IBiConsumer<StateMachineController<any, any, any>, Synchronisation>): void {
         tree.downSyncs.forEach(sync => {
             this.childrenFirst(sync.tree, action);
             action(tree.stateMachineBuilder, sync);
@@ -59,7 +59,7 @@ export class StateMachineTree<SM_ON_LISTENER extends SmListener,
         return result;
     }
 
-    private createSyncSmTree(stateMachineBuilder: StateMachineTreeBuilder<any, any, any>): StartSmTree {
+    private createSyncSmTree(stateMachineBuilder: StateMachineController<any, any, any>): StartSmTree {
         let syncSmTree: StartSmTree = {
             stateMachineBuilder: stateMachineBuilder,
             downSyncs: [],
@@ -78,11 +78,11 @@ export class StateMachineTree<SM_ON_LISTENER extends SmListener,
         FROM_ACTIONS,
         FROM_SM extends SmController<FROM_LISTENER, FROM_JOINER>,
         INTO_LISTENER extends SmListener,
-        INTO_SM extends StateMachineTreeBuilder<INTO_LISTENER, any, any>>(
-        into: StateMachineTreeBuilder<any, any, any>,
+        INTO_SM extends StateMachineController<INTO_LISTENER, any, any>>(
+        into: StateMachineController<any, any, any>,
         sync: Synchronisation
     ): void {
-        let syncListener: INTO_LISTENER = Objects.mapKeys<INTO_LISTENER, FROM_JOINER, SmEventCallback<any>>(
+        let syncListener: INTO_LISTENER = Objects.mapKeys<INTO_LISTENER, FROM_JOINER, OnEventCallback<any>>(
             sync.syncDef.joiner,
             (ifStatements) => (
                 () => {

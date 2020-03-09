@@ -5,8 +5,8 @@ export interface SmEventCallbackParams {
     sm: SmController<any, any>;
 }
 
-export type SmEventCallback<ACTIONS> = IBiConsumer<ACTIONS, SmEventCallbackParams>;
-export type SmListener<ACTIONS = any> = IKeyValuePairs<SmEventCallback<ACTIONS>>;
+export type OnEventCallback<ACTIONS> = IBiConsumer<ACTIONS, SmEventCallbackParams>;
+export type SmListener<ACTIONS = any> = IKeyValuePairs<OnEventCallback<ACTIONS>>;
 
 export type SmListenerDef<
     LISTENER extends SmListener<ACTIONS>,
@@ -19,8 +19,8 @@ export type SmListenerDefList<
 > = WithMetadataArray<LISTENER, string>;
 
 export interface BasicSmListener extends SmListener {
-    onStart?: SmEventCallback<void>;
-    onStop?: SmEventCallback<void>;
+    onStart?: OnEventCallback<void>;
+    onStop?: OnEventCallback<void>;
 }
 
 export type AnonymousDefTuple<

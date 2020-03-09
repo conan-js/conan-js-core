@@ -1,7 +1,7 @@
 import {NotAuthenticatedStage} from "./notAuthenticated.stage";
 import {AppCredentials} from "../../../domain/domain";
 import {Stage} from "../../../../lib/conan-sm/stage";
-import {SmEventCallback, SmListener} from "../../../../lib/conan-sm/stateMachineListeners";
+import {OnEventCallback, SmListener} from "../../../../lib/conan-sm/stateMachineListeners";
 
 
 export type AuthenticatedStageName = 'authenticated';
@@ -12,16 +12,16 @@ export interface AuthenticatedActions {
 }
 
 export interface AuthenticatedActionListener extends SmListener{
-    onDoTimeout?: SmEventCallback <AuthenticatedActions>
-    onDoLogout?: SmEventCallback <AuthenticatedActions>
+    onDoTimeout?: OnEventCallback <AuthenticatedActions>
+    onDoLogout?: OnEventCallback <AuthenticatedActions>
 }
 
 export interface AuthenticatedListener extends SmListener {
-    onAuthenticated?: SmEventCallback <AuthenticatedActions>
+    onAuthenticated?: OnEventCallback <AuthenticatedActions>
 }
 
 export interface AuthenticatedJoiner extends SmListener {
-    ifAuthenticated?: SmEventCallback <AuthenticatedActions>
+    ifAuthenticated?: OnEventCallback <AuthenticatedActions>
 }
 
 export interface AuthenticatedStage extends Stage <AuthenticatedStageName, AppCredentials>{}

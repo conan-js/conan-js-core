@@ -5,5 +5,5 @@ export interface ToDo {
 
 export enum ToDoStatus {
     PENDING = 'PENDING',
-    COMPLETED = 'PENDING'
+    COMPLETED = 'COMPLETED'
 }

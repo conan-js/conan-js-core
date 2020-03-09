@@ -1,7 +1,7 @@
 import {UserNameAndPassword} from "../../../domain/domain";
 import {AuthenticatingStage} from "./authenticating.stage";
 import {Stage} from "../../../../lib/conan-sm/stage";
-import {SmEventCallback, SmListener} from "../../../../lib/conan-sm/stateMachineListeners";
+import {OnEventCallback, SmListener} from "../../../../lib/conan-sm/stateMachineListeners";
 
 export type NotAuthenticatedStageName = 'notAuthenticated';
 
@@ -10,11 +10,11 @@ export interface NotAuthenticatedActions {
 }
 
 export interface NotAuthenticatedActionsListener extends SmListener{
-    onDoAuthenticating?: SmEventCallback <NotAuthenticatedActions>
+    onDoAuthenticating?: OnEventCallback <NotAuthenticatedActions>
 }
 
 export interface NotAuthenticatedListener extends SmListener{
-    onNotAuthenticated?: SmEventCallback <NotAuthenticatedActions>;
+    onNotAuthenticated?: OnEventCallback <NotAuthenticatedActions>;
 }
 
 export interface NotAuthenticatedStage extends Stage<NotAuthenticatedStageName, NotAuthenticatedActions>{}

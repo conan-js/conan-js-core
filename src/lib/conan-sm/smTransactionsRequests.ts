@@ -3,20 +3,20 @@ import {Stage, StageDef} from "./stage";
 import {StageToProcess, StateMachine, ToProcessType} from "./stateMachine";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {ICallback, WithMetadataArray} from "../conan-utils/typesHelper";
-import {SmEventCallback} from "./stateMachineListeners";
+import {OnEventCallback} from "./stateMachineListeners";
 import {SmTransition} from "./stateMachineEvents";
 import {Strings} from "../conan-utils/strings";
 import {TransactionRequests} from "../conan-tx/transactionRequests";
 
 export class SmTransactionsRequests {
     createStageTransactionRequest(stateMachine: StateMachine<any, any, any>, stageToProcess: StageToProcess): TransactionRequest {
-        let intoStageName = stageToProcess.stage.name;
+        let intoStageName = stageToProcess.stage.stage;
         let stageDef = stateMachine.data.stageDefsByKey [intoStageName];
         let isDeferredStage: boolean = !!(stageDef && stageDef.deferredInfo);
-        let eventName = Strings.camelCaseWithPrefix('on', stageToProcess.stage.name);
+        let eventName = Strings.camelCaseWithPrefix('on', stageToProcess.stage.stage);
 
-        let isOnForkJoiningBack = stateMachine.data.parent && stateMachine.data.parent.joinsInto.indexOf(stageToProcess.stage.name) !== -1;
-        let actions = stateMachine.createActions(stateMachine, stateMachine.data.stageDefsByKey, stageToProcess.stage.name, stageToProcess.stage.requirements);
+        let isOnForkJoiningBack = stateMachine.data.parent && stateMachine.data.parent.joinsInto.indexOf(stageToProcess.stage.stage) !== -1;
+        let actions = stateMachine.createActions(stateMachine, stateMachine.data.stageDefsByKey, stageToProcess.stage.stage, stageToProcess.stage.state);
 
         if (isDeferredStage) {
             return this.createForkTransactionRequest(stateMachine, stageToProcess.stage, stageDef);
@@ -27,12 +27,12 @@ export class SmTransactionsRequests {
         }
 
         return this.createNormalStageTransactionRequest(stateMachine, stageToProcess.stage, actions, stateMachine.createReactions(eventName, stateMachine.data.listeners), () => {
-            stateMachine.eventThread.addStageEvent(stageToProcess.stage, eventName, stageToProcess.stage.requirements);
-            StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.STAGE, stateMachine.transactionTree.getCurrentTransactionId(), `::${stageToProcess.stage.name}`);
+            stateMachine.eventThread.addStageEvent(stageToProcess.stage, eventName, stageToProcess.stage.state);
+            StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.STAGE, stateMachine.transactionTree.getCurrentTransactionId(), `::${stageToProcess.stage.stage}`);
         });
     }
 
-    createActionTransactionRequest(stateMachine: StateMachine<any, any, any>, transition: SmTransition, actions: any, reactions: WithMetadataArray<SmEventCallback<any>, string>, onStart: ICallback): TransactionRequest {
+    createActionTransactionRequest(stateMachine: StateMachine<any, any, any>, transition: SmTransition, actions: any, reactions: WithMetadataArray<OnEventCallback<any>, string>, onStart: ICallback): TransactionRequest {
         return this.doEnrich(stateMachine, {
             name: `=>${transition.path}`,
             onStart: {
@@ -41,9 +41,9 @@ export class SmTransactionsRequests {
             },
             reactionsProducer: () => this.reactionsAsCallbacks(stateMachine, reactions, actions),
             doChain: {
-                metadata: `[request-stage]::${transition.into.name}`,
+                metadata: `[request-stage]::${transition.into.stage}`,
                 value: () => {
-                    StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.TR_CHAIN, stateMachine.transactionTree.getCurrentTransactionId(), `//::${transition.into.name}`);
+                    StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.TR_CHAIN, stateMachine.transactionTree.getCurrentTransactionId(), `//::${transition.into.stage}`);
                     return this.createStageTransactionRequest(stateMachine, {
                         description: `=>${transition.path}`,
                         eventType: EventType.STAGE,
@@ -55,9 +55,9 @@ export class SmTransactionsRequests {
         })
     }
 
-    createNormalStageTransactionRequest(stateMachine: StateMachine<any, any, any>, stage: Stage, actions: any, reactions: WithMetadataArray<SmEventCallback<any>, string>, onStart: ICallback): TransactionRequest {
+    createNormalStageTransactionRequest(stateMachine: StateMachine<any, any, any>, stage: Stage, actions: any, reactions: WithMetadataArray<OnEventCallback<any>, string>, onStart: ICallback): TransactionRequest {
         return this.doEnrich(stateMachine, {
-            name: `::${stage.name}`,
+            name: `::${stage.stage}`,
             onStart: {
                 metadata: `[start-stage]>`,
                 value: onStart
@@ -69,12 +69,12 @@ export class SmTransactionsRequests {
 
     createForkTransactionRequest(stateMachine: StateMachine<any, any, any>, stage: Stage, stageDef: StageDef<any, any, any>): TransactionRequest {
         return this.doEnrich(stateMachine, {
-            name: `->::${stage.name}`,
+            name: `->::${stage.stage}`,
             reactionsProducer: () => [{
-                metadata: `([fork]::${stage.name})`,
+                metadata: `([fork]::${stage.stage})`,
                 value: () => stateMachine.fork(
                     stage,
-                    (actions) => stageDef.deferredInfo.deferrer(actions, stage.requirements),
+                    (actions) => stageDef.deferredInfo.deferrer(actions, stage.state),
                     stageDef.deferredInfo.joinsInto
                 )
             }]
@@ -83,13 +83,13 @@ export class SmTransactionsRequests {
 
     createJoinTransactionRequest(stateMachine: StateMachine<any, any, any>, stage: Stage, parentSm: StateMachine<any, any, any>): TransactionRequest {
         return this.doEnrich(stateMachine, {
-            name: `<-::${stage.name}`,
+            name: `<-::${stage.stage}`,
             reactionsProducer: () => [{
                 metadata: `[stop-child-fork]`,
                 value: () => {
-                    StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.FORK_STOP, stateMachine.transactionTree.getCurrentTransactionId(), `!::${stage.name}`);
+                    StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.FORK_STOP, stateMachine.transactionTree.getCurrentTransactionId(), `!::${stage.stage}`);
                     stateMachine.requestStage({
-                        stage: {name: 'stop'},
+                        stage: {stage: 'stop'},
                         description: '::stop',
                         eventType: EventType.FORK_STOP,
                         type: ToProcessType.STAGE
@@ -100,7 +100,7 @@ export class SmTransactionsRequests {
                 metadata: `[parent-join]`, value: (): void => {
                     parentSm.join({
                         stage: stage,
-                        description: `<=${stage.name}`,
+                        description: `<=${stage.stage}`,
                         eventType: EventType.FORK_JOIN,
                         type: ToProcessType.STAGE
                     });
@@ -123,7 +123,7 @@ export class SmTransactionsRequests {
         StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), eventType, transaction.getId(), transaction.getThisName());
     }
 
-    private reactionsAsCallbacks(stateMachine: StateMachine<any, any, any>, reactions: WithMetadataArray<SmEventCallback<any>, string>, actions: any) {
+    private reactionsAsCallbacks(stateMachine: StateMachine<any, any, any>, reactions: WithMetadataArray<OnEventCallback<any>, string>, actions: any) {
         return reactions.map(it => ({
             metadata: it.metadata,
             value: () => it.value(actions, {sm: stateMachine})

@@ -1,4 +1,4 @@
-import {StateMachineTreeBuilder} from "../../../lib/conan-sm/stateMachineTreeBuilder";
+import {StateMachineController} from "../../../lib/conan-sm/stateMachineController";
 import {
     AuthenticatingActions,
     AuthenticatingListener,
@@ -26,13 +26,13 @@ import {BasicSmListener, SmListenerDef} from "../../../lib/conan-sm/stateMachine
 export class AuthenticatedActionsLogic implements AuthenticatedActions {
     doLogout(): NotAuthenticatedStage {
         return {
-            name: "notAuthenticated",
+            stage: "notAuthenticated",
         };
     }
 
     doTimeout(): NotAuthenticatedStage {
         return {
-            name: "notAuthenticated",
+            stage: "notAuthenticated",
         };
     }
 
@@ -41,14 +41,14 @@ export class AuthenticatedActionsLogic implements AuthenticatedActions {
 export class AuthenticatingActionsLogic implements AuthenticatingActions {
     doSuccess(appCredentials: AppCredentials): AuthenticatedStage {
         return {
-            requirements: appCredentials,
-            name: 'authenticated'
+            state: appCredentials,
+            stage: 'authenticated'
         };
     }
 
     doUnauthorised(): NotAuthenticatedStage {
         return {
-            name: 'notAuthenticated'
+            stage: 'notAuthenticated'
         };
     }
 
@@ -57,8 +57,8 @@ export class AuthenticatingActionsLogic implements AuthenticatingActions {
 export class NotAuthenticatedActionsLogic implements NotAuthenticatedActions {
     doAuthenticating(userNameAndPassword: UserNameAndPassword): AuthenticatingStage {
         return {
-            name: 'authenticating',
-            requirements: userNameAndPassword
+            stage: 'authenticating',
+            state: userNameAndPassword
         };
     }
 }
@@ -80,11 +80,11 @@ export class AuthenticationPrototype {
     ) {
     }
 
-    newBuilder(): StateMachineTreeBuilder<AuthenticationSmListener, AuthenticationSmJoiner, AuthenticationSmActions> {
-        return new StateMachineTreeBuilder([`::start=>doNotAuth`, {
+    newBuilder(): StateMachineController<AuthenticationSmListener, AuthenticationSmJoiner, AuthenticationSmActions> {
+        return new StateMachineController([`::start=>doNotAuth`, {
             onStart: (_, params) => params.sm.requestTransition({
                 into: {
-                    name: 'notAuthenticated'
+                    stage: 'notAuthenticated'
                 },
                 path: 'doNotAuthenticated'
             })

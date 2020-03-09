@@ -11,14 +11,14 @@ export interface SyncStateMachineDef<SM_IF_LISTENER extends SmListener,
     INTO_SM_ON_LISTENER extends SmListener,
     JOIN_SM_ON_LISTENER extends SmListener,
     > {
-    stateMachineBuilder: StateMachineTreeBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>,
+    stateMachineBuilder: StateMachineController<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>,
     syncName: string,
     syncStartingPath?: string;
     joiner: SyncListener<INTO_SM_ON_LISTENER, SM_IF_LISTENER>,
-    initCb?: IConsumer<StateMachineTreeBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>>
+    initCb?: IConsumer<StateMachineController<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>>
 }
 
-export class StateMachineTreeBuilder<
+export class StateMachineController<
     SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
     SM_ACTIONS
@@ -93,9 +93,9 @@ export class StateMachineTreeBuilder<
     sync<INTO_SM_ON_LISTENER extends SmListener,
         JOIN_SM_ON_LISTENER extends SmListener>(
         name: string,
-        stateMachine: StateMachineTreeBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>,
+        stateMachine: StateMachineController<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>,
         joiner: SyncListener<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>,
-        initCb?: IConsumer<StateMachineTreeBuilder<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>>
+        initCb?: IConsumer<StateMachineController<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER, any>>
     ): this {
         if (this.started) throw new Error("can't modify the behaviour of a state machine once that it has started");
         this.request.syncDefs.push({
