@@ -1,8 +1,8 @@
-import {IBiConsumer, IConstructor, IConsumer, IFunction, IOptSetKeyValuePairs} from "../conan-utils/typesHelper";
+import {IBiConsumer, IConstructor, IConsumer, IOptSetKeyValuePairs} from "../conan-utils/typesHelper";
 import {StateMachineTree} from "./stateMachineTree";
 import {ListenerType, SmListener, SmListenerDefLike, SmListenerDefLikeParser} from "./stateMachineListeners";
 import {SmController, SmEventsPublisher, StateMachineTreeBuilderData} from "./_domain";
-import {StageLogic} from "./stage";
+import {Stage, StageLogic} from "./stage";
 
 
 export type SyncListener<INTO_SM_ON_LISTENER extends SmListener,
@@ -55,15 +55,34 @@ export class StateMachine<
         throw new Error('TBI');
     }
 
+    withInitialState<
+        DATA = void
+    > (
+        stateName: string,
+        data: DATA,
+    ): this {
+        this.withState<any>('start', () => ({
+            doInitialise: (initialData: DATA): Stage<any, DATA> => ({
+                state: stateName,
+                data: initialData
+            })
+        }))
+        .addListener([`::start=>doInitialise`, {
+            onStart: (actions: any) => actions.doInitialise(data)
+        } as any,], ListenerType.ONCE);
+        return this;
+    }
+
+
     withState<
         ACTIONS,
         DATA = void
     >(
-        name: string,
+        stateName: string,
         logic: StageLogic<ACTIONS, DATA>,
     ): this {
         this.request.stageDefs.push({
-            name,
+            name: stateName,
             logic,
         });
         return this;
