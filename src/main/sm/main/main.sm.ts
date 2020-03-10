@@ -1,4 +1,4 @@
-import {StateMachineController} from "../../../lib/conan-sm/stateMachineController";
+import {StateMachine} from "../../../lib/conan-sm/stateMachine";
 import {
     InitializingActions,
     InitializingListener,
@@ -31,7 +31,7 @@ export interface MainSmJoiner extends ShowingAppJoiner, ShowingLoginJoiner {
 class InitializingActionsLogic implements InitializingActions {
     doInitialise(translations: Translations): ShowingLoginStage {
         return {
-            stage: 'showingLogin'
+            state: 'showingLogin'
         };
     }
 }
@@ -39,7 +39,7 @@ class InitializingActionsLogic implements InitializingActions {
 class ShowingLoginActionsLogic implements ShowingLoginActions {
     doShowApp(): ShowingAppStage {
         return {
-            stage: 'showingApp'
+            state: 'showingApp'
         };
     }
 
@@ -51,11 +51,11 @@ export class MainSm {
     ) {
     }
 
-    define(): StateMachineController<MainSmListener, MainSmJoiner, MainSmActions> {
-        return new StateMachineController([`onStart=>initializing`, {
+    define(): StateMachine<MainSmListener, MainSmJoiner, MainSmActions> {
+        return new StateMachine([`onStart=>initializing`, {
             onStart: (_, params) => params.sm.requestTransition({
                 transition: {
-                    stage: 'initializing'
+                    state: 'initializing'
                 },
                 actionName: 'defaultInitializing'
             })
@@ -63,7 +63,7 @@ export class MainSm {
             .withDeferredStage<InitializingStageName,
                 InitializingActions,
                 InitializingStage>('initializing', InitializingActionsLogic, this.initializer, ['showingLogin'])
-            .withStage<ShowingLoginStageName,
+            .withState<ShowingLoginStageName,
                 ShowingLoginActions,
                 ShowingLoginStage>('showingLogin', ShowingLoginActionsLogic)
     }

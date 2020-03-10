@@ -1,4 +1,4 @@
-import {ParentStateMachineInfo, StateMachine, StateMachineStatus, ToProcessType} from "./stateMachine";
+import {ParentStateMachineInfo, StateMachineImpl, StateMachineStatus, ToProcessType} from "./stateMachineImpl";
 import {IConsumer, IKeyValuePairs} from "../conan-utils/typesHelper";
 import {Stage, StageDef} from "./stage";
 import {Objects} from "../conan-utils/objects";
@@ -18,7 +18,7 @@ export class StateMachineFactory {
         SM_ON_LISTENER extends SmListener,
         SM_IF_LISTENER extends SmListener,
         ACTIONS
-    >(request: StateMachineTreeBuilderData<SM_ON_LISTENER, SM_IF_LISTENER>): StateMachine<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS> {
+    >(request: StateMachineTreeBuilderData<SM_ON_LISTENER, SM_IF_LISTENER>): StateMachineImpl<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS> {
         return this.doCreate(request);
     }
 
@@ -33,8 +33,8 @@ export class StateMachineFactory {
         forkIntoStageDef: StageDef<any, any, any>,
         defer: IConsumer<any>
     ) {
-        let deferEventName = Strings.camelCaseWithPrefix('on', forkIntoStage.stage);
-        let deferPathName = Strings.camelCaseWithPrefix('do', forkIntoStage.stage);
+        let deferEventName = Strings.camelCaseWithPrefix('on', forkIntoStage.state);
+        let deferPathName = Strings.camelCaseWithPrefix('do', forkIntoStage.state);
 
         return this.doCreate({
             initialListener: {
@@ -51,7 +51,7 @@ export class StateMachineFactory {
             },
             name: forkName,
             stageDefs: [{
-                name: forkIntoStage.stage,
+                name: forkIntoStage.state,
                 logic: forkIntoStageDef.logic
             }],
             listeners: [{
@@ -75,9 +75,9 @@ export class StateMachineFactory {
     >(
         treeBuilderData: StateMachineTreeBuilderData<SM_LISTENER, JOIN_LISTENER>,
         parent?: ParentStateMachineInfo<any, any>
-    ): StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> {
+    ): StateMachineImpl<SM_LISTENER, JOIN_LISTENER, ACTIONS> {
         let stageDefsByKey: IKeyValuePairs<StageDef<string, any, any, any>> = Objects.keyfy(treeBuilderData.stageDefs, (it) => it.name);
-        let systemStages: IKeyValuePairs<StageDef<string, any, any, any>> = Objects.keyfy(treeBuilderData.stageDefs, (it) => it.name);
+        let systemStages: IKeyValuePairs<StageDef<string, any, any, any>>;
         let systemListeners: SmListenerDefList<SM_LISTENER> = [];
         let externalListeners: SmListenerDefList<SM_LISTENER> = treeBuilderData.listeners;
 
@@ -103,7 +103,7 @@ export class StateMachineFactory {
                         stateMachine.requestTransition({
                             actionName: `doStart`,
                             transition: {
-                                stage: 'start'
+                                state: 'start'
                             }
                         })
                     }
@@ -130,7 +130,7 @@ export class StateMachineFactory {
         });
 
         StateMachineLogger.log(treeBuilderData.name, StateMachineStatus.IDLE, '', '', EventType.INIT, undefined, '', [
-            [`init listeners`, `(${treeBuilderData.initialListener.metadata})`],
+            [`init listeners`, treeBuilderData.initialListener ? `(${treeBuilderData.initialListener.metadata})` : undefined],
             [`listeners`, `${externalListeners.map(it=>it.metadata).map(it => {
                 return it.name.split(',').map(it=>`(${it})`).join(',');
             })}`],
@@ -142,10 +142,10 @@ export class StateMachineFactory {
             [`system stages`, 'init, start, stop'],
         ]);
 
-        let stateMachine: StateMachine<SM_LISTENER, JOIN_LISTENER, ACTIONS> = new StateMachine({
+        let stateMachine: StateMachineImpl<SM_LISTENER, JOIN_LISTENER, ACTIONS> = new StateMachineImpl({
             ...treeBuilderData,
-            listeners: [...treeBuilderData.listeners, ...systemListeners, treeBuilderData.initialListener],
-            stageDefsByKey: {...stageDefsByKey, ...systemStages},
+            listeners: [...treeBuilderData.listeners, ...systemListeners, ...treeBuilderData.initialListener ? [treeBuilderData.initialListener] : []],
+            stageDefsByKey: {...systemStages, ...stageDefsByKey},
             parent,
         });
 
@@ -155,7 +155,7 @@ export class StateMachineFactory {
             description: '::init',
             eventType: EventType.INIT,
             stage: {
-                stage: 'init'
+                state: 'init'
             },
             type: ToProcessType.STAGE
         });

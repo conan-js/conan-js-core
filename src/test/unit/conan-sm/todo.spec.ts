@@ -1,11 +1,11 @@
-import {TodoListState, TodoListStoreFactory} from "../../../todo/todoList.sm";
+import {TodoListData, TodoListStoreFactory, TodoListUpdatedActions} from "../../../todo/todoList.sm";
 import {expect} from "chai";
 import {ToDo, ToDoStatus} from "../../../todo/domain";
 import {ListenerType} from "../../../lib/conan-sm/stateMachineListeners";
 import {SmController} from "../../../lib/conan-sm/_domain";
 
 describe('test todo list as in redux GS', () => {
-    const INITIAL_STATE: TodoListState = {
+    const INITIAL_STATE: TodoListData = {
         todos: [],
         appliedFilter: undefined
     };
@@ -19,7 +19,7 @@ describe('test todo list as in redux GS', () => {
         let sm: SmController<any, any> = new TodoListStoreFactory(INITIAL_STATE)
             .create()
             .addListener([`::todoListUpdated=>addTodo[1]`, {
-                onTodoListUpdated: (actions, params) => actions.addTodo(INITIAL_TODO)
+                onTodoListUpdated: (actions) => actions.addTodo(INITIAL_TODO)
             }], ListenerType.ONCE)
             .start('todo-list-store')
             .stop();

@@ -1,56 +1,78 @@
 import {ToDo, ToDoStatus} from "./domain";
-import {StateMachineController} from "../lib/conan-sm/stateMachineController";
-import {OnEventCallback, SmListener} from "../lib/conan-sm/stateMachineListeners";
+import {StateMachine} from "../lib/conan-sm/stateMachine";
+import {ListenerType, OnEventCallback, SmListener} from "../lib/conan-sm/stateMachineListeners";
 import {Stage} from "../lib/conan-sm/stage";
 
-export interface TodoListState {
+export interface TodoListData {
     todos: ToDo[];
     appliedFilter: ToDoStatus [];
 }
 
-export interface TodoListActions {
-    addTodo (todo: ToDo): void;
-    filterAll (): void;
-    filterByStatus (status: ToDoStatus): void;
+export interface TodoListStartActions {
+    doInitialise(initialState: TodoListData): TodoListUpdated;
 }
 
-export interface TodoListListener extends SmListener<TodoListActions>{
-    onTodoListUpdated ?: OnEventCallback <TodoListActions>;
+export type TodoListUpdatedStageName = 'todoListUpdated';
+
+export interface TodoListUpdated extends Stage <TodoListUpdatedStageName, TodoListData> {
 }
+
+export interface TodoListUpdatedActions {
+    addTodo(todo: ToDo): void;
+
+    filterAll(): void;
+
+    filterByStatus(status: ToDoStatus): void;
+}
+
+export interface TodoListStoreListener extends SmListener<TodoListUpdatedActions | TodoListStartActions> {
+    onStart?: OnEventCallback<TodoListStartActions>;
+    onTodoListUpdated?: OnEventCallback<TodoListUpdatedActions>;
+}
+
 
 // BOILERPLATE TBR
-export type TodoListUpdatedStageName = 'todoListUpdated';
-export interface TodoListSm extends Stage <TodoListUpdatedStageName, TodoListState>{}
-export class TodoListActionsImpl implements TodoListActions{
-    constructor(
-        private _currentState: TodoListState
-    ) {}
-
-
-    addTodo(todo: ToDo): TodoListSm {
+export class TodoListStartActionsImpl implements TodoListStartActions {
+    doInitialise(initialState: TodoListData): TodoListUpdated {
         return {
-            stage: "todoListUpdated",
-            state: {
+            state: "todoListUpdated",
+            data: initialState
+        };
+    }
+
+}
+
+export class TodoListUpdatedActionsImpl implements TodoListUpdatedActions {
+    constructor(
+        private _currentState: TodoListData
+    ) {
+    }
+
+
+    addTodo(todo: ToDo): TodoListUpdated {
+        return {
+            state: "todoListUpdated",
+            data: {
                 todos: [...this._currentState.todos, todo],
                 appliedFilter: this._currentState.appliedFilter
             }
         };
     }
 
-    filterAll(): TodoListSm {
+    filterAll(): TodoListUpdated {
         return {
-            stage: "todoListUpdated",
-            state: {
+            state: "todoListUpdated",
+            data: {
                 todos: this._currentState.todos,
                 appliedFilter: undefined
             }
         };
     }
 
-    filterByStatus(status: ToDoStatus): TodoListSm {
+    filterByStatus(status: ToDoStatus): TodoListUpdated {
         return {
-            stage: "todoListUpdated",
-            state: {
+            state: "todoListUpdated",
+            data: {
                 todos: this._currentState.todos,
                 appliedFilter: [status]
             }
@@ -58,30 +80,30 @@ export class TodoListActionsImpl implements TodoListActions{
     }
 
 }
+
 // BOILERPLATE TBR
+
+export type TodoListStore = StateMachine<TodoListStoreListener>;
 
 export class TodoListStoreFactory {
     constructor(
-        private readonly initialState: TodoListState
-    ) {}
+        private readonly initialData: TodoListData
+    ) {
+    }
 
-    create(): StateMachineController<TodoListListener, {}, TodoListActions> {
-        return new StateMachineController([
-            `::start=>doInitialState`,
-            {
-                onStart: (_, params)=>
-                    params.sm.requestTransition({
-                        actionName: 'doInitialState',
-                        transition: {
-                            stage: 'todoListUpdated',
-                            state: this.initialState as any
-                        }
-                    })
-            }
-        ]).withStage<
-                TodoListUpdatedStageName,
-                TodoListActions,
-                TodoListState
-            >('todoListUpdated', TodoListActionsImpl)
+    create(): TodoListStore {
+        return new StateMachine<TodoListStoreListener>()
+            .withState<TodoListStartActions>('start', () => ({
+                doInitialise(initialData): TodoListUpdated {
+                    return {
+                        state: "todoListUpdated",
+                        data: initialData
+                    }
+                }
+            }))
+            .addListener([`::start=>doInitialise`, {
+                onStart: (actions) => actions.doInitialise(this.initialData)
+            },], ListenerType.ONCE)
+            .withState<TodoListUpdatedActions>('todoListUpdated', TodoListUpdatedActionsImpl)
     }
 }
