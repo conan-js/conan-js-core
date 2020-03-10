@@ -1,4 +1,4 @@
-import {TodoListData, TodoListStoreFactory, TodoListActions} from "../../../todo/todoList.sm";
+import {TodoListData, TodoListStoreFactory} from "../../../todo/todoList.sm";
 import {expect} from "chai";
 import {ToDo, ToDoStatus} from "../../../todo/domain";
 import {ListenerType} from "../../../lib/conan-sm/stateMachineListeners";

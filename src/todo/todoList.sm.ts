@@ -8,8 +8,7 @@ export interface TodoListData {
     appliedFilter: ToDoStatus [];
 }
 
-export interface NextTodoList extends Stage <'nextTodoList', TodoListData> {
-}
+export interface NextTodoList extends Stage <'nextTodoList', TodoListData> {}
 
 export interface TodoListActions {
     addTodo(todo: ToDo): NextTodoList;
@@ -23,8 +22,7 @@ export interface TodoListListener extends SmListener<TodoListActions> {
     onNextTodoList?: OnEventCallback<TodoListActions>;
 }
 
-export type TodoListStore = StateMachine<TodoListListener>;
-export let TodoListStoreFactory = (initialData: TodoListData): TodoListStore =>
+export let TodoListStoreFactory = (initialData: TodoListData): StateMachine<TodoListListener> =>
     new StateMachine<TodoListListener>()
         .withInitialState('nextTodoList', initialData)
         .withState<TodoListActions, TodoListData>('nextTodoList', (currentState) => ({
