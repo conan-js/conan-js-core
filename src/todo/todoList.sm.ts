@@ -11,9 +11,7 @@ export interface TodoListData {
 export interface NextTodoList extends Stage <'nextTodoList', TodoListData> {}
 export interface TodoListActions {
     addTodo(todo: ToDo): NextTodoList;
-
     filterAll(): NextTodoList;
-
     filterByStatus(status: ToDoStatus): NextTodoList;
 }
 
@@ -23,14 +21,9 @@ export interface TodoListListener extends SmListener<TodoListActions> {
 
 export type TodoListStore = StateMachine<TodoListListener>;
 export class TodoListStoreFactory {
-    constructor(
-        private readonly initialData: TodoListData
-    ) {
-    }
-
-    create(): TodoListStore {
+    create(initialData: TodoListData): TodoListStore {
         return new StateMachine<TodoListListener>()
-            .withInitialState('nextTodoList', this.initialData)
+            .withInitialState('nextTodoList', initialData)
             .withState<TodoListActions, TodoListData>('nextTodoList', (currentState)=>({
                 addTodo: (todo: ToDo): NextTodoList => ({
                     state: 'nextTodoList',

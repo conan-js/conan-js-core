@@ -16,9 +16,9 @@ describe('test todo list as in redux GS', () => {
     };
 
     it('should work', () => {
-        let sm: SmController<any, any> = new TodoListStoreFactory(INITIAL_STATE)
-            .create()
-            .addListener([`::nextTodoList=>addTodo[1]`, {
+        let sm: SmController<any, any> = new TodoListStoreFactory()
+            .create(INITIAL_STATE)
+            .addListener([`::nextTodoList=>addTodo`, {
                 onNextTodoList: (actions) => actions.addTodo(INITIAL_TODO)
             }], ListenerType.ONCE)
             .start('todo-list-store')
