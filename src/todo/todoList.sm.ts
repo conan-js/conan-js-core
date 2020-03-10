@@ -7,20 +7,21 @@ export interface TodoListData {
     todos: ToDo[];
     appliedFilter: ToDoStatus [];
 }
-export interface TodoListUpdated extends Stage <'todoListUpdated', TodoListData> {}
+
+export interface NextTodoList extends Stage <'nextTodoList', TodoListData> {}
 export interface TodoListActions {
-    addTodo(todo: ToDo): TodoListUpdated;
+    addTodo(todo: ToDo): NextTodoList;
 
-    filterAll(): TodoListUpdated;
+    filterAll(): NextTodoList;
 
-    filterByStatus(status: ToDoStatus): TodoListUpdated;
+    filterByStatus(status: ToDoStatus): NextTodoList;
 }
 
-export interface TodoListStoreListener extends SmListener<TodoListActions> {
-    onTodoListUpdated?: OnEventCallback<TodoListActions>;
+export interface TodoListListener extends SmListener<TodoListActions> {
+    onNextTodoList?: OnEventCallback<TodoListActions>;
 }
 
-export type TodoListStore = StateMachine<TodoListStoreListener>;
+export type TodoListStore = StateMachine<TodoListListener>;
 export class TodoListStoreFactory {
     constructor(
         private readonly initialData: TodoListData
@@ -28,25 +29,25 @@ export class TodoListStoreFactory {
     }
 
     create(): TodoListStore {
-        return new StateMachine<TodoListStoreListener>()
-            .withInitialState('todoListUpdated', this.initialData)
-            .withState<TodoListActions, TodoListData>('todoListUpdated', (currentState)=>({
-                addTodo: (todo: ToDo): TodoListUpdated => ({
-                    state: "todoListUpdated",
+        return new StateMachine<TodoListListener>()
+            .withInitialState('nextTodoList', this.initialData)
+            .withState<TodoListActions, TodoListData>('nextTodoList', (currentState)=>({
+                addTodo: (todo: ToDo): NextTodoList => ({
+                    state: 'nextTodoList',
                     data: {
                         todos: [...currentState.todos, todo],
                         appliedFilter: currentState.appliedFilter
                     }
                 }),
-                filterAll: (): TodoListUpdated => ({
-                    state: "todoListUpdated",
+                filterAll: (): NextTodoList => ({
+                    state: 'nextTodoList',
                     data: {
                         todos: currentState.todos,
                         appliedFilter: undefined
                     }
                 }),
-                filterByStatus: (status: ToDoStatus): TodoListUpdated => ({
-                    state: "todoListUpdated",
+                filterByStatus: (status: ToDoStatus): NextTodoList => ({
+                    state: 'nextTodoList',
                     data: {
                         todos: currentState.todos,
                         appliedFilter: [status]
