@@ -5,7 +5,8 @@
   "main": "src/main/bin/main.tsx",
   "scripts": {
     "build": "webpack",
-    "start": "webpack-dev-server"
+    "start": "webpack-dev-server",
+    "test": "mocha -r ts-node/register 'src/test/**/*.ts'"
   },
   "author": "",
   "license": "ISC",

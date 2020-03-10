@@ -19,13 +19,7 @@ import {ShowingAppJoiner, ShowingAppListener, ShowingAppStage} from "./stages/sh
 
 export type Initializer = IConsumer<InitializingActions>;
 
-export interface MainSmActions extends InitializingActions {
-}
-
 export interface MainSmListener extends InitializingListener, ShowingLoginListener, ShowingAppListener {
-}
-
-export interface MainSmJoiner extends ShowingAppJoiner, ShowingLoginJoiner {
 }
 
 class InitializingActionsLogic implements InitializingActions {
@@ -51,7 +45,7 @@ export class MainSm {
     ) {
     }
 
-    define(): StateMachine<MainSmListener, MainSmJoiner, MainSmActions> {
+    define(): StateMachine<MainSmListener> {
         return new StateMachine([`onStart=>initializing`, {
             onStart: (_, params) => params.sm.requestTransition({
                 transition: {
@@ -60,11 +54,13 @@ export class MainSm {
                 actionName: 'defaultInitializing'
             })
         }])
-            .withDeferredStage<InitializingStageName,
+            .withDeferredStage<
+                InitializingStageName,
                 InitializingActions,
                 InitializingStage>('initializing', InitializingActionsLogic, this.initializer, ['showingLogin'])
-            .withState<ShowingLoginStageName,
+            .withState<
                 ShowingLoginActions,
-                ShowingLoginStage>('showingLogin', ShowingLoginActionsLogic)
+                ShowingLoginStage
+            >('showingLogin', ShowingLoginActionsLogic)
     }
 }

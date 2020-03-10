@@ -20,7 +20,7 @@ import {
     AuthenticatedStageName
 } from "./stages/authenticated.stage";
 import {IBiConsumer} from "../../../lib/conan-utils/typesHelper";
-import {BasicSmListener, SmListenerDef} from "../../../lib/conan-sm/stateMachineListeners";
+import {BasicSmListener} from "../../../lib/conan-sm/stateMachineListeners";
 
 
 export class AuthenticatedActionsLogic implements AuthenticatedActions {
@@ -65,9 +65,6 @@ export class NotAuthenticatedActionsLogic implements NotAuthenticatedActions {
 
 export type Authenticator = IBiConsumer<AuthenticatingActions, UserNameAndPassword>;
 
-export interface AuthenticationSmActions extends NotAuthenticatedActions, AuthenticatedActions {
-}
-
 export interface AuthenticationSmListener extends NotAuthenticatedListener, AuthenticatingListener, AuthenticatedListener, BasicSmListener {
 }
 
@@ -80,7 +77,7 @@ export class AuthenticationPrototype {
     ) {
     }
 
-    newBuilder(): StateMachine<AuthenticationSmListener, AuthenticationSmJoiner, AuthenticationSmActions> {
+    newBuilder(): StateMachine<AuthenticationSmListener> {
         return new StateMachine([`::start=>doNotAuth`, {
             onStart: (_, params) => params.sm.requestTransition({
                 transition: {
@@ -89,21 +86,26 @@ export class AuthenticationPrototype {
                 actionName: 'doNotAuthenticated'
             })
         }])
-            .withState<NotAuthenticatedStageName,
-                NotAuthenticatedActions>(
+            .withState<
+                NotAuthenticatedActions,
+                NotAuthenticatedStageName
+            >(
                 'notAuthenticated',
                 NotAuthenticatedActionsLogic,
             )
-            .withDeferredStage<AuthenticatingStageName,
+            .withDeferredStage<
+                AuthenticatingStageName,
                 AuthenticatingActions,
-                UserNameAndPassword>(
+                UserNameAndPassword
+            >(
                 "authenticating",
                 AuthenticatingActionsLogic,
                 this.authenticator,
                 ['authenticated']
-            ).withState<AuthenticatedStageName,
+            ).withState<
                 AuthenticatedActions,
-                AppCredentials>(
+                AuthenticatedStageName
+            >(
                 "authenticated",
                 AuthenticatedActionsLogic,
             )
