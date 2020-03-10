@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {DiContextFactory} from "../../../lib/conan-di/core/diContext";
+import {DiContextFactory} from "../../../src/lib/conan-di/core/diContext";
 
 describe('diContext', () => {
     class SimpleBean {

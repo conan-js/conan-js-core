@@ -1,6 +1,6 @@
 const path = require('path');
 
-const ROOT = path.resolve( __dirname, 'src/test' );
+const ROOT = path.resolve( __dirname, 'test' );
 
 module.exports = {
     context: ROOT,

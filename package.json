@@ -6,7 +6,7 @@
   "scripts": {
     "build": "webpack",
     "start": "webpack-dev-server",
-    "test": "mocha -r ts-node/register 'src/test/**/*.ts'"
+    "test": "mocha -r ts-node/register 'test/**/*.ts'"
   },
   "author": "",
   "license": "ISC",
