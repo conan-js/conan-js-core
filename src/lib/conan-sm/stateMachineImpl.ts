@@ -1,7 +1,14 @@
 import {EventThread} from "./eventThread";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {Stage, StageDef, StageLogicParser} from "./stage";
-import {IConsumer, IKeyValuePairs, WithMetadataArray} from "../conan-utils/typesHelper";
+import {
+    ICallback,
+    IConsumer,
+    IFunction,
+    IKeyValuePairs, IPredicate,
+    IProducer,
+    WithMetadataArray
+} from "../conan-utils/typesHelper";
 import {Strings} from "../conan-utils/strings";
 import {StateMachineFactory} from "./stateMachineFactory";
 import {
@@ -16,6 +23,7 @@ import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
 import {SmController, StateMachineData} from "./_domain";
 import {TransactionTree} from "../conan-tx/transactionTree";
 import {SmTransactionsRequests} from "./smTransactionsRequests";
+import {Proxyfier} from "../conan-utils/proxyfier";
 
 export enum ToProcessType {
     STAGE = 'STAGE'
@@ -205,39 +213,29 @@ export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
         if (!stageDef || !stageDef.logic) return {};
 
         let actionsLogic: any = StageLogicParser.parse(stageDef.logic)(stagePayload);
-        let proxy: any = {} as any;
-        let prototype = Object.getPrototypeOf(actionsLogic);
-        let methodHost = prototype.constructor.name === 'Object' ? actionsLogic : prototype;
-        let ownPropertyNames = Object.getOwnPropertyNames(methodHost);
-        ownPropertyNames.forEach(key => {
-            if (key === 'constructor') return;
-            let toProxy = (methodHost as any)[key];
-            if (typeof toProxy !== 'function') return;
-
-            (proxy as any)[key] = (payload: any) => {
-                let nextStage: Stage = (actionsLogic as any)[key](payload);
-                let nextStageDef: StageDef<string, any, any, any> = actionsByStage [nextStage.nextState];
-                if (nextStageDef == null) {
-                    if (!this.data.parent) {
-                        throw new Error(`trying to move to a non existent stage: ${nextStage.nextState}`);
-                    }
-
-                    nextStageDef = this.data.parent.stateMachine.getStageDef(nextStage.nextState);
-                    if (!nextStageDef) {
-                        throw new Error(`trying to move to a non existent stage from a forked stateMachine: ${nextStage.nextState}`);
-                    }
+        return Proxyfier.proxy(actionsLogic, (originalCall, metadata)=>{
+            let nextStage: Stage = originalCall ();
+            let nextStageDef: StageDef<string, any, any, any> = actionsByStage [nextStage.nextState];
+            if (nextStageDef == null) {
+                if (!this.data.parent) {
+                    throw new Error(`trying to move to a non existent stage: ${nextStage.nextState}`);
                 }
 
-
-                StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.PROXY, this.transactionTree.getCurrentTransactionId(), `(${key})=>::${nextStage.nextState}`);
-                stateMachine.requestTransition({
-                    actionName: key,
-                    payload: payload,
-                    transition: nextStage,
-                });
+                nextStageDef = this.data.parent.stateMachine.getStageDef(nextStage.nextState);
+                if (!nextStageDef) {
+                    throw new Error(`trying to move to a non existent stage from a forked stateMachine: ${nextStage.nextState}`);
+                }
             }
+
+
+            StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.PROXY, this.transactionTree.getCurrentTransactionId(), `(${metadata.methodName})=>::${nextStage.nextState}`);
+            stateMachine.requestTransition({
+                actionName: metadata.methodName,
+                payload: metadata.payload,
+                transition: nextStage,
+            });
+            return nextStage;
         });
-        return proxy;
     }
 
     join(stageToProcess: StageToProcess): void {
