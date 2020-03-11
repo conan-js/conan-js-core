@@ -63,7 +63,7 @@ export class StateMachine<
     ): this {
         this.withState<any>('start', () => ({
             doInitialise: (initialData: DATA): Stage<any, DATA> => ({
-                state: stateName,
+                nextState: stateName,
                 data: initialData
             })
         }))

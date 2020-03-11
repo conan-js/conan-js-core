@@ -93,7 +93,7 @@ export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
         this.assertNotClosed();
         this.requestTransition({
             transition: {
-                state: 'stop',
+                nextState: 'stop',
                 data: ((this.eventThread.currentEvent.data) as any ).data
             },
             actionName: 'doStop',
@@ -104,7 +104,7 @@ export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
     requestStage(stageToProcess: StageToProcess): void {
         this.assertNotClosed();
 
-        let stageName = stageToProcess.stage.state;
+        let stageName = stageToProcess.stage.nextState;
         if (this.data.stageDefsByKey [stageName] == null) {
             throw new Error(`can't move sm: [${this.data.name}] to ::${stageName} and is not a valid stage, ie one of: (${Object.keys(this.data.stageDefsByKey).join(', ')})`)
         }
@@ -119,7 +119,7 @@ export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
     requestTransition(transition: SmTransition): this {
         this.assertNotClosed();
 
-        let actions = this.createActions(this, this.data.stageDefsByKey, transition.transition.state, transition.payload);
+        let actions = this.createActions(this, this.data.stageDefsByKey, transition.transition.nextState, transition.payload);
         let eventName = Strings.camelCaseWithPrefix('on', transition.actionName);
         this.transactionTree
             .createOrQueueTransaction(
@@ -180,7 +180,7 @@ export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
         joinsInto: string []
     ): StateMachineImpl<any, any, any> {
         this._status = StateMachineStatus.PAUSED;
-        let forkSmName = `${this.data.name}/${nextStage.state}`;
+        let forkSmName = `${this.data.name}/${nextStage.nextState}`;
         StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.FORK, this.transactionTree.getCurrentTransactionId(), `[FORK]::${forkSmName}`);
 
         return StateMachineFactory.fork(
@@ -190,7 +190,7 @@ export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
                 joinsInto
             },
             nextStage,
-            this.data.stageDefsByKey[nextStage.state],
+            this.data.stageDefsByKey[nextStage.nextState],
             defer
         );
     }
@@ -216,20 +216,20 @@ export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
 
             (proxy as any)[key] = (payload: any) => {
                 let nextStage: Stage = (actionsLogic as any)[key](payload);
-                let nextStageDef: StageDef<string, any, any, any> = actionsByStage [nextStage.state];
+                let nextStageDef: StageDef<string, any, any, any> = actionsByStage [nextStage.nextState];
                 if (nextStageDef == null) {
                     if (!this.data.parent) {
-                        throw new Error(`trying to move to a non existent stage: ${nextStage.state}`);
+                        throw new Error(`trying to move to a non existent stage: ${nextStage.nextState}`);
                     }
 
-                    nextStageDef = this.data.parent.stateMachine.getStageDef(nextStage.state);
+                    nextStageDef = this.data.parent.stateMachine.getStageDef(nextStage.nextState);
                     if (!nextStageDef) {
-                        throw new Error(`trying to move to a non existent stage from a forked stateMachine: ${nextStage.state}`);
+                        throw new Error(`trying to move to a non existent stage from a forked stateMachine: ${nextStage.nextState}`);
                     }
                 }
 
 
-                StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.PROXY, this.transactionTree.getCurrentTransactionId(), `(${key})=>::${nextStage.state}`);
+                StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.PROXY, this.transactionTree.getCurrentTransactionId(), `(${key})=>::${nextStage.nextState}`);
                 stateMachine.requestTransition({
                     actionName: key,
                     payload: payload,
@@ -241,7 +241,7 @@ export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
     }
 
     join(stageToProcess: StageToProcess): void {
-        let stageName = stageToProcess.stage.state;
+        let stageName = stageToProcess.stage.nextState;
         let stageDescriptor = `::${stageName}`;
         StateMachineLogger.log(this.data.name, this._status, this.eventThread.getCurrentStageName(), this.eventThread.getCurrentActionName(), EventType.FORK_JOIN, this.transactionTree.getCurrentTransactionId(), `<-::${stageName}`);
         this.requestStage({

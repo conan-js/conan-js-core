@@ -17,7 +17,7 @@ export class EventThread  {
 
     serialize(): SerializedSmEvent[] {
         return this.events.map(event=> ({
-            stageName: ifTransitionTypeIs (event, event=> event.data.state, event=> event.data.transition.state),
+            stageName: ifTransitionTypeIs (event, event=> event.data.nextState, event=> event.data.transition.nextState),
             eventName: event.eventName,
             ...(ifTransitionTypeIs (event, event=> undefined, event=> event.data.payload)),
             ...(event.fork ? {fork:event.fork.getEvents()}: undefined),
@@ -45,7 +45,7 @@ export class EventThread  {
         fork?: SmController<any, any>
     ): void {
         let event: StageSmEvent = {
-            eventName: Strings.camelCaseWithPrefix('on', stage.state),
+            eventName: Strings.camelCaseWithPrefix('on', stage.nextState),
             type: SmEventType.STAGE,
             data: stage,
             fork: fork,
@@ -56,7 +56,7 @@ export class EventThread  {
 
     getCurrentStageName(): string {
         if (this.currentStageEvent == null) return '-';
-        return this.currentStageEvent.data.state;
+        return this.currentStageEvent.data.nextState;
     }
 
     private addEvent(event: TransitionSmEvent | StageSmEvent) {

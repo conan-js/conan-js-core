@@ -33,8 +33,8 @@ export class StateMachineFactory {
         forkIntoStageDef: StageDef<any, any, any>,
         defer: IConsumer<any>
     ) {
-        let deferEventName = Strings.camelCaseWithPrefix('on', forkIntoStage.state);
-        let deferPathName = Strings.camelCaseWithPrefix('do', forkIntoStage.state);
+        let deferEventName = Strings.camelCaseWithPrefix('on', forkIntoStage.nextState);
+        let deferPathName = Strings.camelCaseWithPrefix('do', forkIntoStage.nextState);
 
         return this.doCreate({
             initialListener: {
@@ -51,7 +51,7 @@ export class StateMachineFactory {
             },
             name: forkName,
             stageDefs: [{
-                name: forkIntoStage.state,
+                name: forkIntoStage.nextState,
                 logic: forkIntoStageDef.logic
             }],
             listeners: [{
@@ -103,7 +103,7 @@ export class StateMachineFactory {
                         stateMachine.requestTransition({
                             actionName: `doStart`,
                             transition: {
-                                state: 'start'
+                                nextState: 'start'
                             }
                         })
                     }
@@ -155,7 +155,7 @@ export class StateMachineFactory {
             description: '::init',
             eventType: EventType.INIT,
             stage: {
-                state: 'init'
+                nextState: 'init'
             },
             type: ToProcessType.STAGE
         });
