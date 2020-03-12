@@ -33,8 +33,8 @@ export class StateMachineFactory {
         forkIntoStageDef: StageDef<any, any, any>,
         defer: IConsumer<any>
     ) {
-        let deferEventName = Strings.camelCaseWithPrefix('on', forkIntoStage.nextState);
-        let deferPathName = Strings.camelCaseWithPrefix('do', forkIntoStage.nextState);
+        let deferEventName = Strings.camelCaseWithPrefix('on', forkIntoStage.stateName);
+        let deferPathName = Strings.camelCaseWithPrefix('do', forkIntoStage.stateName);
 
         return this.doCreate({
             initialListener: {
@@ -44,14 +44,15 @@ export class StateMachineFactory {
                 },
                 value: {
                     onStart: (_: any, params: SmEventCallbackParams) => params.sm.requestTransition({
-                        actionName: deferPathName,
+                        transitionName: deferPathName,
                         transition: forkIntoStage,
+                        payload: forkIntoStage.data
                     })
                 }
             },
             name: forkName,
             stageDefs: [{
-                name: forkIntoStage.nextState,
+                name: forkIntoStage.stateName,
                 logic: forkIntoStageDef.logic
             }],
             listeners: [{
@@ -101,9 +102,9 @@ export class StateMachineFactory {
                 '::init=>doStart', {
                     onInit: ()=>{
                         stateMachine.requestTransition({
-                            actionName: `doStart`,
+                            transitionName: `doStart`,
                             transition: {
-                                nextState: 'start'
+                                stateName: 'start'
                             }
                         })
                     }
@@ -155,7 +156,7 @@ export class StateMachineFactory {
             description: '::init',
             eventType: EventType.INIT,
             stage: {
-                nextState: 'init'
+                stateName: 'init'
             },
             type: ToProcessType.STAGE
         });

@@ -21,7 +21,7 @@ export class StoreFactory {
                 return Proxyfier.proxy(nextData, (raw):NextData<DATA>=>{
                     let rawData: DATA = raw();
                     return {
-                        nextState: "nextData",
+                        stateName: "nextData",
                         data: rawData
                     };
                 });

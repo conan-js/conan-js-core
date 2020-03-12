@@ -1,7 +1,7 @@
 import {IBiConsumer, IConstructor, IFunction} from "../conan-utils/typesHelper";
 
 export interface Stage<NAME extends string = string, REQUIREMENTS = void> {
-    nextState: NAME;
+    stateName: NAME;
     data?: REQUIREMENTS;
 }
 

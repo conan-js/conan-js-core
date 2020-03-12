@@ -59,12 +59,12 @@ export class StateMachine<
         DATA = void
     > (
         stateName: string,
-        data: DATA,
+        data?: DATA,
     ): this {
         this.withState<any>('start', () => ({
             doInitialise: (initialData: DATA): Stage<any, DATA> => ({
-                nextState: stateName,
-                data: initialData
+                stateName: stateName,
+                ...initialData ? {data: initialData}: undefined
             })
         }))
         .addListener([`::start=>doInitialise`, {
