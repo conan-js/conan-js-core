@@ -75,7 +75,7 @@ export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
     ) {
     }
 
-    getState(): any {
+    getStateData(): any {
         return (this.eventThread.currentEvent.data as any).data;
     }
 

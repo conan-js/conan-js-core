@@ -28,7 +28,7 @@ export class SmTransactionsRequests {
 
         return this.createNormalStageTransactionRequest(stateMachine, stageToProcess.stage, actions, stateMachine.createReactions(eventName, stateMachine.data.listeners), () => {
             stateMachine.eventThread.addStageEvent(stageToProcess.stage, eventName, stageToProcess.stage.data);
-            let state = stateMachine.getState();
+            let state = stateMachine.getStateData();
             StateMachineLogger.log(stateMachine.data.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentActionName(), EventType.STAGE, stateMachine.transactionTree.getCurrentTransactionId(), `::${stageToProcess.stage.nextState}`, [
                 [`current state`, state == null ? undefined : JSON.stringify(state)]
             ]);

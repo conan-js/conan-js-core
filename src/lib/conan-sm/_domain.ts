@@ -28,7 +28,7 @@ export interface SmController<
 
     getStageDef(name: string): StageDef<any, any, any>;
 
-    getState(): any;
+    getStateData(): any;
 }
 
 export interface StateMachineBaseData<
