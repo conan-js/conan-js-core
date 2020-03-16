@@ -1,19 +1,11 @@
 import {Stage} from "./stage";
-import {SmController} from "./_domain";
+import {StateMachine} from "./_domain";
 
 export interface SmTransition {
     transitionName: string;
     payload?: any;
     transition: Stage;
 }
-
-
-export enum SmEventType {
-    TRANSITION = 'TRANSITION',
-    STAGE = 'STAGE'
-}
-
-
 export interface StageSmEvent{
     stateName: string;
     data?: any;
@@ -22,7 +14,7 @@ export interface StageSmEvent{
 export interface RawTransitionSmEvent {
     transitionName: string;
     payload?: any;
-    fork?: SmController<any, any>;
+    fork?: StateMachine<any, any>;
 }
 export interface TransitionSmEvent {
     transitionName: string;
@@ -33,10 +25,4 @@ export interface TransitionSmEvent {
 export function isStageEvent (toCheck: RawTransitionSmEvent | StageSmEvent): toCheck is StageSmEvent {
     return "stageName" in toCheck;
 }
-
-export function isTransitionEvent (toCheck: RawTransitionSmEvent | StageSmEvent): toCheck is RawTransitionSmEvent {
-    return "transitionName" in toCheck;
-}
-
-
 export type SerializedSmEvent = StageSmEvent | TransitionSmEvent;

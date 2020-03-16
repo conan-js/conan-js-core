@@ -7,13 +7,13 @@ import {StateMachineFactory} from "./stateMachineFactory";
 import {
     ListenerType,
     OnEventCallback,
-    SmListener,
+    SmListener, SmListenerDef,
     SmListenerDefLike,
     SmListenerDefLikeParser,
     SmListenerDefList
 } from "./stateMachineListeners";
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
-import {SmController, StateMachineData} from "./_domain";
+import {StateMachine, StateMachineData} from "./_domain";
 import {TransactionTree} from "../conan-tx/transactionTree";
 import {SmTransactionsRequests} from "./smTransactionsRequests";
 import {Proxyfier} from "../conan-utils/proxyfier";
@@ -52,10 +52,11 @@ export interface ListenerMetadata {
     executionType: ListenerType,
 }
 
-export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
+export class StateMachineImpl<
+    SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
     ACTIONS,
-    > implements SmController<SM_ON_LISTENER, SM_IF_LISTENER> {
+> implements StateMachine<SM_ON_LISTENER, SM_IF_LISTENER> {
     readonly smTransactions: SmTransactionsRequests = new SmTransactionsRequests();
     readonly eventThread: EventThread = new EventThread();
     _status: StateMachineStatus = StateMachineStatus.IDLE;
@@ -197,7 +198,7 @@ export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
     }
 
     createActions(
-        stateMachine: SmController<any, any>,
+        stateMachine: StateMachine<any, any>,
         actionsByStage: IKeyValuePairs<StageDef<string, any, any, any>>,
         stageName: string,
         stagePayload: any,
@@ -270,6 +271,17 @@ export class StateMachineImpl<SM_ON_LISTENER extends SmListener,
     private assertNotClosed() {
         if (this.closed) {
             throw new Error(`can't perform any actions in a SM once the SM is closed`);
+        }
+    }
+
+    processAsap(listener: SmListenerDef<SM_ON_LISTENER>): void {
+        let stateName: string = this.eventThread.currentStageEvent.stateName;
+        let eventName: string = Strings.camelCaseWithPrefix('on', stateName);
+        if (listener.value [eventName]) {
+            listener.value [eventName] (
+                this.createActions(this, this.data.stageDefsByKey, stateName, undefined),
+                {sm: this}
+            );
         }
     }
 }

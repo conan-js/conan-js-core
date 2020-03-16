@@ -1,7 +1,7 @@
 import {ListenerType, SmListener, SmListenerDef, SmListenerDefLike, SmListenerDefList} from "./stateMachineListeners";
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
 import {StageDef} from "./stage";
-import {SyncStateMachineDef} from "./stateMachine";
+import {SyncStateMachineDef} from "./stateMachineTreeDefBuilder";
 import {IKeyValuePairs} from "../conan-utils/typesHelper";
 import {ParentStateMachineInfo} from "./stateMachineImpl";
 
@@ -18,7 +18,7 @@ export interface SmRequestsQueue {
     requestTransition(transition: SmTransition): this;
 }
 
-export interface SmController<
+export interface StateMachine<
     SM_ON_LISTENER extends SmListener,
     SM_INTERCEPTOR extends SmListener,
 > extends SmEventsPublisher<SM_ON_LISTENER, SM_INTERCEPTOR>, SmRequestsQueue {
@@ -29,6 +29,8 @@ export interface SmController<
     getStageDef(name: string): StageDef<any, any, any>;
 
     getStateData(): any;
+
+    processAsap (listener: SmListenerDef<SM_ON_LISTENER>): void;
 }
 
 export interface StateMachineBaseData<
@@ -40,7 +42,7 @@ export interface StateMachineBaseData<
     listeners: SmListenerDefList<SM_ON_LISTENER>
 }
 
-export interface StateMachineTreeBuilderData<
+export interface StateMachineTreeDef<
     SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
 > extends StateMachineBaseData<SM_ON_LISTENER, SM_IF_LISTENER>{

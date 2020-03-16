@@ -10,7 +10,7 @@ import {
     SmListenerDefLikeParser,
     SmListenerDefList
 } from "./stateMachineListeners";
-import {StateMachineTreeBuilderData} from "./_domain";
+import {StateMachineTreeDef} from "./_domain";
 import {Strings} from "../conan-utils/strings";
 
 export class StateMachineFactory {
@@ -18,8 +18,8 @@ export class StateMachineFactory {
         SM_ON_LISTENER extends SmListener,
         SM_IF_LISTENER extends SmListener,
         ACTIONS
-    >(request: StateMachineTreeBuilderData<SM_ON_LISTENER, SM_IF_LISTENER>): StateMachineImpl<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS> {
-        return this.doCreate(request);
+    >(definition: StateMachineTreeDef<SM_ON_LISTENER, SM_IF_LISTENER>): StateMachineImpl<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS> {
+        return this.doCreate(definition);
     }
 
 
@@ -74,7 +74,7 @@ export class StateMachineFactory {
         JOIN_LISTENER extends SmListener,
         ACTIONS
     >(
-        treeBuilderData: StateMachineTreeBuilderData<SM_LISTENER, JOIN_LISTENER>,
+        treeBuilderData: StateMachineTreeDef<SM_LISTENER, JOIN_LISTENER>,
         parent?: ParentStateMachineInfo<any, any>
     ): StateMachineImpl<SM_LISTENER, JOIN_LISTENER, ACTIONS> {
         let stageDefsByKey: IKeyValuePairs<StageDef<string, any, any, any>> = Objects.keyfy(treeBuilderData.stageDefs, (it) => it.name);

@@ -1,9 +1,9 @@
 import {IBiConsumer, IKeyValuePairs, WithMetadata, WithMetadataArray} from "../conan-utils/typesHelper";
-import {SmController} from "./_domain";
+import {StateMachine} from "./_domain";
 import {ListenerMetadata} from "./stateMachineImpl";
 
 export interface SmEventCallbackParams {
-    sm: SmController<any, any>;
+    sm: StateMachine<any, any>;
 }
 
 export type OnEventCallback<ACTIONS> = IBiConsumer<ACTIONS, SmEventCallbackParams>;
