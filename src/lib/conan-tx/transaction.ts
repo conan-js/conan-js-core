@@ -1,7 +1,7 @@
 import {ICallback, IConsumer, IProducer, WithMetadata, WithMetadataArray} from "../conan-utils/typesHelper";
 import {OnEventCallback} from "../conan-sm/stateMachineListeners";
 import {Strings} from "../conan-utils/strings";
-import {ListenerMetadata} from "../conan-sm/stateMachineImpl";
+import {ListenerMetadata} from "../conan-sm/stateMachine";
 
 export interface TransactionRequest {
     name: string;

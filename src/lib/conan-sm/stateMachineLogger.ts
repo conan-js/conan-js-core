@@ -1,5 +1,5 @@
 import {Strings} from "../conan-utils/strings";
-import {StateMachineStatus} from "./stateMachineImpl";
+import {StateMachineStatus} from "./stateMachine";
 
 export enum EventType {
     SLEEP='SLEEP',
@@ -60,7 +60,7 @@ export const stagesToIgnore: string[] = [
 ];
 
 export const stagesToMute: string[]=[
-    'init', '-'
+    // 'init', '-'
 ];
 
 export const redundantTransactionParts: string [] = [
@@ -69,7 +69,7 @@ export const redundantTransactionParts: string [] = [
     // '::start'
 ];
 
-export class StateMachineLogger {
+export class StateMachineLoggerHelper {
     static log(smName: string, status: StateMachineStatus, stageName: string, actionName: string, eventType: EventType, transactionId: string, details?: string, additionalLines?: [string, string][]): void {
         if (eventTypesToLog.indexOf(eventType) < 0) return;
         if (stagesToMute.indexOf(stageName) > -1) return;
@@ -131,4 +131,9 @@ export class StateMachineLogger {
             console.log('---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
         }
     }
+}
+
+
+export interface StateMachineLogger {
+    log (eventType: EventType, details?: string, additionalLines?: [string, string][]): void;
 }

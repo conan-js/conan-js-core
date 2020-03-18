@@ -1,5 +1,5 @@
 import {Stage} from "./stage";
-import {StateMachine} from "./_domain";
+import {StateMachineController} from "./_domain";
 
 export interface SmTransition {
     transitionName: string;
@@ -14,7 +14,7 @@ export interface StageSmEvent{
 export interface RawTransitionSmEvent {
     transitionName: string;
     payload?: any;
-    fork?: StateMachine<any, any>;
+    fork?: StateMachineController<any, any>;
 }
 export interface TransitionSmEvent {
     transitionName: string;

@@ -1,13 +1,14 @@
 import {ListenerType, SmListener, SmListenerDefLike} from "../conan-sm/stateMachineListeners";
 import {
     StateMachineBuilderEndpoint,
-    StateMachineTreeDefBuilder,
-    SyncListener
+    StateMachineTreeDefBuilder
 } from "../conan-sm/stateMachineTreeDefBuilder";
-import {StateMachine, StateMachineTreeDef} from "../conan-sm/_domain";
-import {StateMachineTreeStarter} from "../conan-sm/stateMachineTreeStarter";
+import {StateMachineController} from "../conan-sm/_domain";
+import {StateMachineTreeFactory} from "../conan-sm/stateMachineTreeFactory";
 import {IBiConsumer, IConstructor, IConsumer} from "../conan-utils/typesHelper";
 import {StageLogic} from "../conan-sm/stage";
+import {StateMachineTreeDef, SyncListener} from "../conan-sm/stateMachineTreeDef";
+import {StateMachineTree} from "../conan-sm/stateMachineTree";
 
 export class SmPrototype<SM_ON_LISTENER extends SmListener> implements StateMachineBuilderEndpoint <SM_ON_LISTENER> {
     constructor(
@@ -15,9 +16,9 @@ export class SmPrototype<SM_ON_LISTENER extends SmListener> implements StateMach
     ) {
     }
 
-    start(name: string): StateMachine<SM_ON_LISTENER, {}> {
+    start(name: string): StateMachineTree<SM_ON_LISTENER> {
         this.defBuilder.withName(name);
-        return new StateMachineTreeStarter().start(this.defBuilder.build())
+        return StateMachineTreeFactory.create(this.defBuilder.build())
     }
 
     addInterceptor(interceptor: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
@@ -32,7 +33,7 @@ export class SmPrototype<SM_ON_LISTENER extends SmListener> implements StateMach
 
     sync<INTO_SM_ON_LISTENER extends SmListener, JOIN_SM_ON_LISTENER extends SmListener>(
         name: string,
-        treeStateMachineDef: StateMachineTreeDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>,
+        treeStateMachineDef: StateMachineBuilderEndpoint <SM_ON_LISTENER>,
         joiner: SyncListener<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>,
         initCb?: IConsumer<StateMachineTreeDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>>
     ): this {

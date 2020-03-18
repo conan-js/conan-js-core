@@ -1,26 +1,12 @@
-import {IBiConsumer, IConstructor, IConsumer, IOptSetKeyValuePairs} from "../conan-utils/typesHelper";
+import {IBiConsumer, IConstructor, IConsumer} from "../conan-utils/typesHelper";
 import {ListenerType, SmListener, SmListenerDefLike, SmListenerDefLikeParser} from "./stateMachineListeners";
-import {SmEventsPublisher, StateMachineTreeDef} from "./_domain";
-import {Stage, StageLogic} from "./stage";
+import {SmEventsPublisher} from "./_domain";
+import {Stage, StageDef, StageLogic} from "./stage";
+import {StateMachineTreeDef, SyncListener} from "./stateMachineTreeDef";
 
 
-export type SyncListener<INTO_SM_ON_LISTENER extends SmListener,
-    JOIN_SM_ON_LISTENER extends SmListener> = IOptSetKeyValuePairs<keyof INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>
-
-export interface SyncStateMachineDef<
-    SM_IF_LISTENER extends SmListener,
-    INTO_SM_ON_LISTENER extends SmListener,
-    JOIN_SM_ON_LISTENER extends SmListener,
-> {
-    stateMachineTreeDef: StateMachineTreeDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>,
-    syncName: string,
-    syncStartingPath?: string;
-    joiner: SyncListener<INTO_SM_ON_LISTENER, SM_IF_LISTENER>,
-    initCb?: IConsumer<StateMachineTreeDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>>
-}
-
-
-export interface StateMachineBuilderEndpoint<
+export interface StateMachineBuilderEndpoint
+<
     SM_ON_LISTENER extends SmListener,
 > extends SmEventsPublisher <SM_ON_LISTENER, SM_ON_LISTENER>{
     withState<
@@ -47,7 +33,7 @@ export interface StateMachineBuilderEndpoint<
         JOIN_SM_ON_LISTENER extends SmListener
     >(
         name: string,
-        treeStateMachineDef: StateMachineTreeDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>,
+        treeStateMachineDef: StateMachineBuilderEndpoint <SM_ON_LISTENER>,
         joiner: SyncListener<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>,
         initCb?: IConsumer<StateMachineTreeDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>>
     ): this;
@@ -59,26 +45,19 @@ export class StateMachineTreeDefBuilder<
     private readonly smListenerDefLikeParser: SmListenerDefLikeParser = new SmListenerDefLikeParser();
 
     public stateMachineTreeDef: StateMachineTreeDef<SM_ON_LISTENER, SM_ON_LISTENER> = {
-        initialListener: undefined,
-        listeners: [],
-        interceptors: [],
-        name: undefined,
+        rootDef:{
+            listeners: [],
+            interceptors: [],
+            name: undefined,
+            stageDefsByKey: {},
+        },
         syncDefs: [],
-        stageDefs: [],
     };
-
-    constructor(
-        private readonly initialListener?: SmListenerDefLike<SM_ON_LISTENER>
-    ) {
-        if (initialListener) {
-            this.stateMachineTreeDef.initialListener = this.smListenerDefLikeParser.parse(initialListener, ListenerType.ONCE);
-        }
-    }
 
     private started: boolean = false;
 
     addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
-        this.stateMachineTreeDef.listeners.push(
+        this.stateMachineTreeDef.rootDef.listeners.push(
             this.smListenerDefLikeParser.parse(listener, type)
         );
         return this;
@@ -114,10 +93,10 @@ export class StateMachineTreeDefBuilder<
         stateName: string,
         logic: StageLogic<ACTIONS, DATA>,
     ): this {
-        this.stateMachineTreeDef.stageDefs.push({
-            name: stateName,
-            logic,
-        });
+        this.stateMachineTreeDef.rootDef.stageDefsByKey [stateName] = {
+            logic: logic,
+            name: stateName
+        } as StageDef<any, any, any>;
         return this;
     }
 
@@ -131,41 +110,28 @@ export class StateMachineTreeDefBuilder<
         deferrer: IBiConsumer<ACTIONS, REQUIREMENTS>,
         joinsInto: string[]
     ): this {
-        this.stateMachineTreeDef.stageDefs.push({
-            name,
-            logic,
+        this.stateMachineTreeDef.rootDef.stageDefsByKey[name] = {
+            name: name,
+            logic: logic,
             deferredInfo: {
-                deferrer,
-                joinsInto
+                deferrer: deferrer,
+                joinsInto: joinsInto
             }
-        });
+        } as StageDef<NAME, ACTIONS, any, REQUIREMENTS>;
         return this;
     }
-
-
-    nextConditionally(ifStageListeners: any): this {
-        throw new Error('TBI')
-    }
-
     sync<INTO_SM_ON_LISTENER extends SmListener,
         JOIN_SM_ON_LISTENER extends SmListener>(
         name: string,
-        treeStateMachineDef: StateMachineTreeDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>,
+        treeStateMachineDef: StateMachineBuilderEndpoint <SM_ON_LISTENER>,
         joiner: SyncListener<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>,
         initCb?: IConsumer<StateMachineTreeDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>>
     ): this {
-        if (this.started) throw new Error("can't modify the behaviour of a state machine once that it has started");
-        this.stateMachineTreeDef.syncDefs.push({
-            stateMachineTreeDef: treeStateMachineDef,
-            syncName: name,
-            joiner: joiner as unknown as SyncListener<any, SM_ON_LISTENER>,
-            initCb
-        });
-        return this;
+        throw new Error('TBI');
     }
 
     withName(name: string) {
-        this.stateMachineTreeDef.name = name;
+        this.stateMachineTreeDef.rootDef.name = name;
     }
 
     build (): StateMachineTreeDef<SM_ON_LISTENER, SM_ON_LISTENER> {

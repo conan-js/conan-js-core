@@ -1,7 +1,7 @@
 import * as React from "react";
-import {Store} from "../conan-store/store";
 import {IFunction} from "../conan-utils/typesHelper";
 import {ReactElement} from "react";
+import {Store} from "../conan-sm-sugar/store";
 
 
 interface ConnectedState<ACTIONS, DATA> {
