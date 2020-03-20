@@ -3,7 +3,6 @@ import {
     StateMachineBuilderEndpoint,
     StateMachineTreeDefBuilder
 } from "../conan-sm/stateMachineTreeDefBuilder";
-import {StateMachineController} from "../conan-sm/_domain";
 import {StateMachineTreeFactory} from "../conan-sm/stateMachineTreeFactory";
 import {IBiConsumer, IConstructor, IConsumer} from "../conan-utils/typesHelper";
 import {StageLogic} from "../conan-sm/stage";

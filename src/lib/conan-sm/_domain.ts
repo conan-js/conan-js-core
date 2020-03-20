@@ -12,17 +12,3 @@ export interface SmEventsPublisher<
 }
 
 
-export interface StateMachineController<
-    SM_ON_LISTENER extends SmListener,
-    SM_INTERCEPTOR extends SmListener,
-> extends SmEventsPublisher<SM_ON_LISTENER, SM_INTERCEPTOR> {
-
-    getEvents(): SerializedSmEvent [];
-
-    getStageDef(name: string): StageDef<any, any, any>;
-
-    getStateData(): any;
-
-}
-
-

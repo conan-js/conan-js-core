@@ -7,9 +7,9 @@ import {
     StageSmEvent,
     TransitionSmEvent
 } from "./stateMachineEvents";
-import {StateMachineController} from "./_domain";
+import {StateMachine} from "./stateMachine";
 
-export class EventThread  {
+export class SmEventThread  {
     public currentTransitionEvent: RawTransitionSmEvent;
     public currentStageEvent: StageSmEvent;
     public currentEvent: RawTransitionSmEvent | StageSmEvent;
@@ -24,7 +24,7 @@ export class EventThread  {
 
     public addActionEvent(
         transitionEvent: SmTransition,
-        fork?: StateMachineController<any, any>
+        fork?: StateMachine<any, any>
     ){
         let event:RawTransitionSmEvent = {
             transitionName: transitionEvent.transitionName,

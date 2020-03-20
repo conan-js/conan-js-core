@@ -2,9 +2,10 @@ import {ListenerType, SmListener, SmListenerDefLikeParser, SmListenerDefList} fr
 import {StateMachineTreeDef, SyncStateMachineDef} from "./stateMachineTreeDef";
 import {ParentRelationship, StateMachineTree} from "./stateMachineTree";
 import {EventType, StateMachineLogger, StateMachineLoggerHelper} from "./stateMachineLogger";
-import {StateMachine, ToProcessType} from "./stateMachine";
+import {StateMachine, StateMachineStatus, ToProcessType} from "./stateMachine";
 import {IKeyValuePairs} from "../conan-utils/typesHelper";
 import {StageDef} from "./stage";
+import {StateMachineController} from "./stateMachineController";
 
 export interface Synchronisation {
     syncDef: SyncStateMachineDef<any, any, any>;
@@ -72,7 +73,7 @@ export class StateMachineTreeFactory {
             log: (eventType: EventType, details?: string, additionalLines?: [string, string][]): void=>{
                 StateMachineLoggerHelper.log(
                     treeDef.rootDef.name,
-                    stateMachine._status,
+                    StateMachineStatus.IDLE,
                     stateMachine.getCurrentStageName(),
                     stateMachine.getCurrentTransitionName(),
                     eventType,
@@ -89,9 +90,15 @@ export class StateMachineTreeFactory {
                 stageDefsByKey: {...systemStages, ...treeDef.rootDef.stageDefsByKey},
             }, logger
         );
-        stateMachineTree = new StateMachineTree<SM_ON_LISTENER>(
+
+        let stateMachineController = new StateMachineController(
             stateMachine,
-            parentInfo
+            ()=> undefined,
+            ()=> undefined,
+        );
+
+        stateMachineTree = new StateMachineTree<SM_ON_LISTENER>(
+            stateMachineController
         );
 
         logger.log(EventType.INIT,  '', [

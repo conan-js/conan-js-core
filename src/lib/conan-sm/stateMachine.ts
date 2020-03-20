@@ -1,13 +1,12 @@
-import {EventThread} from "./eventThread";
 import {Stage, StageDef} from "./stage";
 import {WithMetadataArray} from "../conan-utils/typesHelper";
 import {ListenerType, OnEventCallback, SmListener, SmListenerDefLike} from "./stateMachineListeners";
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
-import {StateMachineController} from "./_domain";
 import {StateMachineDef} from "./stateMachineDef";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {ListenersController} from "./listenersController";
 import {StateMachineTree} from "./stateMachineTree";
+import {SmEventThread} from "./smEventThread";
 
 export enum ToProcessType {
     STAGE = 'STAGE'
@@ -24,13 +23,13 @@ interface BaseToProcess {
     description: string;
 }
 
-
 export enum StateMachineStatus {
     PAUSED = 'PAUSED',
     STOPPED = 'STOPPED',
     IDLE = 'IDLE',
     RUNNING = 'RUNNING',
 }
+
 
 export interface ListenerMetadata {
     name: string,
@@ -46,11 +45,8 @@ export class StateMachine<
     SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
     ACTIONS = any,
-> implements StateMachineController<SM_ON_LISTENER, SM_IF_LISTENER> {
-    _status: StateMachineStatus = StateMachineStatus.IDLE;
-    private readonly eventThread: EventThread = new EventThread();
-    private closed: boolean = false;
-
+>  {
+    private readonly eventThread: SmEventThread = new SmEventThread();
     private readonly listenersController: ListenersController<SM_ON_LISTENER, ACTIONS>;
     private readonly interceptorsController: ListenersController<SM_IF_LISTENER, ACTIONS>;
 
@@ -64,6 +60,10 @@ export class StateMachine<
 
     getStateData(): any {
         return this.eventThread.currentStageEvent.data;
+    }
+
+    getStatus (): string{
+        return this.eventThread.currentStageEvent.stateName;
     }
 
 
@@ -92,33 +92,18 @@ export class StateMachine<
     getEvents(): SerializedSmEvent [] {
         return this.eventThread.serialize();
     }
-
-    flagAsRunning(details: string) {
-        this.logger.log(EventType.REQUEST,  `+::${details}`);
-        this._status = StateMachineStatus.RUNNING;
-    }
-
-    sleep() {
-        this._status = StateMachineStatus.IDLE;
-        this.logger.log(EventType.SLEEP,  ``);
-    }
-
-    assertNotClosed() {
-        if (this.closed) {
-            throw new Error(`can't perform any actions in a SM once the SM is closed`);
-        }
-    }
-
-    forkInto(tree: StateMachineTree<any>): void {
-        this.eventThread.currentTransitionEvent.fork = tree.root;
-    }
-
     moveToStage (stage: Stage): void {
         this.eventThread.addStageEvent(stage);
+        this.logger.log(EventType.STAGE,  `::${stage.stateName}`, [
+            [`current state`, stage.data == null ? undefined : JSON.stringify(stage.data)]
+        ]);
     }
 
     moveToTransition (transition: SmTransition): void {
         this.eventThread.addActionEvent(transition);
+        this.logger.log(EventType.ACTION, `=>${transition.transitionName}`, [
+            [`payload`, transition.payload == null ? undefined : JSON.stringify(transition.payload)]
+        ]);
     }
 
     getCurrentStageName (): string {
@@ -127,6 +112,10 @@ export class StateMachine<
 
     getCurrentTransitionName (): string {
         return this.eventThread.getCurrentTransitionName();
+    }
+
+    log (eventType: EventType, details?: string, additionalLines?: [string, string][]): void {
+        this.logger.log(eventType, details, additionalLines);
     }
 
     private getListenerController(type: ListenerDefType) {
