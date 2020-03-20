@@ -1,5 +1,5 @@
 import {ListenerDefType, ListenerMetadata, StageToProcess, StateMachine} from "./stateMachine";
-import {BaseActions, ListenerType, OnEventCallback, SmListener} from "./stateMachineListeners";
+import {BaseActions, ListenerType, OnEventCallback, SmListener, SmListenerDefLike} from "./stateMachineListeners";
 import {State, StateDef, StateLogicParser} from "./state";
 import {TransactionTree} from "../conan-tx/transactionTree";
 import {WithMetadataArray} from "../conan-utils/typesHelper";
@@ -15,7 +15,11 @@ export class StateMachineController<SM_ON_LISTENER extends SmListener,
     ACTIONS = any,
     > {
     private readonly transactionTree: TransactionTree = new TransactionTree();
-    private readonly orchestrator: StateMachineOrchestrator = new StateMachineOrchestrator(this);
+    private readonly orchestrator: StateMachineOrchestrator = new StateMachineOrchestrator(
+        this,
+        undefined,
+        undefined
+    );
 
     constructor(
         private stateMachine: StateMachine<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS>,
@@ -73,12 +77,7 @@ export class StateMachineController<SM_ON_LISTENER extends SmListener,
         let actionsLogic: any = StateLogicParser.parse(stageDef.logic)(state.data);
         let proxied = Proxyfier.proxy(actionsLogic, (originalCall, metadata) => {
             let nextState: State = originalCall();
-            let nextStateDef: StateDef<string, any, any, any> = this.stateMachine.getStageDef(nextState.name);
-            if (nextStateDef == null) {
-                this.orchestrator.onMovingToNonExistingState (state, nextStateDef)
-            } else {
-                this.orchestrator.onActionTriggered (metadata.methodName, nextState, nextStateDef)
-            }
+            this.orchestrator.onActionTriggered (metadata.methodName, nextState);
 
             return nextState;
         });
@@ -147,6 +146,14 @@ export class StateMachineController<SM_ON_LISTENER extends SmListener,
         }));
     }
 
+    runNow(toRun: SmListenerDefLike<SM_ON_LISTENER>) {
+        let currentStageName = this.stateMachine.getCurrentStageName();
+        this.stateMachine.createReactions(
+            currentStageName,
+            ListenerDefType.LISTENER
+        )
+    }
+
     private deleteOnceListenersUsed(reactionsProcessed: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, type: ListenerDefType) {
         this.stateMachine.deleteListeners(
             reactionsProcessed
@@ -165,5 +172,14 @@ export class StateMachineController<SM_ON_LISTENER extends SmListener,
 
     log (eventType: EventType, details?: string, additionalLines?: [string, string][]): void {
         this.stateMachine.log(eventType, details, additionalLines)
+    }
+
+    getStateDef(name: string): StateDef<any, any, any> {
+        return this.stateMachine.getStageDef(name);
+    }
+
+    addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
+        this.stateMachine.addListener(listener, type);
+        return this;
     }
 }

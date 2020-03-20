@@ -1,6 +1,4 @@
-import {ListenerType, SmListener, SmListenerDef, SmListenerDefLike} from "./stateMachineListeners";
-import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
-import {StageDef} from "./stage";
+import {ListenerType, SmListener, SmListenerDefLike} from "./stateMachineListeners";
 
 export interface SmEventsPublisher<
     SM_ON_LISTENER extends SmListener,
