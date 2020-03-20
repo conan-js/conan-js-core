@@ -35,7 +35,7 @@ export class StateMachineTree<
     readonly transactionTree: TransactionTree = new TransactionTree();
 
     constructor(
-        readonly root: StateMachine<any, any, any>,
+        readonly root: StateMachine<any, any>,
         readonly parentInfo?: ParentRelationship,
     ) {}
 
@@ -65,7 +65,7 @@ export class StateMachineTree<
             this.root.stateMachineDef.stageDefsByKey[nextStage.stateName],
             defer
         );
-        this.root.eventThread.currentTransitionEvent.fork = stateMachineTree.root;
+        this.root.forkInto (stateMachineTree);
         return stateMachineTree;
     }
 
@@ -166,8 +166,8 @@ export class StateMachineTree<
         return this.root.createReactions(eventName, ListenerDefType.LISTENER);
     }
 
-    addStageEvent(stage: Stage): void {
-        this.root.eventThread.addStageEvent(stage);
+    moveToStage(stage: Stage): void {
+        this.root.moveToStage (stage);
     }
 
     getStateData(): any {
@@ -178,8 +178,8 @@ export class StateMachineTree<
         StateMachineLoggerHelper.log(
             this.root.stateMachineDef.name,
             this.root._status,
-            this.root.eventThread.getCurrentStageName(),
-            this.root.eventThread.getCurrentTransitionName(),
+            this.root.getCurrentStageName(),
+            this.root.getCurrentTransitionName(),
             eventType,
             this.transactionTree.getCurrentTransactionId(),
             details,
@@ -228,7 +228,7 @@ export class StateMachineTree<
             .createOrQueueTransaction(
                 this.smTransactions.createActionTransactionRequest(this, transition, actions, this.root.createReactions(eventName, ListenerDefType.LISTENER),
                     () => {
-                        this.root.eventThread.addActionEvent(
+                        this.root.moveToTransition(
                             transition
                         );
                         this.log(EventType.ACTION, `=>${transition.transitionName}`, [
@@ -243,7 +243,7 @@ export class StateMachineTree<
     }
 
     getEvents(): SerializedSmEvent [] {
-        return this.root.eventThread.serialize();
+        return this.root.getEvents();
     }
 
 

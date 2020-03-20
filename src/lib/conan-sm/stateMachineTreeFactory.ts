@@ -73,8 +73,8 @@ export class StateMachineTreeFactory {
                 StateMachineLoggerHelper.log(
                     treeDef.rootDef.name,
                     stateMachine._status,
-                    stateMachine.eventThread.getCurrentStageName(),
-                    stateMachine.eventThread.getCurrentTransitionName(),
+                    stateMachine.getCurrentStageName(),
+                    stateMachine.getCurrentTransitionName(),
                     eventType,
                     stateMachineTree.transactionTree.getCurrentTransactionId(),
                     details,

@@ -21,7 +21,6 @@ export class ListenersController<
     ) {}
 
     addListener(listener: SmListenerDefLike<ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
-        let listenerDef = this.smListenerDefLikeParser.parse(listener, type);
         this.listeners.push(
             this.smListenerDefLikeParser.parse(listener, type)
         );

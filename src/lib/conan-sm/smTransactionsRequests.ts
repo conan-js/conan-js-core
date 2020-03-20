@@ -28,7 +28,7 @@ export class SmTransactionsRequests {
         }
 
         return this.createNormalStageTransactionRequest(stateMachineTree, stageToProcess.stage, actions, stateMachineTree.createListenerReactions(eventName), () => {
-            stateMachineTree.addStageEvent(stageToProcess.stage);
+            stateMachineTree.moveToStage(stageToProcess.stage);
             let state = stateMachineTree.getStateData();
             stateMachineTree.log(EventType.STAGE,  `::${stageToProcess.stage.stateName}`, [
                 [`current state`, state == null ? undefined : JSON.stringify(state)]
@@ -144,7 +144,7 @@ export class SmTransactionsRequests {
 
 
     private doLog(stateMachine: StateMachine<any, any, any>, transaction: Transaction, eventType: EventType) {
-        StateMachineLoggerHelper.log(stateMachine.stateMachineDef.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentTransitionName(), eventType, transaction.getId(), transaction.getThisName());
+        StateMachineLoggerHelper.log(stateMachine.stateMachineDef.name, stateMachine._status, stateMachine.getCurrentStageName(), stateMachine.getCurrentTransitionName(), eventType, transaction.getId(), transaction.getThisName());
     }
 
     private reactionsAsCallbacks(reactions: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, actions: any) {
