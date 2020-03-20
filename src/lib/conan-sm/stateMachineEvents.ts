@@ -1,14 +1,10 @@
-import {Stage} from "./stage";
+import {State} from "./state";
 import {StateMachine} from "./stateMachine";
 
 export interface SmTransition {
     transitionName: string;
     payload?: any;
-    transition: Stage;
-}
-export interface StageSmEvent{
-    stateName: string;
-    data?: any;
+    into: State;
 }
 
 export interface RawTransitionSmEvent {
@@ -22,7 +18,7 @@ export interface TransitionSmEvent {
     fork?: SerializedSmEvent[];
 }
 
-export function isStageEvent (toCheck: RawTransitionSmEvent | StageSmEvent): toCheck is StageSmEvent {
-    return "stageName" in toCheck;
+export function isStageEvent (toCheck: RawTransitionSmEvent | State): toCheck is State {
+    return "name" in toCheck;
 }
-export type SerializedSmEvent = StageSmEvent | TransitionSmEvent;
+export type SerializedSmEvent = State | TransitionSmEvent;

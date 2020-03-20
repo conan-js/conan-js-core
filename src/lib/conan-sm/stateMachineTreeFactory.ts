@@ -4,8 +4,9 @@ import {ParentRelationship, StateMachineTree} from "./stateMachineTree";
 import {EventType, StateMachineLogger, StateMachineLoggerHelper} from "./stateMachineLogger";
 import {StateMachine, StateMachineStatus, ToProcessType} from "./stateMachine";
 import {IKeyValuePairs} from "../conan-utils/typesHelper";
-import {StageDef} from "./stage";
+import {StateDef} from "./state";
 import {StateMachineController} from "./stateMachineController";
+import {StateMachineOrchestrator} from "./stateMachineOrchestrator";
 
 export interface Synchronisation {
     syncDef: SyncStateMachineDef<any, any, any>;
@@ -29,7 +30,7 @@ export class StateMachineTreeFactory {
         let stateMachineTree: StateMachineTree<SM_ON_LISTENER>;
         let stateMachine: StateMachine<SM_ON_LISTENER, SM_IF_LISTENER>;
 
-        let systemStages: IKeyValuePairs<StageDef<string, any, any, any>>;
+        let systemStages: IKeyValuePairs<StateDef<string, any, any, any>>;
         systemStages = {
             init: {
                 name: 'init',
@@ -49,11 +50,11 @@ export class StateMachineTreeFactory {
         systemListeners.push(
             new SmListenerDefLikeParser().parse([
                 '::init=>doStart', {
-                    onInit: ()=>{
+                    onInit: () => {
                         stateMachineTree.requestTransition({
                             transitionName: `doStart`,
-                            transition: {
-                                stateName: 'start'
+                            into: {
+                                name: 'start'
                             }
                         })
                     }
@@ -70,7 +71,7 @@ export class StateMachineTreeFactory {
         );
 
         let logger: StateMachineLogger = {
-            log: (eventType: EventType, details?: string, additionalLines?: [string, string][]): void=>{
+            log: (eventType: EventType, details?: string, additionalLines?: [string, string][]): void => {
                 StateMachineLoggerHelper.log(
                     treeDef.rootDef.name,
                     StateMachineStatus.IDLE,
@@ -91,10 +92,10 @@ export class StateMachineTreeFactory {
             }, logger
         );
 
-        let stateMachineController = new StateMachineController(
+        let stateMachineController: StateMachineController<SM_ON_LISTENER, SM_IF_LISTENER>;
+        // noinspection JSUnusedAssignment
+        stateMachineController = new StateMachineController(
             stateMachine,
-            ()=> undefined,
-            ()=> undefined,
         );
 
         stateMachineTree = new StateMachineTree<SM_ON_LISTENER>(
@@ -117,7 +118,7 @@ export class StateMachineTreeFactory {
             description: '::init',
             eventType: EventType.INIT,
             stage: {
-                stateName: 'init'
+                name: 'init'
             },
             type: ToProcessType.STAGE
         });

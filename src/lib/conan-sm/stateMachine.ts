@@ -1,11 +1,10 @@
-import {Stage, StageDef} from "./stage";
+import {State, StateDef} from "./state";
 import {WithMetadataArray} from "../conan-utils/typesHelper";
 import {ListenerType, OnEventCallback, SmListener, SmListenerDefLike} from "./stateMachineListeners";
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
 import {StateMachineDef} from "./stateMachineDef";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {ListenersController} from "./listenersController";
-import {StateMachineTree} from "./stateMachineTree";
 import {SmEventThread} from "./smEventThread";
 
 export enum ToProcessType {
@@ -14,7 +13,7 @@ export enum ToProcessType {
 
 export interface StageToProcess extends BaseToProcess {
     type: ToProcessType.STAGE;
-    stage: Stage;
+    stage: State;
 }
 
 interface BaseToProcess {
@@ -62,8 +61,8 @@ export class StateMachine<
         return this.eventThread.currentStageEvent.data;
     }
 
-    getStatus (): string{
-        return this.eventThread.currentStageEvent.stateName;
+    getStateName (): string{
+        return this.eventThread.currentStageEvent.name;
     }
 
 
@@ -85,16 +84,16 @@ export class StateMachine<
         this.getListenerController(type).deleteListeners(listenerNames);
     }
 
-    getStageDef(name: string): StageDef<any, any, any> {
+    getStageDef(name: string): StateDef<any, any, any> {
         return this.stateMachineDef.stageDefsByKey [name];
     }
 
     getEvents(): SerializedSmEvent [] {
         return this.eventThread.serialize();
     }
-    moveToStage (stage: Stage): void {
+    moveToStage (stage: State): void {
         this.eventThread.addStageEvent(stage);
-        this.logger.log(EventType.STAGE,  `::${stage.stateName}`, [
+        this.logger.log(EventType.STAGE,  `::${stage.name}`, [
             [`current state`, stage.data == null ? undefined : JSON.stringify(stage.data)]
         ]);
     }

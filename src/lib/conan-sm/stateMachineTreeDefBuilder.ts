@@ -1,7 +1,7 @@
 import {IBiConsumer, IConstructor, IConsumer} from "../conan-utils/typesHelper";
 import {ListenerType, SmListener, SmListenerDefLike, SmListenerDefLikeParser} from "./stateMachineListeners";
 import {SmEventsPublisher} from "./_domain";
-import {Stage, StageDef, StageLogic} from "./stage";
+import {State, StateDef, StateLogic} from "./state";
 import {StateMachineTreeDef, SyncListener} from "./stateMachineTreeDef";
 
 
@@ -11,7 +11,7 @@ export interface StateMachineBuilderEndpoint<SM_ON_LISTENER extends SmListener,
         DATA = void>
     (
         stateName: string,
-        logic: StageLogic<ACTIONS, DATA>,
+        logic: StateLogic<ACTIONS, DATA>,
     ): this;
 
     withDeferredStage<NAME extends string,
@@ -45,9 +45,6 @@ export class StateMachineTreeDefBuilder<SM_ON_LISTENER extends SmListener,
         },
         syncDefs: [],
     };
-
-    private started: boolean = false;
-
     addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
         this.stateMachineTreeDef.rootDef.listeners.push(
             this.smListenerDefLikeParser.parse(listener, type)
@@ -64,8 +61,8 @@ export class StateMachineTreeDefBuilder<SM_ON_LISTENER extends SmListener,
         data?: DATA,
     ): this {
         this.withState<any>('start', () => ({
-            doInitialise: (initialData: DATA): Stage<any, DATA> => ({
-                stateName: stateName,
+            doInitialise: (initialData: DATA): State<any, DATA> => ({
+                name: stateName,
                 ...initialData ? {data: initialData} : undefined
             })
         }))
@@ -105,12 +102,12 @@ export class StateMachineTreeDefBuilder<SM_ON_LISTENER extends SmListener,
     withState<ACTIONS,
         DATA = void>(
         stateName: string,
-        logic: StageLogic<ACTIONS, DATA>,
+        logic: StateLogic<ACTIONS, DATA>,
     ): this {
         this.stateMachineTreeDef.rootDef.stageDefsByKey [stateName] = {
             logic: logic,
             name: stateName
-        } as StageDef<any, any, any>;
+        } as StateDef<any, any, any>;
         return this;
     }
 
@@ -131,7 +128,7 @@ export class StateMachineTreeDefBuilder<SM_ON_LISTENER extends SmListener,
                 deferrer: deferrer,
                 joinsInto: joinsInto
             }
-        } as StageDef<NAME, ACTIONS, any, REQUIREMENTS>;
+        } as StateDef<NAME, ACTIONS, any, REQUIREMENTS>;
         return this;
     }
 

@@ -5,9 +5,9 @@ import {
 } from "../conan-sm/stateMachineTreeDefBuilder";
 import {StateMachineTreeFactory} from "../conan-sm/stateMachineTreeFactory";
 import {IBiConsumer, IConstructor, IConsumer} from "../conan-utils/typesHelper";
-import {StageLogic} from "../conan-sm/stage";
 import {StateMachineTreeDef, SyncListener} from "../conan-sm/stateMachineTreeDef";
 import {StateMachineTree} from "../conan-sm/stateMachineTree";
+import {StateLogic} from "../conan-sm/state";
 
 export class SmPrototype<SM_ON_LISTENER extends SmListener> implements StateMachineBuilderEndpoint <SM_ON_LISTENER> {
     constructor(
@@ -56,7 +56,7 @@ export class SmPrototype<SM_ON_LISTENER extends SmListener> implements StateMach
     withState<ACTIONS,
         DATA = void>(
         stateName: string,
-        logic: StageLogic<ACTIONS, DATA>,
+        logic: StateLogic<ACTIONS, DATA>,
     ): this {
         this.defBuilder.withState(stateName, logic);
         return this;
