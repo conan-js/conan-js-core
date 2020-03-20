@@ -1,5 +1,12 @@
 import {BaseActions, ListenerType, OnEventCallback, SmListener} from "./stateMachineListeners";
-import {ListenerMetadata, StageToProcess, StateMachine, StateMachineStatus, ToProcessType} from "./stateMachine";
+import {
+    ListenerDefType,
+    ListenerMetadata,
+    StageToProcess,
+    StateMachine,
+    StateMachineStatus,
+    ToProcessType
+} from "./stateMachine";
 import {Stage, StageDef, StageLogicParser} from "./stage";
 import {IConsumer, WithMetadataArray} from "../conan-utils/typesHelper";
 import {Strings} from "../conan-utils/strings";
@@ -156,7 +163,7 @@ export class StateMachineTree<
     }
 
     createListenerReactions(eventName: string): WithMetadataArray<OnEventCallback<any>, ListenerMetadata> {
-        return this.root.createReactions(eventName, this.root.stateMachineDef.listeners);
+        return this.root.createReactions(eventName, ListenerDefType.LISTENER);
     }
 
     addStageEvent(stage: Stage): void {
@@ -196,7 +203,7 @@ export class StateMachineTree<
     }
 
     deleteListeners(listenerIds: string[]) {
-        this.root.deleteListeners(listenerIds);
+        this.root.deleteListeners(listenerIds, ListenerDefType.LISTENER);
     }
 
     joinBack(stageToProcess: StageToProcess) {
@@ -219,7 +226,7 @@ export class StateMachineTree<
         let eventName = Strings.camelCaseWithPrefix('on', transition.transitionName);
         this.transactionTree
             .createOrQueueTransaction(
-                this.smTransactions.createActionTransactionRequest(this, transition, actions, this.root.createReactions(eventName, this.root.stateMachineDef.listeners),
+                this.smTransactions.createActionTransactionRequest(this, transition, actions, this.root.createReactions(eventName, ListenerDefType.LISTENER),
                     () => {
                         this.root.eventThread.addActionEvent(
                             transition
