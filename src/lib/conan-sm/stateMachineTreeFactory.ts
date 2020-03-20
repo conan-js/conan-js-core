@@ -26,7 +26,7 @@ export class StateMachineTreeFactory {
         parentInfo?: ParentRelationship,
     ): StateMachineTree<SM_ON_LISTENER> {
         let stateMachineTree: StateMachineTree<SM_ON_LISTENER>;
-        let stateMachine: StateMachine<SM_ON_LISTENER, SM_IF_LISTENER, unknown>;
+        let stateMachine: StateMachine<SM_ON_LISTENER, SM_IF_LISTENER>;
 
         let systemStages: IKeyValuePairs<StageDef<string, any, any, any>>;
         systemStages = {

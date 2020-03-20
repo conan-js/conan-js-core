@@ -1,51 +1,52 @@
-import {IBiConsumer, IKeyValuePairs, WithMetadata, WithMetadataArray} from "../conan-utils/typesHelper";
-import {StateMachineController} from "./_domain";
+import {IConsumer, IKeyValuePairs, WithMetadata, WithMetadataArray} from "../conan-utils/typesHelper";
 import {ListenerMetadata} from "./stateMachine";
-import {StateMachineTree} from "./stateMachineTree";
+import {StateMachineEndpoint} from "./stateMachineTree";
 
-export interface SmEventCallbackParams {
-    sm: StateMachineTree<any>;
+
+export interface BaseActions extends StateMachineEndpoint{
+    stop(): void;
+    getStateData(): any;
 }
 
-export type OnEventCallback<ACTIONS> = IBiConsumer<ACTIONS, SmEventCallbackParams>;
+export type OnEventCallback<ACTIONS> = IConsumer<ACTIONS & BaseActions>;
 export type SmListener<ACTIONS = any> = IKeyValuePairs<OnEventCallback<ACTIONS>>;
 
 export type SmListenerDef<
     LISTENER extends SmListener<ACTIONS>,
-    ACTIONS = any
+    ACTIONS  = any
 > = WithMetadata<LISTENER, ListenerMetadata>;
 
 export type SmListenerDefList<
     LISTENER extends SmListener<ACTIONS>,
-    ACTIONS = any
+    ACTIONS  = any
 > = WithMetadataArray<LISTENER, ListenerMetadata>;
 
-export interface BasicSmListener extends SmListener {
-    onStart?: OnEventCallback<void>;
-    onStop?: OnEventCallback<void>;
+export interface BasicSmListener extends SmListener<any> {
+    onStart?: OnEventCallback<BaseActions>;
+    onStop?: OnEventCallback<BaseActions>;
 }
 
 export type AnonymousDefTuple<
     LISTENER extends SmListener<ACTIONS>,
-    ACTIONS = any
+    ACTIONS  = any
 > = LISTENER;
 
 export type SmListenerDefTuple<
     LISTENER extends SmListener<ACTIONS>,
-    ACTIONS = any
+    ACTIONS  = any
 > = [string, LISTENER];
 
 
 export type SmListenerDefLike<
     LISTENER extends SmListener<ACTIONS>,
-    ACTIONS = any
+    ACTIONS  = any
 > =
     LISTENER |
     SmListenerDefTuple<LISTENER, ACTIONS> |
     AnonymousDefTuple<LISTENER, ACTIONS>;
 
 export class SmListenerDefLikeParser {
-    isAnonymous (toTransform: SmListenerDefLike <any>): toTransform is SmListener {
+    isAnonymous (toTransform: SmListenerDefLike <any>): toTransform is SmListener<any> {
         return !Array.isArray(toTransform) && ((toTransform as any).metadata);
     }
 

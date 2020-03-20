@@ -1,11 +1,5 @@
-import {ListenerType, OnEventCallback, SmEventCallbackParams, SmListener} from "./stateMachineListeners";
-import {
-    ListenerMetadata,
-    StageToProcess,
-    StateMachine,
-    StateMachineStatus,
-    ToProcessType
-} from "./stateMachine";
+import {BaseActions, ListenerType, OnEventCallback, SmListener} from "./stateMachineListeners";
+import {ListenerMetadata, StageToProcess, StateMachine, StateMachineStatus, ToProcessType} from "./stateMachine";
 import {Stage, StageDef, StageLogicParser} from "./stage";
 import {IConsumer, WithMetadataArray} from "../conan-utils/typesHelper";
 import {Strings} from "../conan-utils/strings";
@@ -21,9 +15,15 @@ export interface ParentRelationship {
     joinsIntoStages: string[];
 }
 
+export interface StateMachineEndpoint {
+    requestStage(stageToProcess: StageToProcess): void;
+
+    requestTransition(transition: SmTransition): void;
+}
+
 export class StateMachineTree<
     SM_ON_LISTENER extends SmListener,
-> implements StateMachineLogger{
+> implements StateMachineLogger, StateMachineEndpoint {
     readonly smTransactions: SmTransactionsRequests = new SmTransactionsRequests();
     readonly transactionTree: TransactionTree = new TransactionTree();
 
@@ -89,7 +89,7 @@ export class StateMachineTree<
                             executionType: ListenerType.ONCE,
                         },
                         value: {
-                            onStart: (_: any, params: SmEventCallbackParams) => params.sm.requestTransition({
+                            onStart: (actions: any) => actions.requestTransition({
                                 transitionName: deferPathName,
                                 transition: forkIntoStage,
                                 payload: forkIntoStage.data
@@ -111,11 +111,25 @@ export class StateMachineTree<
     }
 
     createActions(stageName: string, stagePayload: any,): any {
+        let baseActions: BaseActions = {
+            requestTransition: (transition: SmTransition): void => {
+                this.requestTransition(transition);
+            },
+            getStateData: (): any =>{
+                this.getStateData();
+            },
+            requestStage: (stageToProcess: StageToProcess): void => {
+                this.requestStage(stageToProcess);
+            },
+            stop: (): void => {
+                throw new Error('TBI')
+            }
+        };
         let stageDef: StageDef<string, any, any, any> = this.getStageDef(stageName);
-        if (!stageDef || !stageDef.logic) return {};
+        if (!stageDef || !stageDef.logic) return baseActions;
 
         let actionsLogic: any = StageLogicParser.parse(stageDef.logic)(stagePayload);
-        return Proxyfier.proxy(actionsLogic, (originalCall, metadata)=>{
+        let proxied = Proxyfier.proxy(actionsLogic, (originalCall, metadata)=>{
             let nextStage: Stage = originalCall ();
             let nextStageDef: StageDef<string, any, any, any> = this.getStageDef(stageName);
             if (nextStageDef == null) {
@@ -137,6 +151,7 @@ export class StateMachineTree<
             });
             return nextStage;
         });
+        return Object.assign(proxied, baseActions);
 
     }
 
@@ -196,6 +211,7 @@ export class StateMachineTree<
         });
 
     }
+
     requestTransition(transition: SmTransition): this {
         this.root.assertNotClosed();
 
@@ -208,12 +224,12 @@ export class StateMachineTree<
                         this.root.eventThread.addActionEvent(
                             transition
                         );
-                        this.log(EventType.ACTION,  `=>${transition.transitionName}`, [
+                        this.log(EventType.ACTION, `=>${transition.transitionName}`, [
                             [`payload`, transition.payload == null ? undefined : JSON.stringify(transition.payload)]
                         ]);
                     }
                 ),
-                ()=> this.root.sleep(),
+                () => this.root.sleep(),
                 () => this.root.flagAsRunning(transition.transitionName)
             );
         return this;

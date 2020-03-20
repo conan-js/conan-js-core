@@ -15,7 +15,7 @@ export class EventThread  {
     public currentEvent: RawTransitionSmEvent | StageSmEvent;
     private readonly events: (RawTransitionSmEvent | StageSmEvent)[] = [];
 
-    serialize(): SerializedSmEvent[] {
+    public serialize(): SerializedSmEvent[] {
         return this.events.map(event=> isStageEvent(event) ?  event : {
             ...event,
             ...event.fork ? {fork: event.fork.getEvents()} : undefined,

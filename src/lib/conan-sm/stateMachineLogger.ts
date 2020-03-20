@@ -33,7 +33,7 @@ export const eventTypesToLog: EventType[] = [
     // EventType.FORK,
     // EventType.FORK_JOIN,
     EventType.ACTION,
-    // EventType.SHUTDOWN,
+    EventType.SHUTDOWN,
     // EventType.TR_CHAIN,
     // EventType.TR_CLOSE,
     // EventType.TR_OPEN,

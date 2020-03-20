@@ -1,6 +1,6 @@
 import * as React from "react";
-import {IFunction} from "../conan-utils/typesHelper";
 import {ReactElement} from "react";
+import {IFunction} from "../conan-utils/typesHelper";
 import {Store} from "../conan-sm-sugar/store";
 
 
@@ -22,9 +22,9 @@ export class PropsInjector {
     ): React.ComponentClass {
         class Connector extends React.Component<{}, ConnectedState<ACTIONS, DATA>> {
             private stateMachine = store.addListener([`::nextData->connect`, {
-                onNextData: (actions, params) => this.setState({
+                onNextData: (actions) => this.setState({
                     actions,
-                    data: params.sm.getStateData()
+                    data: actions.getStateData()
                 })
             }]);
 

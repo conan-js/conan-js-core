@@ -43,7 +43,7 @@ export class SmTransactionsRequests {
                 metadata: `[start-action]>${transition.transitionName}`,
                 value: onStart,
             },
-            reactionsProducer: () => this.reactionsAsCallbacks(stateMachineTree, reactions, actions),
+            reactionsProducer: () => this.reactionsAsCallbacks(reactions, actions),
             doChain: {
                 metadata: `[request-stage]::${transition.transition.stateName}`,
                 value: () => {
@@ -67,7 +67,7 @@ export class SmTransactionsRequests {
                 metadata: `[start-stage]>`,
                 value: onStart
             },
-            reactionsProducer: () => this.reactionsAsCallbacks(stateMachineTree, reactions, actions),
+            reactionsProducer: () => this.reactionsAsCallbacks(reactions, actions),
             onReactionsProcessed: (reactionsProcessed)=>this.onReactionsProcessed(stateMachineTree, reactionsProcessed)
         });
     }
@@ -147,10 +147,10 @@ export class SmTransactionsRequests {
         StateMachineLoggerHelper.log(stateMachine.stateMachineDef.name, stateMachine._status, stateMachine.eventThread.getCurrentStageName(), stateMachine.eventThread.getCurrentTransitionName(), eventType, transaction.getId(), transaction.getThisName());
     }
 
-    private reactionsAsCallbacks(stateMachineTree: StateMachineTree<any>, reactions: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, actions: any) {
+    private reactionsAsCallbacks(reactions: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, actions: any) {
         return reactions.map(it => ({
             metadata: it.metadata,
-            value: () => it.value(actions, {sm: stateMachineTree})
+            value: () => it.value(actions)
         }));
     }
 }

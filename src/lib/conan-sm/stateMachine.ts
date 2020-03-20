@@ -2,6 +2,7 @@ import {EventThread} from "./eventThread";
 import {Stage, StageDef} from "./stage";
 import {WithMetadataArray} from "../conan-utils/typesHelper";
 import {
+    BaseActions,
     ListenerType,
     OnEventCallback,
     SmListener,
@@ -45,12 +46,13 @@ export interface ListenerMetadata {
 export class StateMachine<
     SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
-    ACTIONS,
+    ACTIONS = any,
 > implements StateMachineController<SM_ON_LISTENER, SM_IF_LISTENER> {
-    readonly eventThread: EventThread = new EventThread();
     _status: StateMachineStatus = StateMachineStatus.IDLE;
-    private closed: boolean = false;
     private readonly smListenerDefLikeParser: SmListenerDefLikeParser = new SmListenerDefLikeParser();
+
+    readonly eventThread: EventThread = new EventThread();
+    private closed: boolean = false;
 
     constructor(
         readonly stateMachineDef: StateMachineDef<SM_ON_LISTENER, SM_IF_LISTENER>,
@@ -89,9 +91,9 @@ export class StateMachine<
             if (!actionListener) return undefined;
 
             reactions.push({
-                value: (actions, params) => {
+                value: (actions) => {
                     this.logger.log(EventType.REACTION,  `(${smListener.metadata})`);
-                    actionListener(actions, params)
+                    actionListener(actions)
                 },
                 metadata: smListener.metadata
             });
@@ -108,6 +110,7 @@ export class StateMachine<
     getEvents(): SerializedSmEvent [] {
         return this.eventThread.serialize();
     }
+
     deleteListeners(listenerNames: string[]) {
         if (listenerNames.length === 0) return;
 
