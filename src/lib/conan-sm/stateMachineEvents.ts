@@ -1,5 +1,5 @@
 import {State} from "./state";
-import {StateMachine} from "./stateMachine";
+import {StateMachineCore} from "./stateMachine";
 
 export interface SmTransition {
     transitionName: string;
@@ -10,7 +10,7 @@ export interface SmTransition {
 export interface RawTransitionSmEvent {
     transitionName: string;
     payload?: any;
-    fork?: StateMachine<any, any>;
+    fork?: StateMachineCore<any>;
 }
 export interface TransitionSmEvent {
     transitionName: string;

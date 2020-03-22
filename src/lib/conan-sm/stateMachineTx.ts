@@ -1,9 +1,9 @@
 import {State} from "./state";
 import {TransactionRequest} from "../conan-tx/transaction";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
-import {ListenerDefType} from "./stateMachine";
 import {SmTransition} from "./stateMachineEvents";
 import {SmOrchestrator} from "./smOrchestrator";
+import {ListenerDefType} from "./stateMachineCore";
 
 export class StateMachineTx {
     constructor(

@@ -1,23 +1,23 @@
 import {ListenerType, SmListener, SmListenerDefLike} from "../conan-sm/stateMachineListeners";
 import {
     StateMachineBuilderEndpoint,
-    StateMachineTreeDefBuilder
-} from "../conan-sm/stateMachineTreeDefBuilder";
-import {StateMachineTreeFactory} from "../conan-sm/stateMachineTreeFactory";
+    StateMachineDefBuilder
+} from "../conan-sm/stateMachineDefBuilder";
 import {IBiConsumer, IConstructor, IConsumer} from "../conan-utils/typesHelper";
-import {StateMachineTreeDef, SyncListener} from "../conan-sm/stateMachineTreeDef";
-import {StateMachineTree} from "../conan-sm/stateMachineTree";
+import {StateMachineDef, SyncListener} from "../conan-sm/stateMachineDef";
 import {StateLogic} from "../conan-sm/state";
+import {StateMachine} from "../conan-sm/stateMachine";
+import {StateMachineFactory} from "../conan-sm/stateMachineFactory";
 
 export class SmPrototype<SM_ON_LISTENER extends SmListener> implements StateMachineBuilderEndpoint <SM_ON_LISTENER> {
     constructor(
-        private defBuilder: StateMachineTreeDefBuilder<SM_ON_LISTENER>
+        private defBuilder: StateMachineDefBuilder<SM_ON_LISTENER>
     ) {
     }
 
-    start(name: string): StateMachineTree<SM_ON_LISTENER> {
+    start(name: string): StateMachine<SM_ON_LISTENER> {
         this.defBuilder.withName(name);
-        return StateMachineTreeFactory.create(this.defBuilder.build())
+        return StateMachineFactory.create(this.defBuilder.build())
     }
 
     addInterceptor(interceptor: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
@@ -34,7 +34,7 @@ export class SmPrototype<SM_ON_LISTENER extends SmListener> implements StateMach
         name: string,
         treeStateMachineDef: StateMachineBuilderEndpoint <SM_ON_LISTENER>,
         joiner: SyncListener<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>,
-        initCb?: IConsumer<StateMachineTreeDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>>
+        initCb?: IConsumer<StateMachineDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>>
     ): this {
         this.defBuilder.sync(name, treeStateMachineDef, joiner, initCb);
         return this;

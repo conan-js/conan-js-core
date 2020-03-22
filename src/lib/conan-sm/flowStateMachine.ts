@@ -1,6 +1,6 @@
 import {OnEventCallback, SmListener} from "./stateMachineListeners";
 import {State} from "./state";
-import {StateMachineTreeDefBuilder} from "./stateMachineTreeDefBuilder";
+import {StateMachineDefBuilder} from "./stateMachineDefBuilder";
 import {SmTransition} from "./stateMachineEvents";
 
 interface ForkData {
@@ -37,7 +37,7 @@ export interface FlowStateMachineListener extends SmListener{
     onForking?: OnEventCallback<ForkingActions>;
 }
 
-export let FlowStateMachineBuilder$: StateMachineTreeDefBuilder<FlowStateMachineListener> = new StateMachineTreeDefBuilder<SmListener>()
+export let FlowStateMachineBuilder$: StateMachineDefBuilder<FlowStateMachineListener> = new StateMachineDefBuilder<SmListener>()
     .withDeferredState<
         'init',
         InitActions,

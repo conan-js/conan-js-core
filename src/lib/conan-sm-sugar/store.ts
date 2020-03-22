@@ -1,4 +1,4 @@
-import {StateMachineTreeDefBuilder} from "../conan-sm/stateMachineTreeDefBuilder";
+import {StateMachineDefBuilder} from "../conan-sm/stateMachineDefBuilder";
 import {OnEventCallback, SmListener} from "../conan-sm/stateMachineListeners";
 import {IFunction} from "../conan-utils/typesHelper";
 import {State} from "../conan-sm/state";
@@ -15,7 +15,7 @@ export interface NextData<DATA> extends State <'nextData', DATA> {}
 
 export class StoreFactory {
     static create <DATA, ACTIONS> (initialData: DATA, actionsProducer: IFunction<DATA, ACTIONS>):  Store<ACTIONS>{
-        return new SmPrototype(new StateMachineTreeDefBuilder<NextDataListener<ACTIONS>>()
+        return new SmPrototype(new StateMachineDefBuilder<NextDataListener<ACTIONS>>()
             .withInitialState('nextData', initialData)
             .withState<ACTIONS, DATA>('nextData', (prevState) => {
                 let nextData: ACTIONS = actionsProducer(prevState);

@@ -7,7 +7,7 @@ import {
 } from "./stateMachineListeners";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {WithMetadataArray} from "../conan-utils/typesHelper";
-import {ListenerMetadata} from "./stateMachine";
+import {ListenerMetadata} from "./stateMachineCore";
 
 export class ListenersController<
     ON_LISTENER extends SmListener,

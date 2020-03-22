@@ -1,5 +1,5 @@
 import {Strings} from "../conan-utils/strings";
-import {StateMachineStatus} from "./stateMachine";
+import {StateMachineStatus} from "./stateMachineCore";
 
 export enum EventType {
     SLEEP='SLEEP',

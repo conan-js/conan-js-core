@@ -1,11 +1,13 @@
 import {IConsumer, IKeyValuePairs, WithMetadata, WithMetadataArray} from "../conan-utils/typesHelper";
-import {ListenerMetadata} from "./stateMachine";
-import {StateMachineEndpoint} from "./stateMachineTree";
+import {State} from "./state";
+import {SmTransition} from "./stateMachineEvents";
+import {ListenerMetadata} from "./stateMachineCore";
 
 
-export interface BaseActions extends StateMachineEndpoint{
-    stop(): void;
+export interface BaseActions {
     getStateData(): any;
+    requestStage(state: State): void;
+    requestTransition(transition: SmTransition): void;
 }
 
 export type OnEventCallback<ACTIONS> = IConsumer<ACTIONS & BaseActions>;

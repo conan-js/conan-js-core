@@ -2,7 +2,7 @@ import {IBiConsumer, IConstructor, IConsumer} from "../conan-utils/typesHelper";
 import {ListenerType, SmListener, SmListenerDefLike, SmListenerDefLikeParser} from "./stateMachineListeners";
 import {SmEventsPublisher} from "./_domain";
 import {State, StateDef, StateLogic} from "./state";
-import {StateMachineTreeDef, SyncListener} from "./stateMachineTreeDef";
+import {StateMachineDef, SyncListener} from "./stateMachineDef";
 
 
 export interface StateMachineBuilderEndpoint<SM_ON_LISTENER extends SmListener,
@@ -28,15 +28,16 @@ export interface StateMachineBuilderEndpoint<SM_ON_LISTENER extends SmListener,
         name: string,
         treeStateMachineDef: StateMachineBuilderEndpoint<SM_ON_LISTENER>,
         joiner: SyncListener<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>,
-        initCb?: IConsumer<StateMachineTreeDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>>
+        initCb?: IConsumer<StateMachineDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>>
     ): this;
 }
 
-export class StateMachineTreeDefBuilder<SM_ON_LISTENER extends SmListener,
-    > implements StateMachineBuilderEndpoint<SM_ON_LISTENER> {
+export class StateMachineDefBuilder<
+    SM_ON_LISTENER extends SmListener,
+> implements StateMachineBuilderEndpoint<SM_ON_LISTENER> {
     private readonly smListenerDefLikeParser: SmListenerDefLikeParser = new SmListenerDefLikeParser();
 
-    public stateMachineTreeDef: StateMachineTreeDef<SM_ON_LISTENER, SM_ON_LISTENER> = {
+    public stateMachineTreeDef: StateMachineDef<SM_ON_LISTENER, SM_ON_LISTENER> = {
         rootDef: {
             listeners: [],
             interceptors: [],
@@ -139,7 +140,7 @@ export class StateMachineTreeDefBuilder<SM_ON_LISTENER extends SmListener,
         name: string,
         treeStateMachineDef: StateMachineBuilderEndpoint<SM_ON_LISTENER>,
         joiner: SyncListener<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>,
-        initCb?: IConsumer<StateMachineTreeDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>>
+        initCb?: IConsumer<StateMachineDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>>
     ): this {
         throw new Error('TBI');
     }
@@ -148,7 +149,7 @@ export class StateMachineTreeDefBuilder<SM_ON_LISTENER extends SmListener,
         this.stateMachineTreeDef.rootDef.name = name;
     }
 
-    build(): StateMachineTreeDef<SM_ON_LISTENER, SM_ON_LISTENER> {
+    build(): StateMachineDef<SM_ON_LISTENER, SM_ON_LISTENER> {
         return this.stateMachineTreeDef;
     }
 }

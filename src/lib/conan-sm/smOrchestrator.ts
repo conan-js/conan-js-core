@@ -1,13 +1,12 @@
 import {State, StateDef, StateLogicParser} from "./state";
 import {EventType} from "./stateMachineLogger";
-import {StateMachineController} from "./stateMachineController";
-import {ListenerDefType, ListenerMetadata, StageToProcess} from "./stateMachine";
 import {WithMetadataArray} from "../conan-utils/typesHelper";
 import {BaseActions, ListenerType, OnEventCallback} from "./stateMachineListeners";
 import {SmTransition} from "./stateMachineEvents";
 import {Strings} from "../conan-utils/strings";
 import {Proxyfier} from "../conan-utils/proxyfier";
-import base = Mocha.reporters.base;
+import {StateMachine, StateMachineEndpoint} from "./stateMachine";
+import {ListenerDefType, ListenerMetadata} from "./stateMachineCore";
 
 
 export interface SmOrchestrator {
@@ -26,18 +25,19 @@ export interface SmOrchestrator {
 
 export class SimpleOrchestrator implements SmOrchestrator {
     constructor(
-       private readonly statesController: StateMachineController<any>,
+       private readonly stateMachine: StateMachine<any>,
+       private readonly endpoint: StateMachineEndpoint
     ) {}
 
     onActionTriggered(actionName: string, nextState: State) {
-        let nextStateDef: StateDef<string, any, any, any> = this.statesController.getStateDef(nextState.name);
+        let nextStateDef: StateDef<string, any, any, any> = this.stateMachine.getStateDef(nextState.name);
         if (nextStateDef == null) {
             throw new Error('TBI');
         } else if (nextStateDef.deferredInfo != null) {
             throw new Error('TBI');
         } else {
-            this.statesController.log(EventType.PROXY, `(${actionName})=>::${nextState.name}`);
-            this.statesController.requestTransition({
+            this.stateMachine.log(EventType.PROXY, `(${actionName})=>::${nextState.name}`);
+            this.stateMachine.requestTransition({
                 transitionName: actionName,
                 ...nextState ? {payload: nextState.data} : undefined,
                 into: nextState,
@@ -47,8 +47,8 @@ export class SimpleOrchestrator implements SmOrchestrator {
     }
 
     moveToState(state: State): void {
-        this.statesController.log(EventType.TR_OPEN);
-        this.statesController.moveToState(state);
+        this.stateMachine.log(EventType.TR_OPEN);
+        this.endpoint.moveToState(state);
     }
 
     createStateReactions(state: State): any {
@@ -56,7 +56,7 @@ export class SimpleOrchestrator implements SmOrchestrator {
         return this.createReactions(
             eventName,
             ListenerDefType.LISTENER,
-            this.stateActions(state, this.statesController.getStateDef(state.name))
+            this.stateActions(state, this.stateMachine.getStateDef(state.name))
         )
     }
 
@@ -69,7 +69,7 @@ export class SimpleOrchestrator implements SmOrchestrator {
     }
 
     createReactions(eventName: string, type: ListenerDefType, actions: any): any {
-        return this.reactionsAsCallbacks(this.statesController.createReactions(eventName, type), actions)
+        return this.reactionsAsCallbacks(this.stateMachine.createReactions(eventName, type), actions)
     }
 
     onReactionsProcessed(reactionsProcessed: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, type: ListenerDefType): any {
@@ -77,8 +77,8 @@ export class SimpleOrchestrator implements SmOrchestrator {
     }
 
     moveToAction(transition: SmTransition): void {
-        this.statesController.log(EventType.TR_OPEN);
-        this.statesController.moveToAction(transition);
+        this.stateMachine.log(EventType.TR_OPEN);
+        this.endpoint.moveToTransition(transition);
     }
 
     private reactionsAsCallbacks(reactions: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, actions: any) {
@@ -89,7 +89,7 @@ export class SimpleOrchestrator implements SmOrchestrator {
     }
 
     private deleteOnceListenersUsed(reactionsProcessed: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, type: ListenerDefType) {
-        this.statesController.deleteListeners(
+        this.stateMachine.deleteListeners(
             reactionsProcessed
                 .filter(it => it.metadata.executionType === ListenerType.ONCE)
                 .map(it => it.metadata.name)
@@ -99,17 +99,14 @@ export class SimpleOrchestrator implements SmOrchestrator {
     private stateActions(state: State, stateDef: StateDef<any, any, any>): any {
         let baseActions: BaseActions = {
             requestTransition: (transition: SmTransition): void => {
-                this.statesController.requestTransition(transition);
+                this.stateMachine.requestTransition(transition);
             },
             getStateData: (): any => {
-                this.statesController.getStateData();
+                this.stateMachine.getStateData();
             },
-            requestStage: (stageToProcess: StageToProcess): void => {
-                this.statesController.requestStage(state);
+            requestStage: (state: State): void => {
+                this.stateMachine.requestStage(state);
             },
-            stop: (): void => {
-                throw new Error('TBI')
-            }
         };
 
         if (stateDef.logic == null) return baseActions;

@@ -1,14 +1,13 @@
 import {ListenerType, SmListener, SmListenerDefLikeParser, SmListenerDefList} from "./stateMachineListeners";
-import {StateMachineTreeDef, SyncStateMachineDef} from "./stateMachineTreeDef";
-import {ParentRelationship, StateMachineTree} from "./stateMachineTree";
+import {StateMachineDef, SyncStateMachineDef} from "./stateMachineDef";
+import {StateMachine} from "./stateMachine";
 import {EventType, StateMachineLogger, StateMachineLoggerHelper} from "./stateMachineLogger";
-import {StateMachine, StateMachineStatus, ToProcessType} from "./stateMachine";
 import {IKeyValuePairs} from "../conan-utils/typesHelper";
 import {StateDef} from "./state";
-import {StateMachineController, StateMachineControllerImpl} from "./stateMachineController";
 import {TransactionTree} from "../conan-tx/transactionTree";
 import {SimpleOrchestrator} from "./smOrchestrator";
-import {StateMachineTx} from "./stateMachineTx";
+import {StateMachineSimple} from "./stateMachineSimple";
+import {StateMachineCoreImpl, StateMachineStatus} from "./stateMachineCore";
 
 export interface Synchronisation {
     syncDef: SyncStateMachineDef<any, any, any>;
@@ -16,21 +15,18 @@ export interface Synchronisation {
 }
 
 export interface StartSmTree {
-    stateMachineTreeDef: StateMachineTreeDef<any, any>;
+    stateMachineTreeDef: StateMachineDef<any, any>;
     downSyncs: Synchronisation[];
 }
 
 
-export class StateMachineTreeFactory {
+export class StateMachineFactory {
     static create<
         SM_ON_LISTENER extends SmListener,
         SM_IF_LISTENER extends SmListener,
     >(
-        treeDef: StateMachineTreeDef<SM_ON_LISTENER, SM_IF_LISTENER>,
-        parentInfo?: ParentRelationship,
-    ): StateMachineTree<SM_ON_LISTENER> {
-        let stateMachineTree: StateMachineTree<SM_ON_LISTENER>;
-        let stateMachine: StateMachine<SM_ON_LISTENER, SM_IF_LISTENER>;
+        treeDef: StateMachineDef<SM_ON_LISTENER, SM_IF_LISTENER>,
+    ): StateMachine<SM_ON_LISTENER> {
 
         let systemStages: IKeyValuePairs<StateDef<string, any, any, any>>;
         systemStages = {
@@ -53,7 +49,7 @@ export class StateMachineTreeFactory {
             new SmListenerDefLikeParser().parse([
                 '::init=>doStart', {
                     onInit: () => {
-                        stateMachineTree.requestTransition({
+                        stateMachine.requestTransition({
                             transitionName: `doStart`,
                             into: {
                                 name: 'start'
@@ -87,7 +83,7 @@ export class StateMachineTreeFactory {
                 )
             }
         };
-        stateMachine = new StateMachine(
+        let stateMachineCore = new StateMachineCoreImpl(
             {
                 ...treeDef.rootDef,
                 listeners: [...treeDef.rootDef.listeners, ...systemListeners],
@@ -95,19 +91,15 @@ export class StateMachineTreeFactory {
             }, logger
         );
 
-        let stateMachineController: StateMachineController<SM_ON_LISTENER>;
+        let stateMachine: StateMachine<SM_ON_LISTENER>;
         // noinspection JSUnusedAssignment
-        stateMachineController = new StateMachineControllerImpl(
-            stateMachine,
+        stateMachine = new StateMachineSimple(
+            stateMachineCore,
             (tx)=>transactionTree.createOrQueueTransaction(tx, ()=>null, ()=>null),
-            (stateMachineController)=>new SimpleOrchestrator(stateMachineController),
+            (stateMachineController)=>new SimpleOrchestrator(stateMachineController, stateMachineCore),
             logger
         );
 
-
-        stateMachineTree = new StateMachineTree<SM_ON_LISTENER>(
-            stateMachineController,
-        );
 
         logger.log(EventType.INIT,  '', [
             [`listeners`, `${treeDef.rootDef.listeners.map(it=>it.metadata).map(it => {
@@ -121,16 +113,11 @@ export class StateMachineTreeFactory {
             [`system stages`, 'init, start, stop'],
         ]);
 
-        stateMachineTree.requestStage ({
-            description: '::init',
-            eventType: EventType.INIT,
-            stage: {
-                name: 'init'
-            },
-            type: ToProcessType.STAGE
+        stateMachine.requestStage ({
+            name: 'init'
         });
 
-        return stateMachineTree;
+        return stateMachine;
     }
 
 
