@@ -19,10 +19,9 @@ export interface StateMachineEndpoint {
 export class StateMachineTree<
     SM_ON_LISTENER extends SmListener,
 > implements StateMachineLogger, StateMachineEndpoint {
-    readonly transactionTree: TransactionTree = new TransactionTree();
 
     constructor(
-        readonly controller: StateMachineController<any, any>,
+        readonly controller: StateMachineController<any>,
     ) {}
 
     getStateData(): any {

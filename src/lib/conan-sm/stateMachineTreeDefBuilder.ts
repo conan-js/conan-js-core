@@ -14,7 +14,7 @@ export interface StateMachineBuilderEndpoint<SM_ON_LISTENER extends SmListener,
         logic: StateLogic<ACTIONS, DATA>,
     ): this;
 
-    withDeferredStage<NAME extends string,
+    withDeferredState<NAME extends string,
         ACTIONS,
         REQUIREMENTS = void>(
         name: NAME,
@@ -88,7 +88,7 @@ export class StateMachineTreeDefBuilder<SM_ON_LISTENER extends SmListener,
         //         transitionName: 'doInitializing'
         //     } as any)
         // }]
-        return this.withDeferredStage<'start',
+        return this.withDeferredState<'start',
             ACTIONS,
             DATA>(
             'start',
@@ -99,8 +99,10 @@ export class StateMachineTreeDefBuilder<SM_ON_LISTENER extends SmListener,
     }
 
 
-    withState<ACTIONS,
-        DATA = void>(
+    withState<
+        ACTIONS,
+        DATA = void
+    >(
         stateName: string,
         logic: StateLogic<ACTIONS, DATA>,
     ): this {
@@ -112,12 +114,12 @@ export class StateMachineTreeDefBuilder<SM_ON_LISTENER extends SmListener,
     }
 
 
-    withDeferredStage<NAME extends string,
+    withDeferredState<NAME extends string,
         ACTIONS,
         REQUIREMENTS = void>
     (
         name: NAME,
-        logic: IConstructor<ACTIONS, REQUIREMENTS>,
+        logic: StateLogic<ACTIONS, REQUIREMENTS>,
         deferrer: IBiConsumer<ACTIONS, REQUIREMENTS>,
         joinsInto: string[]
     ): this {

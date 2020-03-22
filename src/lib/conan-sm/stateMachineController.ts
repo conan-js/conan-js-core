@@ -1,152 +1,77 @@
-import {ListenerDefType, ListenerMetadata, StageToProcess, StateMachine} from "./stateMachine";
-import {BaseActions, ListenerType, OnEventCallback, SmListener, SmListenerDefLike} from "./stateMachineListeners";
-import {State, StateDef, StateLogicParser} from "./state";
-import {TransactionTree} from "../conan-tx/transactionTree";
-import {WithMetadataArray} from "../conan-utils/typesHelper";
+import {ListenerDefType, ListenerMetadata, StateMachine} from "./stateMachine";
+import {ListenerType, OnEventCallback, SmListener, SmListenerDefLike} from "./stateMachineListeners";
+import {State, StateDef} from "./state";
+import {IConsumer, IFunction, WithMetadataArray} from "../conan-utils/typesHelper";
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
 import {TransactionRequest} from "../conan-tx/transaction";
-import {Strings} from "../conan-utils/strings";
-import {EventType} from "./stateMachineLogger";
-import {Proxyfier} from "../conan-utils/proxyfier";
-import {StateMachineOrchestrator} from "./stateMachineOrchestrator";
+import {EventType, StateMachineLogger} from "./stateMachineLogger";
+import {StateMachineTx} from "./stateMachineTx";
+import {SmOrchestrator} from "./smOrchestrator";
 
-export class StateMachineController<SM_ON_LISTENER extends SmListener,
+export interface StateMachineController<SM_ON_LISTENER extends SmListener> {
+    requestStage(state: State): void;
+
+    requestTransition(transition: SmTransition): this;
+
+    runNow(toRun: SmListenerDefLike<SM_ON_LISTENER>): void;
+
+    getStateDef(name: string): StateDef<any, any, any>;
+
+    log (eventType: EventType, details?: string, additionalLines?: [string, string][]): void;
+
+    addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType): this;
+
+    getEvents(): SerializedSmEvent[];
+
+    getStateData(): any;
+
+    moveToState (stage: State): void;
+
+    createReactions(eventName: string, type: ListenerDefType): WithMetadataArray<OnEventCallback<any>, ListenerMetadata>;
+
+    deleteListeners(listenerNames: string[], type: ListenerDefType): void;
+
+    moveToAction(transition: SmTransition): void;
+}
+
+export class StateMachineControllerImpl<
+    SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
-    ACTIONS = any,
-    > {
-    private readonly transactionTree: TransactionTree = new TransactionTree();
-    private readonly orchestrator: StateMachineOrchestrator = new StateMachineOrchestrator(
-        this,
-        undefined,
-        undefined
-    );
+    ACTIONS = any
+> implements StateMachineController<SM_ON_LISTENER>{
+    private txFactory: StateMachineTx;
 
     constructor(
         private stateMachine: StateMachine<SM_ON_LISTENER, SM_IF_LISTENER, ACTIONS>,
+        private txConsumer: IConsumer<TransactionRequest>,
+        private txInitializer: IFunction<StateMachineController<any>, SmOrchestrator>,
+        private logger: StateMachineLogger
     ) {
+        this.txFactory = new StateMachineTx(
+            txInitializer(this),
+            logger
+        );
     }
 
-    requestStage(stage: State): void {
-        let stageName = stage.name;
-        if (this.stateMachine.getStageDef(stage.name) == null) {
+    requestStage(state: State): void {
+        let stageName = state.name;
+        if (this.stateMachine.getStageDef(state.name) == null) {
             throw new Error(`can't move sm: [${this.stateMachine.stateMachineDef.name}] to ::${stageName} and is not a valid stage, ie one of: (${Object.keys(this.stateMachine.stateMachineDef.stageDefsByKey).join(', ')})`)
         }
 
-        this.transactionTree.createOrQueueTransaction(
-            this.createStageTxRequest(stage),
-            () => this.orchestrator.onSleep(),
-            () => this.orchestrator.onResume()
-        );
+        this.txConsumer(this.txFactory.createStageTxRequest(state));
     }
 
     requestTransition(transition: SmTransition): this {
-        let actions = this.createTransitionActions(transition);
-        let eventName = Strings.camelCaseWithPrefix('on', transition.transitionName);
-        this.transactionTree.createOrQueueTransaction(
-            this.createActionTxRequest(transition),
-            () => this.orchestrator.onSleep(),
-            () => this.orchestrator.onResume()
+        this.txConsumer(
+            this.txFactory.createActionTxRequest(transition)
         );
 
         return this;
-
-    }
-
-    private createTransitionActions(transition: SmTransition): any {
-        return {};
-    }
-
-    private createStateActions(state: State): any {
-        let baseActions: BaseActions = {
-            requestTransition: (transition: SmTransition): void => {
-                this.requestTransition(transition);
-            },
-            getStateData: (): any => {
-                this.stateMachine.getStateData();
-            },
-            requestStage: (stageToProcess: StageToProcess): void => {
-                this.requestStage(state);
-            },
-            stop: (): void => {
-                throw new Error('TBI')
-            }
-        };
-        let stageDef: StateDef<string, any, any, any> = this.stateMachine.getStageDef(state.name);
-        if (!stageDef || !stageDef.logic) return baseActions;
-
-        let actionsLogic: any = StateLogicParser.parse(stageDef.logic)(state.data);
-        let proxied = Proxyfier.proxy(actionsLogic, (originalCall, metadata) => {
-            let nextState: State = originalCall();
-            this.orchestrator.onActionTriggered (metadata.methodName, nextState);
-
-            return nextState;
-        });
-        return Object.assign(proxied, baseActions);
-
-
-    }
-
-    createActionTxRequest(
-        transition: SmTransition,
-    ): TransactionRequest {
-        let eventName = Strings.camelCaseWithPrefix('on', transition.transitionName);
-        return {
-            name: `=>${transition.transitionName}`,
-            onStart: {
-                metadata: `+tx[=>${transition.transitionName}]>`,
-                value: () => {
-                    this.stateMachine.log(EventType.TR_OPEN);
-                    this.stateMachine.moveToTransition(transition);
-                },
-            },
-            reactionsProducer: () => this.reactionsAsCallbacks(this.stateMachine.createReactions(eventName, ListenerDefType.INTERCEPTOR), this.createTransitionActions(transition)),
-            doChain: {
-                metadata: `[request-stage]::${transition.into.name}`,
-                value: () => {
-                    this.stateMachine.log(EventType.TR_CHAIN, `//::${transition.into.name}`);
-                    return this.createStageTxRequest({
-                        data: transition.payload,
-                        name: transition.into.name
-                    });
-                }
-            },
-            onReactionsProcessed: (reactionsProcessed) => this.deleteOnceListenersUsed(reactionsProcessed, ListenerDefType.INTERCEPTOR)
-        }
     }
 
 
-    private createStageTxRequest(
-        state: State,
-    ): TransactionRequest {
-        let eventName = Strings.camelCaseWithPrefix('on', state.name);
-        return {
-            name: `::${state.name}`,
-            onStart: {
-                metadata: `+tx[::${state.name}]>`,
-                value: () => {
-                    this.stateMachine.log(EventType.TR_OPEN);
-                    this.stateMachine.moveToStage(state);
-                }
-            },
-            reactionsProducer: () => this.reactionsAsCallbacks(this.stateMachine.createReactions(eventName, ListenerDefType.LISTENER), this.createStateActions(state)),
-            onReactionsProcessed: (reactionsProcessed) => this.deleteOnceListenersUsed(reactionsProcessed, ListenerDefType.LISTENER),
-            onDone: {
-                metadata: `-tx[::${state.name}]>`,
-                value: () => {
-                    this.stateMachine.log(EventType.TR_CLOSE);
-                }
-            }
-        };
-    }
-
-    private reactionsAsCallbacks(reactions: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, actions: any) {
-        return reactions.map(it => ({
-            metadata: it.metadata,
-            value: () => it.value(actions)
-        }));
-    }
-
-    runNow(toRun: SmListenerDefLike<SM_ON_LISTENER>) {
+    runNow(toRun: SmListenerDefLike<SM_ON_LISTENER>): void {
         let currentStageName = this.stateMachine.getCurrentStageName();
         this.stateMachine.createReactions(
             currentStageName,
@@ -154,13 +79,6 @@ export class StateMachineController<SM_ON_LISTENER extends SmListener,
         )
     }
 
-    private deleteOnceListenersUsed(reactionsProcessed: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, type: ListenerDefType) {
-        this.stateMachine.deleteListeners(
-            reactionsProcessed
-                .filter(it => it.metadata.executionType === ListenerType.ONCE)
-                .map(it => it.metadata.name)
-            , type);
-    }
 
     getStateData(): any {
         return this.stateMachine.getStateData();
@@ -182,4 +100,21 @@ export class StateMachineController<SM_ON_LISTENER extends SmListener,
         this.stateMachine.addListener(listener, type);
         return this;
     }
+
+    moveToState(state: State): void {
+        this.stateMachine.moveToState(state);
+    }
+
+    createReactions(eventName: string, type: ListenerDefType): WithMetadataArray<OnEventCallback<any>, ListenerMetadata> {
+        return this.stateMachine.createReactions(eventName, type);
+    }
+
+    deleteListeners(listenerNames: string[], type: ListenerDefType): void {
+        this.stateMachine.deleteListeners(listenerNames, type);
+    }
+
+    moveToAction(transition: SmTransition): void {
+        this.stateMachine.moveToTransition(transition);
+    }
 }
+//

@@ -91,7 +91,8 @@ export class StateMachine<
     getEvents(): SerializedSmEvent [] {
         return this.eventThread.serialize();
     }
-    moveToStage (stage: State): void {
+
+    moveToState (stage: State): void {
         this.eventThread.addStageEvent(stage);
         this.logger.log(EventType.STAGE,  `::${stage.name}`, [
             [`current state`, stage.data == null ? undefined : JSON.stringify(stage.data)]

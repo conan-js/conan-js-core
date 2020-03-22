@@ -5,8 +5,10 @@ import {EventType, StateMachineLogger, StateMachineLoggerHelper} from "./stateMa
 import {StateMachine, StateMachineStatus, ToProcessType} from "./stateMachine";
 import {IKeyValuePairs} from "../conan-utils/typesHelper";
 import {StateDef} from "./state";
-import {StateMachineController} from "./stateMachineController";
-import {StateMachineOrchestrator} from "./stateMachineOrchestrator";
+import {StateMachineController, StateMachineControllerImpl} from "./stateMachineController";
+import {TransactionTree} from "../conan-tx/transactionTree";
+import {SimpleOrchestrator} from "./smOrchestrator";
+import {StateMachineTx} from "./stateMachineTx";
 
 export interface Synchronisation {
     syncDef: SyncStateMachineDef<any, any, any>;
@@ -70,6 +72,7 @@ export class StateMachineTreeFactory {
             } as any as SM_ON_LISTENER], ListenerType.ONCE)
         );
 
+        let transactionTree: TransactionTree = new TransactionTree();
         let logger: StateMachineLogger = {
             log: (eventType: EventType, details?: string, additionalLines?: [string, string][]): void => {
                 StateMachineLoggerHelper.log(
@@ -78,7 +81,7 @@ export class StateMachineTreeFactory {
                     stateMachine.getCurrentStageName(),
                     stateMachine.getCurrentTransitionName(),
                     eventType,
-                    stateMachineTree.transactionTree.getCurrentTransactionId(),
+                    transactionTree.getCurrentTransactionId(),
                     details,
                     additionalLines
                 )
@@ -92,14 +95,18 @@ export class StateMachineTreeFactory {
             }, logger
         );
 
-        let stateMachineController: StateMachineController<SM_ON_LISTENER, SM_IF_LISTENER>;
+        let stateMachineController: StateMachineController<SM_ON_LISTENER>;
         // noinspection JSUnusedAssignment
-        stateMachineController = new StateMachineController(
+        stateMachineController = new StateMachineControllerImpl(
             stateMachine,
+            (tx)=>transactionTree.createOrQueueTransaction(tx, ()=>null, ()=>null),
+            (stateMachineController)=>new SimpleOrchestrator(stateMachineController),
+            logger
         );
 
+
         stateMachineTree = new StateMachineTree<SM_ON_LISTENER>(
-            stateMachineController
+            stateMachineController,
         );
 
         logger.log(EventType.INIT,  '', [

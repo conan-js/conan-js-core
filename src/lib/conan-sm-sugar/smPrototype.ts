@@ -40,7 +40,7 @@ export class SmPrototype<SM_ON_LISTENER extends SmListener> implements StateMach
         return this;
     }
 
-    withDeferredStage<NAME extends string,
+    withDeferredState<NAME extends string,
         ACTIONS,
         REQUIREMENTS = void>
     (
@@ -49,7 +49,7 @@ export class SmPrototype<SM_ON_LISTENER extends SmListener> implements StateMach
         deferrer: IBiConsumer<ACTIONS, REQUIREMENTS>,
         joinsInto: string[]
     ): this {
-        this.defBuilder.withDeferredStage(name, logic, deferrer, joinsInto);
+        this.defBuilder.withDeferredState(name, logic, deferrer, joinsInto);
         return this;
     }
 
