@@ -12,22 +12,24 @@ export class StateMachineComposed<
     SUPPORT_LISTENER extends SmListener
 > extends StateMachineBase<MAIN_LISTENER>{
     constructor(
-        private mainStateMachineCore: StateMachineCore<MAIN_LISTENER>,
+        private mainStateMachine: StateMachine<MAIN_LISTENER>,
         private supportStateMachine: StateMachine<SUPPORT_LISTENER>,
-        private logger: StateMachineLogger,
     ) {
-        super (mainStateMachineCore)
+        super (mainStateMachine)
     }
 
 
 
-    requestStage(state: State<string, void>): void {
+    requestStage(state: State): void {
+        this.mainStateMachine.requestStage(state);
     }
 
     requestTransition(transition: SmTransition): this {
-        return undefined;
+        this.mainStateMachine.requestTransition(transition);
+        return this;
     }
 
     runNow(toRun: [string, MAIN_LISTENER] | MAIN_LISTENER): void {
+        throw new Error('TBI');
     }
 }

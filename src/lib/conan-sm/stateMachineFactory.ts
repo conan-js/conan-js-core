@@ -1,6 +1,6 @@
 import {ListenerType, SmListener, SmListenerDefLikeParser, SmListenerDefList} from "./stateMachineListeners";
 import {StateMachineDef, SyncStateMachineDef} from "./stateMachineDef";
-import {StateMachine} from "./stateMachine";
+import {StateMachine, StateMachineCore} from "./stateMachine";
 import {EventType, StateMachineLogger, StateMachineLoggerHelper} from "./stateMachineLogger";
 import {IKeyValuePairs} from "../conan-utils/typesHelper";
 import {StateDef} from "./state";
@@ -9,6 +9,9 @@ import {SimpleOrchestrator} from "./smOrchestrator";
 import {StateMachineSimple} from "./stateMachineSimple";
 import {StateMachineCoreImpl, StateMachineStatus} from "./stateMachineCore";
 import {StateMachineTx} from "./stateMachineTx";
+import {ForkStateMachineBuilder$, ForkStateMachineListener} from "./forkStateMachine";
+import {StateMachineComposed} from "./stateMachineComposed";
+import {StateMachineDefBuilder} from "./stateMachineDefBuilder";
 
 export interface Synchronisation {
     syncDef: SyncStateMachineDef<any, any, any>;
@@ -101,6 +104,14 @@ export class StateMachineFactory {
             new StateMachineTx(logger)
         );
 
+        let forkStateMachineCore: StateMachineCore<ForkStateMachineListener> = new StateMachineCoreImpl(ForkStateMachineBuilder$.build().rootDef, logger);
+        let forkStateMachine: StateMachine<ForkStateMachineListener> = new StateMachineSimple(
+            forkStateMachineCore,
+            (tx)=>transactionTree.createOrQueueTransaction(tx, ()=>null, ()=>null),
+            (stateMachineController)=>new SimpleOrchestrator(stateMachineController, stateMachineCore),
+            new StateMachineTx(logger)
+        );
+
 
         logger.log(EventType.INIT,  '', [
             [`listeners`, `${treeDef.rootDef.listeners.map(it=>it.metadata).map(it => {
@@ -118,7 +129,10 @@ export class StateMachineFactory {
             name: 'init'
         });
 
-        return stateMachine;
+        return new StateMachineComposed(
+            stateMachine,
+            forkStateMachine
+        );
     }
 
 
