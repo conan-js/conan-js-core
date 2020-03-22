@@ -1,59 +1,31 @@
-import {State, StateDef, StateLogicParser} from "./state";
+import {State} from "./state";
 import {EventType} from "./stateMachineLogger";
 import {WithMetadataArray} from "../conan-utils/typesHelper";
-import {BaseActions, ListenerType, OnEventCallback} from "./stateMachineListeners";
+import {ListenerType, OnEventCallback} from "./stateMachineListeners";
 import {SmTransition} from "./stateMachineEvents";
 import {Strings} from "../conan-utils/strings";
-import {Proxyfier} from "../conan-utils/proxyfier";
 import {StateMachine, StateMachineEndpoint} from "./stateMachine";
 import {ListenerDefType, ListenerMetadata} from "./stateMachineCore";
+import {SmRequestStrategy} from "./smRequestStrategy";
 
 
-export interface SmOrchestrator extends StateMachineEndpoint{
-    onActionTriggered(actionName: string, nextState: State): void;
-
-    createStateReactions(state: State): any;
-
-    createTransitionReactions(transition: SmTransition): any;
-
-    onReactionsProcessed(reactionsProcessed: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, type: ListenerDefType): any;
-
-}
-
-export class SimpleOrchestrator implements SmOrchestrator {
+export class SmOrchestrator {
     constructor(
        private readonly stateMachine: StateMachine<any>,
-       private readonly endpoint: StateMachineEndpoint
+       private readonly endpoint: StateMachineEndpoint,
     ) {}
-
-    onActionTriggered(actionName: string, nextState: State) {
-        let nextStateDef: StateDef<string, any, any, any> = this.stateMachine.getStateDef(nextState.name);
-        if (nextStateDef == null) {
-            throw new Error('TBI');
-        } else if (nextStateDef.deferredInfo != null) {
-            throw new Error('TBI');
-        } else {
-            this.stateMachine.log(EventType.PROXY, `(${actionName})=>::${nextState.name}`);
-            this.stateMachine.requestTransition({
-                transitionName: actionName,
-                ...nextState ? {payload: nextState.data} : undefined,
-                into: nextState,
-            });
-
-        }
-    }
 
     moveToState(state: State): void {
         this.stateMachine.log(EventType.TR_OPEN);
         this.endpoint.moveToState(state);
     }
 
-    createStateReactions(state: State): any {
+    createStateReactions(state: State, requestStrategy: SmRequestStrategy): any {
         let eventName = Strings.camelCaseWithPrefix('on', state.name);
         return this.createReactions(
             eventName,
             ListenerDefType.LISTENER,
-            this.stateActions(state, this.stateMachine.getStateDef(state.name))
+            requestStrategy.stateActions(state, this.stateMachine.getStateDef(state.name))
         )
     }
 
@@ -93,29 +65,4 @@ export class SimpleOrchestrator implements SmOrchestrator {
             , type);
     }
 
-    private stateActions(state: State, stateDef: StateDef<any, any, any>): any {
-        let baseActions: BaseActions = {
-            requestTransition: (transition: SmTransition): void => {
-                this.stateMachine.requestTransition(transition);
-            },
-            getStateData: (): any => {
-                this.stateMachine.getStateData();
-            },
-            requestStage: (state: State): void => {
-                this.stateMachine.requestStage(state);
-            },
-        };
-
-        if (stateDef.logic == null) return baseActions;
-
-        let actionsLogic: any = StateLogicParser.parse(stateDef.logic)(state.data);
-        let proxied = Proxyfier.proxy(actionsLogic, (originalCall, metadata) => {
-            let nextState: State = originalCall();
-            this.onActionTriggered (metadata.methodName, nextState);
-
-            return nextState;
-        });
-        return Object.assign(proxied, baseActions);
-
-    }
 }

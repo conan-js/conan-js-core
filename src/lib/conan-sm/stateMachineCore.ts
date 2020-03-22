@@ -6,6 +6,7 @@ import {StateMachineCoreDef} from "./stateMachineCoreDef";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {ListenersController} from "./listenersController";
 import {SmEventThread} from "./smEventThread";
+import {StateMachineEndpoint} from "./stateMachine";
 
 export enum ToProcessType {
     STAGE = 'STAGE'
@@ -44,7 +45,7 @@ export class StateMachineCoreImpl<
     SM_ON_LISTENER extends SmListener,
     SM_IF_LISTENER extends SmListener,
     ACTIONS = any,
->  {
+>  implements StateMachineEndpoint{
     private readonly eventThread: SmEventThread = new SmEventThread();
     private readonly listenersController: ListenersController<SM_ON_LISTENER, ACTIONS>;
     private readonly interceptorsController: ListenersController<SM_IF_LISTENER, ACTIONS>;

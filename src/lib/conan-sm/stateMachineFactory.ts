@@ -1,17 +1,15 @@
 import {ListenerType, SmListener, SmListenerDefLikeParser, SmListenerDefList} from "./stateMachineListeners";
 import {StateMachineDef, SyncStateMachineDef} from "./stateMachineDef";
-import {StateMachine, StateMachineCore} from "./stateMachine";
+import {StateMachine, StateMachineImpl} from "./stateMachine";
 import {EventType, StateMachineLogger, StateMachineLoggerHelper} from "./stateMachineLogger";
 import {IKeyValuePairs} from "../conan-utils/typesHelper";
 import {StateDef} from "./state";
 import {TransactionTree} from "../conan-tx/transactionTree";
-import {SimpleOrchestrator} from "./smOrchestrator";
-import {StateMachineSimple} from "./stateMachineSimple";
 import {StateMachineCoreImpl, StateMachineStatus} from "./stateMachineCore";
 import {StateMachineTx} from "./stateMachineTx";
 import {ForkStateMachineBuilder$, ForkStateMachineListener} from "./forkStateMachine";
-import {StateMachineComposed} from "./stateMachineComposed";
-import {StateMachineDefBuilder} from "./stateMachineDefBuilder";
+import {SmOrchestrator} from "./smOrchestrator";
+import {ForkSmRequestStrategy, SimpleSmRequestStrategy} from "./smRequestStrategy";
 
 export interface Synchronisation {
     syncDef: SyncStateMachineDef<any, any, any>;
@@ -31,7 +29,7 @@ export class StateMachineFactory {
     >(
         treeDef: StateMachineDef<SM_ON_LISTENER, SM_IF_LISTENER>,
     ): StateMachine<SM_ON_LISTENER> {
-
+        let finalStateMachine: StateMachineImpl<SM_ON_LISTENER>;
         let systemStages: IKeyValuePairs<StateDef<string, any, any, any>>;
         systemStages = {
             init: {
@@ -53,7 +51,7 @@ export class StateMachineFactory {
             new SmListenerDefLikeParser().parse([
                 '::init=>doStart', {
                     onInit: () => {
-                        stateMachine.requestTransition({
+                        finalStateMachine.requestTransition({
                             transitionName: `doStart`,
                             into: {
                                 name: 'start'
@@ -97,19 +95,22 @@ export class StateMachineFactory {
 
         let stateMachine: StateMachine<SM_ON_LISTENER>;
         // noinspection JSUnusedAssignment
-        stateMachine = new StateMachineSimple(
+        let stateMachineTx = new StateMachineTx(logger);
+        stateMachine = new StateMachineImpl(
             stateMachineCore,
             (tx)=>transactionTree.createOrQueueTransaction(tx, ()=>null, ()=>null),
-            (stateMachineController)=>new SimpleOrchestrator(stateMachineController, stateMachineCore),
-            new StateMachineTx(logger)
+            (stateMachineController)=>new SmOrchestrator(stateMachineController, stateMachineCore),
+            (stateMachineController)=>new SimpleSmRequestStrategy(stateMachineController),
+            stateMachineTx
         );
 
-        let forkStateMachineCore: StateMachineCore<ForkStateMachineListener> = new StateMachineCoreImpl(ForkStateMachineBuilder$.build().rootDef, logger);
-        let forkStateMachine: StateMachine<ForkStateMachineListener> = new StateMachineSimple(
+        let forkStateMachineCore: StateMachineCoreImpl<ForkStateMachineListener, any> = new StateMachineCoreImpl(ForkStateMachineBuilder$.build().rootDef, logger);
+        let forkStateMachine: StateMachine<ForkStateMachineListener> = new StateMachineImpl(
             forkStateMachineCore,
             (tx)=>transactionTree.createOrQueueTransaction(tx, ()=>null, ()=>null),
-            (stateMachineController)=>new SimpleOrchestrator(stateMachineController, stateMachineCore),
-            new StateMachineTx(logger)
+            (thisSm)=>new SmOrchestrator(thisSm, forkStateMachineCore),
+            (thisSm)=>new SimpleSmRequestStrategy(thisSm),
+            stateMachineTx
         );
 
 
@@ -125,15 +126,23 @@ export class StateMachineFactory {
             [`system stages`, 'init, start, stop'],
         ]);
 
-        stateMachine.requestStage ({
+
+        finalStateMachine = new StateMachineImpl(
+            stateMachine,
+            (tx) => transactionTree.createOrQueueTransaction(tx, () => null, () => null),
+            (stateMachineController) => new SmOrchestrator(stateMachineController, stateMachineCore),
+            (thisSm) => new ForkSmRequestStrategy(
+                thisSm,
+                forkStateMachine,
+                new SimpleSmRequestStrategy(thisSm)
+            ),
+            stateMachineTx
+        );
+
+        finalStateMachine.requestStage ({
             name: 'init'
         });
-
-        return new StateMachineComposed(
-            stateMachine,
-            forkStateMachine
-        );
+        return finalStateMachine;
     }
-
 
 }

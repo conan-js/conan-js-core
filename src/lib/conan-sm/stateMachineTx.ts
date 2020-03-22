@@ -4,6 +4,7 @@ import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {SmTransition} from "./stateMachineEvents";
 import {ListenerDefType} from "./stateMachineCore";
 import {SmOrchestrator} from "./smOrchestrator";
+import {SmRequestStrategy} from "./smRequestStrategy";
 
 export class StateMachineTx {
     constructor(
@@ -12,7 +13,8 @@ export class StateMachineTx {
 
     createStageTxRequest(
         state: State,
-        orchestrator: SmOrchestrator
+        orchestrator: SmOrchestrator,
+        requestStrategy: SmRequestStrategy
     ): TransactionRequest {
         return {
             name: `::${state.name}`,
@@ -22,7 +24,7 @@ export class StateMachineTx {
                     orchestrator.moveToState (state);
                 }
             },
-            reactionsProducer: () => orchestrator.createStateReactions(state),
+            reactionsProducer: () => orchestrator.createStateReactions(state, requestStrategy),
             onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (reactionsProcessed, ListenerDefType.LISTENER),
             onDone: {
                 metadata: `-tx[::${state.name}]>`,
@@ -36,6 +38,7 @@ export class StateMachineTx {
     createActionTxRequest(
         transition: SmTransition,
         orchestrator: SmOrchestrator,
+        requestStrategy: SmRequestStrategy
     ): TransactionRequest {
         return {
             name: `=>${transition.transitionName}`,
@@ -53,7 +56,7 @@ export class StateMachineTx {
                     return this.createStageTxRequest({
                         data: transition.payload,
                         name: transition.into.name
-                    }, orchestrator);
+                    }, orchestrator, requestStrategy);
                 }
             },
             onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (reactionsProcessed, ListenerDefType.INTERCEPTOR)
