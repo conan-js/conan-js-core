@@ -9,10 +9,8 @@ import {StateMachine, StateMachineEndpoint} from "./stateMachine";
 import {ListenerDefType, ListenerMetadata} from "./stateMachineCore";
 
 
-export interface SmOrchestrator {
+export interface SmOrchestrator extends StateMachineEndpoint{
     onActionTriggered(actionName: string, nextState: State): void;
-
-    moveToState(state: State): void;
 
     createStateReactions(state: State): any;
 
@@ -20,7 +18,6 @@ export interface SmOrchestrator {
 
     onReactionsProcessed(reactionsProcessed: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, type: ListenerDefType): any;
 
-    moveToAction(transition: SmTransition): void;
 }
 
 export class SimpleOrchestrator implements SmOrchestrator {
@@ -76,7 +73,7 @@ export class SimpleOrchestrator implements SmOrchestrator {
         this.deleteOnceListenersUsed(reactionsProcessed, type)
     }
 
-    moveToAction(transition: SmTransition): void {
+    moveToTransition(transition: SmTransition): void {
         this.stateMachine.log(EventType.TR_OPEN);
         this.endpoint.moveToTransition(transition);
     }
@@ -121,29 +118,4 @@ export class SimpleOrchestrator implements SmOrchestrator {
         return Object.assign(proxied, baseActions);
 
     }
-
-
-
-
-    // private createFork(deferredInfo: DeferredInfo<any, any>): void {
-    //     this.flowController.runNow({
-    //         onProcessingAction: (actions)=> {
-    //             this.flowController.addListener({
-    //                 onForking: (actions)=>{
-    //                     this.stateMachineTree$ ({
-    //                         rootDef: {
-    //                             name: undefined,
-    //                             interceptors: [],
-    //                             listeners: [],
-    //                             stageDefsByKey: {}
-    //                         },
-    //                         syncDefs: []
-    //                     })
-    //                 }
-    //             }, ListenerType.ONCE);
-    //             return actions.fork();
-    //         }
-    //     });
-    // }
-
 }

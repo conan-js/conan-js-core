@@ -8,6 +8,7 @@ import {TransactionTree} from "../conan-tx/transactionTree";
 import {SimpleOrchestrator} from "./smOrchestrator";
 import {StateMachineSimple} from "./stateMachineSimple";
 import {StateMachineCoreImpl, StateMachineStatus} from "./stateMachineCore";
+import {StateMachineTx} from "./stateMachineTx";
 
 export interface Synchronisation {
     syncDef: SyncStateMachineDef<any, any, any>;
@@ -97,7 +98,7 @@ export class StateMachineFactory {
             stateMachineCore,
             (tx)=>transactionTree.createOrQueueTransaction(tx, ()=>null, ()=>null),
             (stateMachineController)=>new SimpleOrchestrator(stateMachineController, stateMachineCore),
-            logger
+            new StateMachineTx(logger)
         );
 
 

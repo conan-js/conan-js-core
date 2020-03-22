@@ -3,36 +3,32 @@ import {State} from "./state";
 import {IConsumer, IFunction} from "../conan-utils/typesHelper";
 import {SmTransition} from "./stateMachineEvents";
 import {TransactionRequest} from "../conan-tx/transaction";
-import {StateMachineLogger} from "./stateMachineLogger";
-import {StateMachineTx} from "./stateMachineTx";
 import {SmOrchestrator} from "./smOrchestrator";
 import {StateMachine, StateMachineCore} from "./stateMachine";
 import {StateMachineBase} from "./stateMachineBase";
+import {StateMachineTx} from "./stateMachineTx";
 
 export class StateMachineSimple<
     SM_ON_LISTENER extends SmListener,
 > extends StateMachineBase<SM_ON_LISTENER>{
-    private txFactory: StateMachineTx;
+    private readonly orchestrator: SmOrchestrator;
 
     constructor(
         stateMachineCore: StateMachineCore<SM_ON_LISTENER>,
         private txConsumer: IConsumer<TransactionRequest>,
-        private txInitializer: IFunction<StateMachine<any>, SmOrchestrator>,
-        private logger: StateMachineLogger
+        private Orchestrator$: IFunction<StateMachine<any>, SmOrchestrator>,
+        private txFactory: StateMachineTx
     ) {
         super(stateMachineCore);
-        this.txFactory = new StateMachineTx(
-            txInitializer(this),
-            logger
-        );
+        this.orchestrator = Orchestrator$(this);
     }
 
     requestStage(state: State): void {
-        this.txConsumer(this.txFactory.createStageTxRequest(state));
+        this.txConsumer(this.txFactory.createStageTxRequest(state, this.orchestrator));
     }
 
     requestTransition(transition: SmTransition): this {
-        this.txConsumer(this.txFactory.createActionTxRequest(transition));
+        this.txConsumer(this.txFactory.createActionTxRequest(transition, this.orchestrator));
         return this;
     }
 

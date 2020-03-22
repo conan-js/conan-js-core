@@ -2,28 +2,28 @@ import {State} from "./state";
 import {TransactionRequest} from "../conan-tx/transaction";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {SmTransition} from "./stateMachineEvents";
-import {SmOrchestrator} from "./smOrchestrator";
 import {ListenerDefType} from "./stateMachineCore";
+import {SmOrchestrator} from "./smOrchestrator";
 
 export class StateMachineTx {
     constructor(
-        private readonly orchestrator: SmOrchestrator,
         private readonly logger: StateMachineLogger,
     ) {}
 
     createStageTxRequest(
         state: State,
+        orchestrator: SmOrchestrator
     ): TransactionRequest {
         return {
             name: `::${state.name}`,
             onStart: {
                 metadata: `+tx[::${state.name}]>`,
                 value: () => {
-                    this.orchestrator.moveToState (state);
+                    orchestrator.moveToState (state);
                 }
             },
-            reactionsProducer: () => this.orchestrator.createStateReactions(state),
-            onReactionsProcessed: (reactionsProcessed) => this.orchestrator.onReactionsProcessed (reactionsProcessed, ListenerDefType.LISTENER),
+            reactionsProducer: () => orchestrator.createStateReactions(state),
+            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (reactionsProcessed, ListenerDefType.LISTENER),
             onDone: {
                 metadata: `-tx[::${state.name}]>`,
                 value: () => {
@@ -35,16 +35,17 @@ export class StateMachineTx {
 
     createActionTxRequest(
         transition: SmTransition,
+        orchestrator: SmOrchestrator,
     ): TransactionRequest {
         return {
             name: `=>${transition.transitionName}`,
             onStart: {
                 metadata: `+tx[=>${transition.transitionName}]>`,
                 value: () => {
-                    this.orchestrator.moveToAction(transition)
+                    orchestrator.moveToTransition(transition)
                 },
             },
-            reactionsProducer: () => this.orchestrator.createTransitionReactions(transition),
+            reactionsProducer: () => orchestrator.createTransitionReactions(transition),
             doChain: {
                 metadata: `[request-stage]::${transition.into.name}`,
                 value: () => {
@@ -52,10 +53,10 @@ export class StateMachineTx {
                     return this.createStageTxRequest({
                         data: transition.payload,
                         name: transition.into.name
-                    });
+                    }, orchestrator);
                 }
             },
-            onReactionsProcessed: (reactionsProcessed) => this.orchestrator.onReactionsProcessed (reactionsProcessed, ListenerDefType.INTERCEPTOR)
+            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (reactionsProcessed, ListenerDefType.INTERCEPTOR)
         }
     }
 }
