@@ -65,11 +65,11 @@ export class StateMachineCoreImpl<
     }
 
     createReactions(eventName: string, type: ListenerDefType): WithMetadataArray<OnEventCallback<ACTIONS>, ListenerMetadata> {
-        return this.getListenerController(type).createReactions(eventName);
+        return this.getListenerController(type).createReactions(this, eventName);
     }
 
     deleteListeners(listenerNames: string[], type: ListenerDefType) {
-        this.getListenerController(type).deleteListeners(listenerNames);
+        this.getListenerController(type).deleteListeners(this, listenerNames);
     }
 
     getStateDef(name: string): StateDef<any, any, any> {

@@ -1,5 +1,5 @@
 import {State, StateDef, StateLogicParser} from "./state";
-import {EventType, StateMachineLogger} from "./stateMachineLogger";
+import {EventType} from "./stateMachineLogger";
 import {StateMachine} from "./stateMachine";
 import {BaseActions, ListenerType} from "./stateMachineListeners";
 import {SmTransition} from "./stateMachineEvents";
@@ -7,26 +7,22 @@ import {Proxyfier} from "../conan-utils/proxyfier";
 import {ForkStateMachineListener} from "./forkStateMachine";
 
 export interface SmRequestStrategy {
-    onTransitionRequest(actionName: string, nextState: State): void;
+    onTransitionRequest(stateMachine: StateMachine<any>, actionName: string, nextState: State): void;
 
-    stateActions(state: State, stateDef: StateDef<any, any, any>): any;
+    stateActions(stateMachine: StateMachine<any>, state: State, stateDef: StateDef<any, any, any>): any;
 }
 
 export abstract class BaseSmRequestStrategy implements SmRequestStrategy{
-    protected constructor(
-        protected readonly stateMachine: StateMachine<any>
-    ) {}
-
-    public stateActions(state: State, stateDef: StateDef<any, any, any>): any {
+    public stateActions(stateMachine: StateMachine<any>, state: State, stateDef: StateDef<any, any, any>): any {
         let baseActions: BaseActions = {
             requestTransition: (transition: SmTransition): void => {
-                this.stateMachine.requestTransition(transition);
+                stateMachine.requestTransition(transition);
             },
             getStateData: (): any => {
-                this.stateMachine.getStateData();
+                stateMachine.getStateData();
             },
             requestStage: (state: State): void => {
-                this.stateMachine.requestStage(state);
+                stateMachine.requestStage(state);
             },
         };
 
@@ -35,33 +31,26 @@ export abstract class BaseSmRequestStrategy implements SmRequestStrategy{
         let actionsLogic: any = StateLogicParser.parse(stateDef.logic)(state.data);
         let proxied = Proxyfier.proxy(actionsLogic, (originalCall, metadata) => {
             let nextState: State = originalCall();
-            this.onTransitionRequest (metadata.methodName, nextState);
+            this.onTransitionRequest (stateMachine, metadata.methodName, nextState);
 
             return nextState;
         });
         return Object.assign(proxied, baseActions);
     }
 
-    abstract onTransitionRequest(actionName: string, nextState: State<string, void>): void;
+    abstract onTransitionRequest(stateMachine: StateMachine<any>, actionName: string, nextState: State<string, void>): void;
 }
 
 export class SimpleSmRequestStrategy extends BaseSmRequestStrategy{
-    constructor(
-        readonly stateMachine: StateMachine<any>,
-        private readonly logger: StateMachineLogger
-    ) {
-        super(stateMachine);
-    }
-
-    onTransitionRequest(actionName: string, nextState: State): void {
-        let nextStateDef: StateDef<string, any, any, any> = this.stateMachine.getStateDef(nextState.name);
+    onTransitionRequest(stateMachine: StateMachine<any>, actionName: string, nextState: State): void {
+        let nextStateDef: StateDef<string, any, any, any> = stateMachine.getStateDef(nextState.name);
         if (nextStateDef == null) {
             throw new Error('unexpected error');
         } else if (nextStateDef.deferredInfo != null) {
             throw new Error('unexpected error');
         } else {
-            this.logger.log(EventType.PROXY, `(${actionName})=>::${nextState.name}`);
-            this.stateMachine.requestTransition({
+            stateMachine.log(EventType.PROXY, `(${actionName})=>::${nextState.name}`);
+            stateMachine.requestTransition({
                 transitionName: actionName,
                 ...nextState ? {payload: nextState.data} : undefined,
                 into: nextState,
@@ -72,16 +61,15 @@ export class SimpleSmRequestStrategy extends BaseSmRequestStrategy{
 
 export class ForkSmRequestStrategy  extends BaseSmRequestStrategy{
     constructor(
-        readonly stateMachine: StateMachine<any>,
         private readonly forkSm: StateMachine<ForkStateMachineListener>,
         private readonly otherwise: SmRequestStrategy
     ) {
-        super(stateMachine);
+        super();
     }
 
 
-    onTransitionRequest(actionName: string, nextState: State): void {
-        let nextStateDef: StateDef<string, any, any, any> = this.stateMachine.getStateDef(nextState.name);
+    onTransitionRequest(stateMachine: StateMachine<any>, actionName: string, nextState: State): void {
+        let nextStateDef: StateDef<string, any, any, any> = stateMachine.getStateDef(nextState.name);
         if (nextStateDef == null) {
             throw new Error('TBC');
         } else if (nextStateDef.deferredInfo != null) {
@@ -95,7 +83,7 @@ export class ForkSmRequestStrategy  extends BaseSmRequestStrategy{
             });
 
         } else {
-            this.otherwise.onTransitionRequest(actionName, nextState);
+            this.otherwise.onTransitionRequest(stateMachine, actionName, nextState);
         }
     }
 

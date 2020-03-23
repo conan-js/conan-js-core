@@ -1,6 +1,6 @@
 import {ListenerType, OnEventCallback, SmListener, SmListenerDefLike} from "./stateMachineListeners";
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
-import {EventType} from "./stateMachineLogger";
+import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {State, StateDef} from "./state";
 import {IConsumer, IFunction, WithMetadata, WithMetadataArray} from "../conan-utils/typesHelper";
 import {SmOrchestrator} from "./smOrchestrator";
@@ -8,6 +8,7 @@ import {TransactionRequest} from "../conan-tx/transaction";
 import {StateMachineTx} from "./stateMachineTx";
 import {SmRequestStrategy} from "./smRequestStrategy";
 import {Strings} from "../conan-utils/strings";
+import {StateMachineCoreImpl} from "./stateMachineCore";
 
 export interface ListenerMetadata {
     name: string,
@@ -38,7 +39,7 @@ export interface StateMachineCore<SM_ON_LISTENER extends SmListener> {
 }
 
 
-export interface StateMachine<SM_ON_LISTENER extends SmListener> extends StateMachineCore<SM_ON_LISTENER>{
+export interface StateMachine<SM_ON_LISTENER extends SmListener> extends StateMachineCore<SM_ON_LISTENER>, StateMachineLogger{
     requestStage(state: State): void;
 
     requestTransition(transition: SmTransition): this;
@@ -59,22 +60,24 @@ export class StateMachineImpl<
     private readonly requestStrategy: SmRequestStrategy;
 
     constructor(
-        private stateMachineCore: StateMachineCore<SM_ON_LISTENER>,
+        private stateMachineCore: StateMachineCoreImpl<SM_ON_LISTENER, any>,
         private txConsumer: IConsumer<TransactionRequest>,
         private Orchestrator$: IFunction<StateMachine<any>, SmOrchestrator>,
         private RequestStrategy$: IFunction<StateMachine<any>, SmRequestStrategy>,
-        private txFactory: StateMachineTx
+        private txFactory: StateMachineTx,
+        private readonly logger: StateMachineLogger
+
     ) {
         this.orchestrator = Orchestrator$(this);
         this.requestStrategy = RequestStrategy$(this);
     }
 
     requestStage(state: State): void {
-        this.txConsumer(this.txFactory.createStageTxRequest(state, this.orchestrator, this.requestStrategy));
+        this.txConsumer(this.txFactory.createStageTxRequest(state, this.orchestrator, this.stateMachineCore, this, this.requestStrategy));
     }
 
     requestTransition(transition: SmTransition): this {
-        this.txConsumer(this.txFactory.createActionTxRequest(transition, this.orchestrator, this.requestStrategy));
+        this.txConsumer(this.txFactory.createActionTxRequest(transition, this.orchestrator, this.stateMachineCore, this, this.requestStrategy));
         return this;
     }
 
@@ -84,7 +87,7 @@ export class StateMachineImpl<
         let currentEvent: string = Strings.camelCaseWithPrefix('on', currentState);
 
         if (currentEvent in toRun) {
-            this.txConsumer(this.txFactory.forceEvent({
+            this.txConsumer(this.txFactory.forceEvent(this, {
                     logic: (toRun as any)[currentEvent],
                     stateDef: this.stateMachineCore.getStateDef(currentState),
                     state: {
@@ -134,5 +137,6 @@ export class StateMachineImpl<
     }
 
     log(eventType: EventType, details?: string, additionalLines?: [string, string][]): void {
+        this.logger.log(eventType, details, additionalLines);
     }
 }

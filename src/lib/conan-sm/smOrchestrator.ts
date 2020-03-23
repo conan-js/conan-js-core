@@ -10,59 +10,55 @@ import {ForcedEvent} from "./stateMachineTx";
 
 
 export class SmOrchestrator {
-    constructor(
-       private readonly stateMachine: StateMachine<any>,
-       private readonly endpoint: StateMachineEndpoint,
-       private readonly logger: StateMachineLogger,
-    ) {}
-
-    moveToState(state: State): void {
-        this.logger.log(EventType.STAGE,  `::${state.name}`, [
+    moveToState(stateMachine: StateMachine<any>, endpoint: StateMachineEndpoint, state: State): void {
+        stateMachine.log(EventType.STAGE,  `::${state.name}`, [
             [`current state`, state.data == null ? undefined : JSON.stringify(state.data)]
         ]);
-        this.endpoint.moveToState(state);
+        endpoint.moveToState(state);
     }
 
-    createStateReactions(state: State, requestStrategy: SmRequestStrategy): WithMetadataArray<ICallback, ListenerMetadata> {
+    createStateReactions(stateMachine: StateMachine<any>, state: State, requestStrategy: SmRequestStrategy): WithMetadataArray<ICallback, ListenerMetadata> {
         let eventName = Strings.camelCaseWithPrefix('on', state.name);
         return this.createReactions(
+            stateMachine,
             eventName,
             ListenerDefType.LISTENER,
-            requestStrategy.stateActions(state, this.stateMachine.getStateDef(state.name))
+            requestStrategy.stateActions(stateMachine, state, stateMachine.getStateDef(state.name))
         )
     }
 
-    createForcedEventReactions(forcedEvent: ForcedEvent, requestStrategy: SmRequestStrategy): WithMetadataArray<ICallback, ListenerMetadata> {
+    createForcedEventReactions(stateMachine: StateMachine<any>, forcedEvent: ForcedEvent, requestStrategy: SmRequestStrategy): WithMetadataArray<ICallback, ListenerMetadata> {
         return [{
             metadata: {
                 executionType: ListenerType.ONCE,
                 name: forcedEvent.description
             },
-            value: ()=> forcedEvent.logic (requestStrategy.stateActions(forcedEvent.state, forcedEvent.stateDef))
+            value: ()=> forcedEvent.logic (requestStrategy.stateActions(stateMachine, forcedEvent.state, forcedEvent.stateDef))
         }]
     }
 
-    createTransitionReactions(transition: SmTransition): WithMetadataArray<ICallback, ListenerMetadata> {
+    createTransitionReactions(stateMachine: StateMachine<any>, transition: SmTransition): WithMetadataArray<ICallback, ListenerMetadata> {
         return this.createReactions(
+            stateMachine,
             Strings.camelCaseWithPrefix('on',  transition.transitionName),
             ListenerDefType.INTERCEPTOR,
             {}
         )
     }
 
-    createReactions(eventName: string, type: ListenerDefType, actions: any): WithMetadataArray<ICallback, ListenerMetadata> {
-        return this.reactionsAsCallbacks(this.stateMachine.createReactions(eventName, type), actions)
+    createReactions(stateMachine: StateMachine<any>, eventName: string, type: ListenerDefType, actions: any): WithMetadataArray<ICallback, ListenerMetadata> {
+        return this.reactionsAsCallbacks(stateMachine.createReactions(eventName, type), actions)
     }
 
-    onReactionsProcessed(reactionsProcessed: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, type: ListenerDefType): any {
-        this.deleteOnceListenersUsed(reactionsProcessed, type)
+    onReactionsProcessed(stateMachine: StateMachine<any>, reactionsProcessed: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, type: ListenerDefType): any {
+        this.deleteOnceListenersUsed(stateMachine, reactionsProcessed, type)
     }
 
-    moveToTransition(transition: SmTransition): void {
-        this.logger.log(EventType.ACTION, `=>${transition.transitionName}`, [
+    moveToTransition(stateMachine: StateMachine<any>, endpoint: StateMachineEndpoint, transition: SmTransition): void {
+        stateMachine.log(EventType.ACTION, `=>${transition.transitionName}`, [
             [`payload`, transition.payload == null ? undefined : JSON.stringify(transition.payload)]
         ]);
-        this.endpoint.moveToTransition(transition);
+        endpoint.moveToTransition(transition);
     }
 
     private reactionsAsCallbacks(reactions: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, actions: any): WithMetadataArray<ICallback, ListenerMetadata> {
@@ -72,8 +68,8 @@ export class SmOrchestrator {
         }));
     }
 
-    private deleteOnceListenersUsed(reactionsProcessed: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, type: ListenerDefType): void {
-        this.stateMachine.deleteListeners(
+    private deleteOnceListenersUsed(stateMachine: StateMachine<any>, reactionsProcessed: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, type: ListenerDefType): void {
+        stateMachine.deleteListeners(
             reactionsProcessed
                 .filter(it => it.metadata.executionType === ListenerType.ONCE)
                 .map(it => it.metadata.name)

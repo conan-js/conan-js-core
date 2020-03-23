@@ -1,11 +1,11 @@
 import {State, StateDef} from "./state";
 import {TransactionRequest} from "../conan-tx/transaction";
-import {EventType, StateMachineLogger} from "./stateMachineLogger";
+import {EventType} from "./stateMachineLogger";
 import {SmTransition} from "./stateMachineEvents";
 import {SmOrchestrator} from "./smOrchestrator";
 import {SmRequestStrategy} from "./smRequestStrategy";
 import {IConsumer} from "../conan-utils/typesHelper";
-import {ListenerDefType} from "./stateMachine";
+import {ListenerDefType, StateMachine, StateMachineEndpoint} from "./stateMachine";
 
 
 export interface ForcedEvent {
@@ -16,13 +16,11 @@ export interface ForcedEvent {
 }
 
 export class StateMachineTx {
-    constructor(
-        private readonly logger: StateMachineLogger,
-    ) {}
-
     createStageTxRequest(
         state: State,
         orchestrator: SmOrchestrator,
+        endpoint: StateMachineEndpoint,
+        stateMachine: StateMachine<any>,
         requestStrategy: SmRequestStrategy
     ): TransactionRequest {
         return {
@@ -30,15 +28,16 @@ export class StateMachineTx {
             onStart: {
                 metadata: `+tx[::${state.name}]>`,
                 value: () => {
-                    orchestrator.moveToState (state);
+                    stateMachine.log(EventType.TR_OPEN);
+                    orchestrator.moveToState (stateMachine, endpoint, state);
                 }
             },
-            reactionsProducer: () => orchestrator.createStateReactions(state, requestStrategy),
-            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (reactionsProcessed, ListenerDefType.LISTENER),
+            reactionsProducer: () => orchestrator.createStateReactions(stateMachine, state, requestStrategy),
+            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (stateMachine, reactionsProcessed, ListenerDefType.LISTENER),
             onDone: {
                 metadata: `-tx[::${state.name}]>`,
                 value: () => {
-                    this.logger.log(EventType.TR_CLOSE);
+                    stateMachine.log(EventType.TR_CLOSE);
                 }
             }
         };
@@ -47,6 +46,8 @@ export class StateMachineTx {
     createActionTxRequest(
         transition: SmTransition,
         orchestrator: SmOrchestrator,
+        endpoint: StateMachineEndpoint,
+        stateMachine: StateMachine<any>,
         requestStrategy: SmRequestStrategy
     ): TransactionRequest {
         return {
@@ -54,46 +55,47 @@ export class StateMachineTx {
             onStart: {
                 metadata: `+tx[=>${transition.transitionName}]>`,
                 value: () => {
-                    orchestrator.moveToTransition(transition)
+                    stateMachine.log(EventType.TR_OPEN);
+                    endpoint.moveToTransition(transition)
                 },
             },
-            reactionsProducer: () => orchestrator.createTransitionReactions(transition),
+            reactionsProducer: () => orchestrator.createTransitionReactions(stateMachine, transition),
             doChain: {
                 metadata: `[request-stage]::${transition.into.name}`,
                 value: () => {
-                    this.logger.log(EventType.TR_CHAIN, `//::${transition.into.name}`);
-                    return this.createStageTxRequest({
+                    stateMachine.log(EventType.TR_CHAIN, `//::${transition.into.name}`);
+                    return this.createStageTxRequest( {
                         data: transition.payload,
                         name: transition.into.name
-                    }, orchestrator, requestStrategy);
+                    }, orchestrator, endpoint, stateMachine, requestStrategy);
                 }
             },
-            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (reactionsProcessed, ListenerDefType.INTERCEPTOR),
+            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (stateMachine, reactionsProcessed, ListenerDefType.INTERCEPTOR),
             onDone: {
                 metadata: `-tx[=>${transition.transitionName}]>`,
                 value: () => {
-                    this.logger.log(EventType.TR_CLOSE);
+                    stateMachine.log(EventType.TR_CLOSE);
                 }
             }
 
         }
     }
 
-    forceEvent(forcedEvent: ForcedEvent, orchestrator: SmOrchestrator, requestStrategy: SmRequestStrategy): TransactionRequest  {
+    forceEvent(stateMachine: StateMachine<any>, forcedEvent: ForcedEvent, orchestrator: SmOrchestrator, requestStrategy: SmRequestStrategy): TransactionRequest  {
         return {
             name: `=>${forcedEvent.description}`,
             onStart: {
                 metadata: `+tx[!${forcedEvent.description}]>`,
                 value: () => {
-                    this.logger.log(EventType.TR_OPEN);
+                    stateMachine.log(EventType.TR_OPEN);
                 },
             },
-            reactionsProducer: () => orchestrator.createForcedEventReactions(forcedEvent, requestStrategy),
-            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (reactionsProcessed, ListenerDefType.INTERCEPTOR),
+            reactionsProducer: () => orchestrator.createForcedEventReactions(stateMachine, forcedEvent, requestStrategy),
+            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (stateMachine, reactionsProcessed, ListenerDefType.INTERCEPTOR),
             onDone: {
                 metadata: `-tx[=>${forcedEvent.description}]>`,
                 value: () => {
-                    this.logger.log(EventType.TR_CLOSE);
+                    stateMachine.log(EventType.TR_CLOSE);
                 }
             }
 

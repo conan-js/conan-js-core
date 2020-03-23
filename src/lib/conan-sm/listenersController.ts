@@ -1,13 +1,14 @@
 import {
-    ListenerType, OnEventCallback,
+    ListenerType,
+    OnEventCallback,
     SmListener,
     SmListenerDefLike,
     SmListenerDefLikeParser,
     SmListenerDefList
 } from "./stateMachineListeners";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
-import {IProducer, WithMetadataArray} from "../conan-utils/typesHelper";
-import {ListenerMetadata} from "./stateMachine";
+import {IFunction, WithMetadataArray} from "../conan-utils/typesHelper";
+import {ListenerMetadata, StateMachineCore} from "./stateMachine";
 
 export class ListenersController<
     ON_LISTENER extends SmListener,
@@ -17,7 +18,7 @@ export class ListenersController<
 
     constructor(
         private listeners: SmListenerDefList<ON_LISTENER>,
-        readonly Logger$: IProducer<StateMachineLogger>
+        readonly Logger$: IFunction<StateMachineCore<any>, StateMachineLogger>
     ) {}
 
     addListener(listener: SmListenerDefLike<ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
@@ -27,7 +28,7 @@ export class ListenersController<
         return this;
     }
 
-    createReactions(eventName: string): WithMetadataArray<OnEventCallback<ACTIONS>, ListenerMetadata> {
+    createReactions(stateMachineCore: StateMachineCore<any>, eventName: string): WithMetadataArray<OnEventCallback<ACTIONS>, ListenerMetadata> {
         let reactions: WithMetadataArray<OnEventCallback<ACTIONS>, ListenerMetadata> = [];
         this.listeners.forEach(listener => {
             let actionListener: OnEventCallback<ACTIONS> = listener.value[eventName];
@@ -35,7 +36,7 @@ export class ListenersController<
 
             reactions.push({
                 value: (actions) => {
-                    this.Logger$().log(EventType.REACTION,  `(${listener.metadata})`);
+                    this.Logger$(stateMachineCore).log(EventType.REACTION,  `(${listener.metadata})`);
                     actionListener(actions)
                 },
                 metadata: listener.metadata
@@ -45,13 +46,13 @@ export class ListenersController<
         return reactions;
     }
 
-    deleteListeners(listenerNames: string[]) {
+    deleteListeners(stateMachineCore: StateMachineCore<any>, listenerNames: string[]) {
         if (listenerNames.length === 0) return;
 
         let newListeners: SmListenerDefList<ON_LISTENER> = [];
         this.listeners.forEach(currentListener=>{
             if (listenerNames.indexOf(currentListener.metadata.name) > -1) {
-                this.Logger$().log(EventType.DELETE_LISTENER,  `-(${currentListener.metadata.name})[${currentListener.metadata.executionType}]`);
+                this.Logger$(stateMachineCore).log(EventType.DELETE_LISTENER,  `-(${currentListener.metadata.name})[${currentListener.metadata.executionType}]`);
             } else {
                 newListeners.push(currentListener)
             }
