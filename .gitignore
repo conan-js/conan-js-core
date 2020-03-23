@@ -1,3 +1,5 @@
 node_modules/
 .idea/
-/lib/
+/dist/lib
+/elastic-ui-core.d.ts
+/elastic-ui-core.min.js

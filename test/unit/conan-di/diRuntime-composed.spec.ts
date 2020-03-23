@@ -1,7 +1,7 @@
 import {expect} from 'chai';
-import {DiRuntime} from "../../../src/lib/conan-di/core/diRuntime";
-import {DiRuntimeFactory} from "../../../src/lib/conan-di/core/diRuntimeFactory";
-import {InjectByType, InjectDynamic} from "../../../src/lib/conan-di/core/annotations/diAnnotations";
+import {DiRuntime} from "../../../src/conan-di/core/diRuntime";
+import {DiRuntimeFactory} from "../../../src/conan-di/core/diRuntimeFactory";
+import {InjectByType, InjectDynamic} from "../../../src/conan-di/core/annotations/diAnnotations";
 
 describe('beanRuntime', () => {
     function checkDeepEquality<T>(actualResult: T, expectedResult: T) {

@@ -1,12 +1,15 @@
 {
   "compilerOptions": {
-    "outDir": "./lib/",
-    "noImplicitAny": true,
-    "module": "commonjs",
-    "target": "es2015",
+    "outDir": "dist/lib",
+    "moduleResolution": "node",
+    "target": "es2017",
     "jsx": "react",
     "declaration": true,
     "sourceMap": true,
-    "experimentalDecorators": true
-  }
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": [
+    "src"
+  ]
 }

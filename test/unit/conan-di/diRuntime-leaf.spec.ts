@@ -1,8 +1,8 @@
 import {expect} from 'chai';
-import {DiRuntime} from "../../../src/lib/conan-di/core/diRuntime";
-import {DiRuntimeFactory} from "../../../src/lib/conan-di/core/diRuntimeFactory";
-import {InjectByName, InjectByType} from "../../../src/lib/conan-di/core/annotations/diAnnotations";
-import {KeyValueCache} from "../../../src/lib/conan-utils/keyValueCache";
+import {DiRuntime} from "../../../src/conan-di/core/diRuntime";
+import {DiRuntimeFactory} from "../../../src/conan-di/core/diRuntimeFactory";
+import {InjectByName, InjectByType} from "../../../src/conan-di/core/annotations/diAnnotations";
+import {KeyValueCache} from "../../../src/conan-utils/keyValueCache";
 
 describe('beanRuntime', () => {
     let beanRuntime: DiRuntime;

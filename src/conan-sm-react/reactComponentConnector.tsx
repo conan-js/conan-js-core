@@ -9,8 +9,8 @@ interface ConnectedState<ACTIONS, DATA> {
     data: DATA;
 }
 
-export class PropsInjector {
-    static create<
+export class ReactComponentConnector {
+    static connect<
         ACTIONS,
         DATA,
         INTO_PROPS
