@@ -5,6 +5,7 @@ import {SmTransition} from "./stateMachineEvents";
 import {ListenerDefType} from "./stateMachineCore";
 import {SmOrchestrator} from "./smOrchestrator";
 import {SmRequestStrategy} from "./smRequestStrategy";
+import {SmListener} from "./stateMachineListeners";
 
 export class StateMachineTx {
     constructor(
@@ -59,7 +60,18 @@ export class StateMachineTx {
                     }, orchestrator, requestStrategy);
                 }
             },
-            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (reactionsProcessed, ListenerDefType.INTERCEPTOR)
+            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (reactionsProcessed, ListenerDefType.INTERCEPTOR),
+            onDone: {
+                metadata: `-tx[=>${transition.transitionName}]>`,
+                value: () => {
+                    this.logger.log(EventType.TR_CLOSE);
+                }
+            }
+
         }
+    }
+
+    forceEvent(toRunElement: SmListener<any>, orchestrator: SmOrchestrator, requestStrategy: SmRequestStrategy): TransactionRequest  {
+        throw new Error('TBI');
     }
 }

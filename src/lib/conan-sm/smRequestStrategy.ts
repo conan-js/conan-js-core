@@ -1,9 +1,10 @@
 import {State, StateDef, StateLogicParser} from "./state";
 import {EventType} from "./stateMachineLogger";
 import {StateMachine} from "./stateMachine";
-import {BaseActions} from "./stateMachineListeners";
+import {BaseActions, ListenerType} from "./stateMachineListeners";
 import {SmTransition} from "./stateMachineEvents";
 import {Proxyfier} from "../conan-utils/proxyfier";
+import {ForkStateMachineListener} from "./forkStateMachine";
 
 export interface SmRequestStrategy {
     onTransitionRequest(actionName: string, nextState: State): void;
@@ -71,7 +72,7 @@ export class SimpleSmRequestStrategy extends BaseSmRequestStrategy{
 export class ForkSmRequestStrategy  extends BaseSmRequestStrategy{
     constructor(
         readonly stateMachine: StateMachine<any>,
-        private readonly forkSm: StateMachine<any>,
+        private readonly forkSm: StateMachine<ForkStateMachineListener>,
         private readonly otherwise: SmRequestStrategy
     ) {
         super(stateMachine);
@@ -81,12 +82,24 @@ export class ForkSmRequestStrategy  extends BaseSmRequestStrategy{
     onTransitionRequest(actionName: string, nextState: State): void {
         let nextStateDef: StateDef<string, any, any, any> = this.stateMachine.getStateDef(nextState.name);
         if (nextStateDef == null) {
-            throw new Error('TBI');
+            throw new Error('TBC');
         } else if (nextStateDef.deferredInfo != null) {
-            throw new Error('TBI');
+            this.forkSm.runNow({
+                onIdle: (actions)=> {
+                    this.forkSm.addListener({
+                        omForking: ()=> this.startFork ()
+                    }, ListenerType.ONCE);
+                    actions.startForking ({})
+                }
+            });
+
         } else {
             this.otherwise.onTransitionRequest(actionName, nextState);
         }
+    }
+
+    private startFork() {
+        throw new Error('TBI');
     }
 }
 

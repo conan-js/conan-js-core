@@ -1,4 +1,10 @@
-import {ListenerType, OnEventCallback, SmListener, SmListenerDefLike} from "./stateMachineListeners";
+import {
+    ListenerType,
+    OnEventCallback,
+    SmListener, SmListenerDef,
+    SmListenerDefLike,
+    SmListenerDefLikeParser
+} from "./stateMachineListeners";
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
 import {EventType} from "./stateMachineLogger";
 import {State, StateDef} from "./state";
@@ -9,6 +15,7 @@ import {SmOrchestrator} from "./smOrchestrator";
 import {TransactionRequest} from "../conan-tx/transaction";
 import {StateMachineTx} from "./stateMachineTx";
 import {SmRequestStrategy} from "./smRequestStrategy";
+import {Strings} from "../conan-utils/strings";
 
 export interface StateMachineCore<SM_ON_LISTENER extends SmListener> {
     getStateDef(name: string): StateDef<any, any, any>;
@@ -74,7 +81,14 @@ export class StateMachineImpl<
 
 
     runNow(toRun: SmListenerDefLike<SM_ON_LISTENER>): void {
-        throw new Error('TBI')
+        let currentState: string = this.getCurrentStageName();
+        let currentEvent: string = Strings.camelCaseWithPrefix('on', currentState);
 
+        if (currentEvent in toRun) {
+            // @ts-ignore
+            this.txConsumer(this.txFactory.forceEvent(toRun[currentState], this.orchestrator, this.requestStrategy));
+        } else {
+            throw new Error(`can't run now the listener with states: ${Object.keys(toRun)} it does not match the current state: ${currentState}`)
+        }
     }
 }

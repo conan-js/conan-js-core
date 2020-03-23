@@ -139,6 +139,10 @@ export class StateMachineFactory {
             stateMachineTx
         );
 
+        forkStateMachine.requestStage({
+            name: 'idle'
+        });
+
         finalStateMachine.requestStage ({
             name: 'init'
         });
