@@ -20,6 +20,7 @@ export class Strings {
     }
 
     static padEnd (s: string, positions: number): string {
+        if (s==null) return s;
         let toAdd:number = positions - s.length;
         if (toAdd < 1) {
             let middle = '...';

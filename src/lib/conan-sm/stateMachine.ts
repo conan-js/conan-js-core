@@ -85,8 +85,18 @@ export class StateMachineImpl<
         let currentEvent: string = Strings.camelCaseWithPrefix('on', currentState);
 
         if (currentEvent in toRun) {
-            // @ts-ignore
-            this.txConsumer(this.txFactory.forceEvent(toRun[currentState], this.orchestrator, this.requestStrategy));
+            this.txConsumer(this.txFactory.forceEvent({
+                    logic: (toRun as any)[currentEvent],
+                    stateDef: this.getStateDef(currentState),
+                    state: {
+                        name: currentState,
+                        data: this.getStateData()
+                    },
+                    description: `!${currentEvent}`
+                },
+                this.orchestrator,
+                this.requestStrategy
+            ));
         } else {
             throw new Error(`can't run now the listener with states: ${Object.keys(toRun)} it does not match the current state: ${currentState}`)
         }

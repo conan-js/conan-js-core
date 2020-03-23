@@ -1,11 +1,19 @@
-import {State} from "./state";
+import {State, StateDef} from "./state";
 import {TransactionRequest} from "../conan-tx/transaction";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {SmTransition} from "./stateMachineEvents";
 import {ListenerDefType} from "./stateMachineCore";
 import {SmOrchestrator} from "./smOrchestrator";
 import {SmRequestStrategy} from "./smRequestStrategy";
-import {SmListener} from "./stateMachineListeners";
+import {IConsumer} from "../conan-utils/typesHelper";
+
+
+export interface ForcedEvent {
+    description: string;
+    state: State;
+    stateDef: StateDef<any, any, any>;
+    logic: IConsumer<any>;
+}
 
 export class StateMachineTx {
     constructor(
@@ -71,7 +79,25 @@ export class StateMachineTx {
         }
     }
 
-    forceEvent(toRunElement: SmListener<any>, orchestrator: SmOrchestrator, requestStrategy: SmRequestStrategy): TransactionRequest  {
-        throw new Error('TBI');
+    forceEvent(forcedEvent: ForcedEvent, orchestrator: SmOrchestrator, requestStrategy: SmRequestStrategy): TransactionRequest  {
+        return {
+            name: `=>${forcedEvent.description}`,
+            onStart: {
+                metadata: `+tx[!${forcedEvent.description}]>`,
+                value: () => {
+                    this.logger.log(EventType.TR_OPEN);
+                },
+            },
+            reactionsProducer: () => orchestrator.createForcedEventReactions(forcedEvent, requestStrategy),
+            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (reactionsProcessed, ListenerDefType.INTERCEPTOR),
+            onDone: {
+                metadata: `-tx[=>${forcedEvent.description}]>`,
+                value: () => {
+                    this.logger.log(EventType.TR_CLOSE);
+                }
+            }
+
+        }
+
     }
 }

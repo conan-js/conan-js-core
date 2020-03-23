@@ -86,9 +86,9 @@ export class ForkSmRequestStrategy  extends BaseSmRequestStrategy{
         } else if (nextStateDef.deferredInfo != null) {
             this.forkSm.runNow({
                 onIdle: (actions)=> {
-                    this.forkSm.addListener({
-                        omForking: ()=> this.startFork ()
-                    }, ListenerType.ONCE);
+                    this.forkSm.addListener(['!${forking}',{
+                        omForking: (forkingData)=> this.startFork ()
+                    }], ListenerType.ONCE);
                     actions.startForking ({})
                 }
             });

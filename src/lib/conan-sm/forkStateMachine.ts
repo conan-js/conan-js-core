@@ -24,11 +24,20 @@ export let ForkStateMachineBuilder$: StateMachineDefBuilder<ForkStateMachineList
         IdleActions
     >(
         "idle",
-        undefined,
+        ()=>({
+            startForking(forkingData: ForkData): State<"forking", ForkData> {
+                return {
+                    name: "forking",
+                    data: forkingData
+                }
+            }
+        }),
     )
     .withState<
         ForkingActions
         >(
         "forking",
-        undefined,
+        ()=>({
+
+        }),
     );
