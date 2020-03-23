@@ -6,8 +6,8 @@ import {
     SmListenerDefList
 } from "./stateMachineListeners";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
-import {WithMetadataArray} from "../conan-utils/typesHelper";
-import {ListenerMetadata} from "./stateMachineCore";
+import {IProducer, WithMetadataArray} from "../conan-utils/typesHelper";
+import {ListenerMetadata} from "./stateMachine";
 
 export class ListenersController<
     ON_LISTENER extends SmListener,
@@ -17,7 +17,7 @@ export class ListenersController<
 
     constructor(
         private listeners: SmListenerDefList<ON_LISTENER>,
-        readonly logger: StateMachineLogger
+        readonly Logger$: IProducer<StateMachineLogger>
     ) {}
 
     addListener(listener: SmListenerDefLike<ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
@@ -35,7 +35,7 @@ export class ListenersController<
 
             reactions.push({
                 value: (actions) => {
-                    this.logger.log(EventType.REACTION,  `(${listener.metadata})`);
+                    this.Logger$().log(EventType.REACTION,  `(${listener.metadata})`);
                     actionListener(actions)
                 },
                 metadata: listener.metadata
@@ -51,7 +51,7 @@ export class ListenersController<
         let newListeners: SmListenerDefList<ON_LISTENER> = [];
         this.listeners.forEach(currentListener=>{
             if (listenerNames.indexOf(currentListener.metadata.name) > -1) {
-                this.logger.log(EventType.DELETE_LISTENER,  `-(${currentListener.metadata.name})[${currentListener.metadata.executionType}]`);
+                this.Logger$().log(EventType.DELETE_LISTENER,  `-(${currentListener.metadata.name})[${currentListener.metadata.executionType}]`);
             } else {
                 newListeners.push(currentListener)
             }

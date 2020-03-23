@@ -10,6 +10,7 @@ import {StateMachineTx} from "./stateMachineTx";
 import {ForkStateMachineBuilder$, ForkStateMachineListener} from "./forkStateMachine";
 import {SmOrchestrator} from "./smOrchestrator";
 import {ForkSmRequestStrategy, SimpleSmRequestStrategy} from "./smRequestStrategy";
+import {ListenersController} from "./listenersController";
 
 export interface Synchronisation {
     syncDef: SyncStateMachineDef<any, any, any>;
@@ -71,27 +72,26 @@ export class StateMachineFactory {
         );
 
         let transactionTree: TransactionTree = new TransactionTree();
+        let stateMachineCore = new StateMachineCoreImpl<any, any, any>(
+            treeDef.rootDef.name,
+            new ListenersController([...treeDef.rootDef.listeners, ...systemListeners], ()=>logger),
+            new ListenersController(treeDef.rootDef.interceptors, ()=>logger),
+        {...systemStages, ...treeDef.rootDef.stageDefsByKey}
+        );
         let logger: StateMachineLogger = {
             log: (eventType: EventType, details?: string, additionalLines?: [string, string][]): void => {
                 StateMachineLoggerHelper.log(
                     treeDef.rootDef.name,
                     StateMachineStatus.IDLE,
-                    stateMachine.getCurrentStageName(),
-                    stateMachine.getCurrentTransitionName(),
+                    stateMachineCore.getCurrentStageName(),
+                    stateMachineCore.getCurrentTransitionName(),
                     eventType,
-                    transactionTree.getCurrentTransactionId(),
+                    transactionTree ? transactionTree.getCurrentTransactionId(): '-',
                     details,
                     additionalLines
                 )
             }
         };
-        let stateMachineCore = new StateMachineCoreImpl(
-            {
-                ...treeDef.rootDef,
-                listeners: [...treeDef.rootDef.listeners, ...systemListeners],
-                stageDefsByKey: {...systemStages, ...treeDef.rootDef.stageDefsByKey},
-            }, logger
-        );
 
         let stateMachine: StateMachine<SM_ON_LISTENER>;
         // noinspection JSUnusedAssignment
@@ -99,17 +99,23 @@ export class StateMachineFactory {
         stateMachine = new StateMachineImpl(
             stateMachineCore,
             (tx)=>transactionTree.createOrQueueTransaction(tx, ()=>null, ()=>null),
-            (stateMachineController)=>new SmOrchestrator(stateMachineController, stateMachineCore),
-            (stateMachineController)=>new SimpleSmRequestStrategy(stateMachineController),
+            (stateMachineController)=>new SmOrchestrator(stateMachineController, stateMachineCore, logger),
+            (stateMachineController)=>new SimpleSmRequestStrategy(stateMachineController, logger),
             stateMachineTx
         );
 
-        let forkStateMachineCore: StateMachineCoreImpl<ForkStateMachineListener, any> = new StateMachineCoreImpl(ForkStateMachineBuilder$.build().rootDef, logger);
+        let forkDef = ForkStateMachineBuilder$.build().rootDef;
+        let forkStateMachineCore: StateMachineCoreImpl<ForkStateMachineListener, any> = new StateMachineCoreImpl(
+            forkDef.name,
+            new ListenersController(forkDef.listeners, ()=>logger),
+            new ListenersController(forkDef.interceptors, ()=>logger),
+            forkDef.stageDefsByKey
+        );
         let forkStateMachine: StateMachine<ForkStateMachineListener> = new StateMachineImpl(
             forkStateMachineCore,
             (tx)=>transactionTree.createOrQueueTransaction(tx, ()=>null, ()=>null),
-            (thisSm)=>new SmOrchestrator(thisSm, forkStateMachineCore),
-            (thisSm)=>new SimpleSmRequestStrategy(thisSm),
+            (thisSm)=>new SmOrchestrator(thisSm, forkStateMachineCore, logger),
+            (thisSm)=>new SimpleSmRequestStrategy(thisSm, logger),
             stateMachineTx
         );
 
@@ -130,11 +136,11 @@ export class StateMachineFactory {
         finalStateMachine = new StateMachineImpl(
             stateMachine,
             (tx) => transactionTree.createOrQueueTransaction(tx, () => null, () => null),
-            (stateMachineController) => new SmOrchestrator(stateMachineController, stateMachineCore),
+            (stateMachineController) => new SmOrchestrator(stateMachineController, stateMachineCore, logger),
             (thisSm) => new ForkSmRequestStrategy(
                 thisSm,
                 forkStateMachine,
-                new SimpleSmRequestStrategy(thisSm)
+                new SimpleSmRequestStrategy(thisSm, logger)
             ),
             stateMachineTx
         );

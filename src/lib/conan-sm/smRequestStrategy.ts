@@ -1,5 +1,5 @@
 import {State, StateDef, StateLogicParser} from "./state";
-import {EventType} from "./stateMachineLogger";
+import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {StateMachine} from "./stateMachine";
 import {BaseActions, ListenerType} from "./stateMachineListeners";
 import {SmTransition} from "./stateMachineEvents";
@@ -47,7 +47,8 @@ export abstract class BaseSmRequestStrategy implements SmRequestStrategy{
 
 export class SimpleSmRequestStrategy extends BaseSmRequestStrategy{
     constructor(
-        readonly stateMachine: StateMachine<any>
+        readonly stateMachine: StateMachine<any>,
+        private readonly logger: StateMachineLogger
     ) {
         super(stateMachine);
     }
@@ -59,7 +60,7 @@ export class SimpleSmRequestStrategy extends BaseSmRequestStrategy{
         } else if (nextStateDef.deferredInfo != null) {
             throw new Error('unexpected error');
         } else {
-            this.stateMachine.log(EventType.PROXY, `(${actionName})=>::${nextState.name}`);
+            this.logger.log(EventType.PROXY, `(${actionName})=>::${nextState.name}`);
             this.stateMachine.requestTransition({
                 transitionName: actionName,
                 ...nextState ? {payload: nextState.data} : undefined,

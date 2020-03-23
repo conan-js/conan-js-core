@@ -1,11 +1,10 @@
 import {State} from "./state";
-import {EventType} from "./stateMachineLogger";
+import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {ICallback, WithMetadataArray} from "../conan-utils/typesHelper";
 import {ListenerType, OnEventCallback} from "./stateMachineListeners";
 import {SmTransition} from "./stateMachineEvents";
 import {Strings} from "../conan-utils/strings";
-import {StateMachine, StateMachineEndpoint} from "./stateMachine";
-import {ListenerDefType, ListenerMetadata} from "./stateMachineCore";
+import {ListenerDefType, ListenerMetadata, StateMachine, StateMachineEndpoint} from "./stateMachine";
 import {SmRequestStrategy} from "./smRequestStrategy";
 import {ForcedEvent} from "./stateMachineTx";
 
@@ -14,10 +13,13 @@ export class SmOrchestrator {
     constructor(
        private readonly stateMachine: StateMachine<any>,
        private readonly endpoint: StateMachineEndpoint,
+       private readonly logger: StateMachineLogger,
     ) {}
 
     moveToState(state: State): void {
-        this.stateMachine.log(EventType.TR_OPEN);
+        this.logger.log(EventType.STAGE,  `::${state.name}`, [
+            [`current state`, state.data == null ? undefined : JSON.stringify(state.data)]
+        ]);
         this.endpoint.moveToState(state);
     }
 
@@ -57,7 +59,9 @@ export class SmOrchestrator {
     }
 
     moveToTransition(transition: SmTransition): void {
-        this.stateMachine.log(EventType.TR_OPEN);
+        this.logger.log(EventType.ACTION, `=>${transition.transitionName}`, [
+            [`payload`, transition.payload == null ? undefined : JSON.stringify(transition.payload)]
+        ]);
         this.endpoint.moveToTransition(transition);
     }
 

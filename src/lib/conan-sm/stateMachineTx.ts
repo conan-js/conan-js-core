@@ -2,10 +2,10 @@ import {State, StateDef} from "./state";
 import {TransactionRequest} from "../conan-tx/transaction";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {SmTransition} from "./stateMachineEvents";
-import {ListenerDefType} from "./stateMachineCore";
 import {SmOrchestrator} from "./smOrchestrator";
 import {SmRequestStrategy} from "./smRequestStrategy";
 import {IConsumer} from "../conan-utils/typesHelper";
+import {ListenerDefType} from "./stateMachine";
 
 
 export interface ForcedEvent {
