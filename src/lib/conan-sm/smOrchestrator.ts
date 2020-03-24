@@ -1,5 +1,5 @@
 import {State} from "./state";
-import {EventType, StateMachineLogger} from "./stateMachineLogger";
+import {EventType} from "./stateMachineLogger";
 import {ICallback, WithMetadataArray} from "../conan-utils/typesHelper";
 import {ListenerType, OnEventCallback} from "./stateMachineListeners";
 import {SmTransition} from "./stateMachineEvents";
@@ -13,7 +13,7 @@ import {TransactionTree} from "../conan-tx/transactionTree";
 export class SmOrchestrator {
     moveToState(stateMachine: StateMachine<any>, endpoint: StateMachineEndpoint, state: State): void {
         stateMachine.log(EventType.STAGE,  `::${state.name}`, [
-            [`current state`, state.data == null ? undefined : JSON.stringify(state.data)]
+            [`current state`, state.data == null ? undefined : state.data]
         ]);
         endpoint.moveToState(state);
     }
@@ -59,7 +59,7 @@ export class SmOrchestrator {
 
     moveToTransition(stateMachine: StateMachine<any>, endpoint: StateMachineEndpoint, transition: SmTransition): void {
         stateMachine.log(EventType.ACTION, `=>${transition.transitionName}`, [
-            [`payload`, transition.payload == null ? undefined : JSON.stringify(transition.payload)]
+            [`payload`, transition.payload == null ? undefined : transition.payload]
         ]);
         endpoint.moveToTransition(transition);
     }

@@ -7,6 +7,7 @@ import {Store} from "../conan-sm-sugar/store";
 interface ConnectedState<ACTIONS, DATA> {
     actions: ACTIONS;
     data: DATA;
+    stateName: string;
 }
 
 export class PropsInjector {
@@ -24,7 +25,8 @@ export class PropsInjector {
             private stateMachine = store.addListener([`::nextData->connect`, {
                 onNextData: (actions) => this.setState({
                     actions,
-                    data: actions.getStateData()
+                    data: actions.getStateData(),
+                    stateName: actions.getStateName(),
                 })
             }]);
 
@@ -33,7 +35,7 @@ export class PropsInjector {
             }
 
             render(): ReactElement {
-                if (this.state == null) return null;
+                if (this.state == null || this.state.stateName !== 'nextData') return null;
 
                 return <ConnectInto
                     {...connector({

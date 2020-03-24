@@ -23,7 +23,7 @@ export enum ListenerDefType {
 export interface StateMachineCore<SM_ON_LISTENER extends SmListener> {
     getStateDef(name: string): StateDef<any, any, any>;
 
-    addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType): this;
+    addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, txTree: TransactionTree, type: ListenerType): this;
 
     getEvents(): SerializedSmEvent[];
 
@@ -45,6 +45,8 @@ export interface StateMachine<SM_ON_LISTENER extends SmListener> extends StateMa
     requestTransition(transition: SmTransition): this;
 
     runNow(toRun: SmListenerDefLike<SM_ON_LISTENER>): void;
+
+    getStateName(): string;
 }
 
 export interface StateMachineEndpoint {
@@ -115,8 +117,9 @@ export class StateMachineImpl<
         }
     }
 
-    addListener(listener: [string, SM_ON_LISTENER] | SM_ON_LISTENER, type: ListenerType): this {
-        return undefined;
+    addListener(listener: [string, SM_ON_LISTENER] | SM_ON_LISTENER, txTree: TransactionTree, type: ListenerType): this {
+        this.stateMachineCore.addListener(listener, txTree, type);
+        return this;
     }
 
     createReactions(eventName: string, type: ListenerDefType): WithMetadata<(toConsume: any) => void, ListenerMetadata>[] {
@@ -137,6 +140,10 @@ export class StateMachineImpl<
 
     getEvents(): SerializedSmEvent[] {
         return this.stateMachineCore.getEvents();
+    }
+
+    getStateName(): any {
+        return this.stateMachineCore.getStateName();
     }
 
     getStateData(): any {

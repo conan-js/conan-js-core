@@ -22,9 +22,11 @@ export class ListenersController<
         readonly Logger$: IBiFunction<StateMachineCore<any>, TransactionTree, StateMachineLogger>
     ) {}
 
-    addListener(listener: SmListenerDefLike<ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
+    addListener(stateMachineCore: StateMachineCore<any>, transactionTree: TransactionTree, listener: SmListenerDefLike<ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
+        let parsedListener = this.smListenerDefLikeParser.parse(listener, type);
+        this.Logger$(stateMachineCore, transactionTree).log(EventType.ADD_LISTENER,  `+(${parsedListener.metadata.name})[${parsedListener.metadata.executionType}]`);
         this.listeners.push(
-            this.smListenerDefLikeParser.parse(listener, type)
+            parsedListener
         );
         return this;
     }

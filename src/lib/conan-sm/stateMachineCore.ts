@@ -55,13 +55,13 @@ export class StateMachineCoreImpl<
     }
 
 
-    addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
-        this.listeners.addListener(listener, type);
+    addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, txTree: TransactionTree, type: ListenerType = ListenerType.ALWAYS): this {
+        this.listeners.addListener(this, txTree, listener, type);
         return this;
     }
 
-    addInterceptor(interceptor: SmListenerDefLike<SM_IF_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
-        this.interceptors.addListener(interceptor, type);
+    addInterceptor(interceptor: SmListenerDefLike<SM_IF_LISTENER>, txTree: TransactionTree, type: ListenerType = ListenerType.ALWAYS): this {
+        this.interceptors.addListener(this, txTree, interceptor, type);
         return this;
     }
 

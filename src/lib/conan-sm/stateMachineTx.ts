@@ -61,7 +61,7 @@ export class StateMachineTx {
                 value: () => {
                     stateMachine.log(EventType.TR_OPEN, `+tx[=>${transition.transitionName}]`);
                     stateMachine.log(EventType.REQUEST, `=>${transition.transitionName}`);
-                    endpoint.moveToTransition(transition)
+                    orchestrator.moveToTransition(stateMachine, endpoint, transition)
                 },
             },
             reactionsProducer: () => orchestrator.createTransitionReactions(stateMachine, transition, txTree),
@@ -70,7 +70,7 @@ export class StateMachineTx {
                 value: () => {
                     stateMachine.log(EventType.TR_CHAIN, `//::${transition.into.name}`);
                     return this.createStageTxRequest( {
-                        data: transition.payload,
+                        data: transition.into.data,
                         name: transition.into.name
                     }, orchestrator, endpoint, stateMachine, txTree, requestStrategy);
                 }

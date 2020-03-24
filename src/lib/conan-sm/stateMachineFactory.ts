@@ -138,7 +138,8 @@ export class StateMachineFactory {
             (stateMachineController) => new SmOrchestrator(),
             (thisSm) => new ForkSmRequestStrategy(
                 forkStateMachine,
-                new SimpleSmRequestStrategy()
+                new SimpleSmRequestStrategy(),
+                forkTree
             ),
             stateMachineTx,
             Logger$(treeDef.rootDef.name, stateMachineCore, transactionTree)

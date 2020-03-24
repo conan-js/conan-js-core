@@ -1,10 +1,10 @@
 import {StateMachineDefBuilder} from "./stateMachineDefBuilder";
 import {OnEventCallback, SmListener} from "./stateMachineListeners";
-import {State} from "./state";
+import {DeferredInfo, State} from "./state";
 
 export interface ForkStateMachineListener extends SmListener{
     onIdle?: OnEventCallback <IdleActions>
-    omForking?: OnEventCallback <ForkingActions>
+    onForking?: OnEventCallback <ForkingActions>
 }
 
 export interface ForkData {
@@ -16,7 +16,7 @@ export interface ForkingActions {
 }
 
 export interface IdleActions {
-    startForking (forkingData: ForkData): State<'forking', ForkData>
+    startForking (deferInfo: DeferredInfo<any, any>): State<'forking', ForkData>
 }
 
 export let ForkStateMachineBuilder$: StateMachineDefBuilder<ForkStateMachineListener> = new StateMachineDefBuilder<ForkStateMachineListener>()
@@ -34,7 +34,8 @@ export let ForkStateMachineBuilder$: StateMachineDefBuilder<ForkStateMachineList
         }),
     )
     .withState<
-        ForkingActions
+        ForkingActions,
+        DeferredInfo<any, any>
         >(
         "forking",
         ()=>({

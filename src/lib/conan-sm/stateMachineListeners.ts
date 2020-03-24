@@ -5,6 +5,7 @@ import {ListenerMetadata} from "./stateMachine";
 
 
 export interface BaseActions {
+    getStateName (): string;
     getStateData(): any;
     requestStage(state: State): void;
     requestTransition(transition: SmTransition): void;

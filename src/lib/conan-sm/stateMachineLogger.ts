@@ -24,21 +24,21 @@ export enum EventType {
 export const eventTypesToLog: EventType[] = [
     EventType.INIT,
     EventType.STAGE,
-    EventType.FORK_STOP,
-    EventType.ADD_INTERCEPTOR,
-    EventType.ADD_LISTENER,
-    EventType.PROXY,
-    EventType.REQUEST,
-    EventType.REACTION,
-    EventType.FORK,
-    EventType.FORK_JOIN,
+    // EventType.FORK_STOP,
+    // EventType.ADD_INTERCEPTOR,
+    // EventType.ADD_LISTENER,
+    // EventType.PROXY,
+    // EventType.REQUEST,
+    // EventType.REACTION,
+    // EventType.FORK,
+    // EventType.FORK_JOIN,
     EventType.ACTION,
-    EventType.SHUTDOWN,
-    EventType.TR_CHAIN,
-    EventType.TR_CLOSE,
-    EventType.TR_OPEN,
-    EventType.SLEEP,
-    EventType.DELETE_LISTENER,
+    // EventType.SHUTDOWN,
+    // EventType.TR_CHAIN,
+    // EventType.TR_CLOSE,
+    // EventType.TR_OPEN,
+    // EventType.SLEEP,
+    // EventType.DELETE_LISTENER,
 ];
 
 export const detailLinesToLog: string[] = [
@@ -52,11 +52,11 @@ export const detailLinesToLog: string[] = [
 ];
 
 export const actionsToIgnore: string[] = [
-    'doStart'
+    // 'doStart'
 ];
 
 export const stagesToIgnore: string[] = [
-    'init', 'stop', 'start'
+    // 'init', 'stop', 'start'
 ];
 
 export const stagesToMute: string[]=[
@@ -70,7 +70,7 @@ export const redundantTransactionParts: string [] = [
 ];
 
 export class StateMachineLoggerHelper {
-    static log(smName: string, status: StateMachineStatus, stageName: string, actionName: string, eventType: EventType, transactionId: string, details?: string, additionalLines?: [string, string][]): void {
+    static log(smName: string, status: StateMachineStatus, stageName: string, actionName: string, eventType: EventType, transactionId: string, details?: string, additionalLines?: [string, any][]): void {
         if (eventTypesToLog.indexOf(eventType) < 0) return;
         if (stagesToMute.indexOf(stageName) > -1) return;
         if (eventType === EventType.STAGE && stagesToIgnore.indexOf(stageName) > -1) return;
@@ -135,5 +135,5 @@ export class StateMachineLoggerHelper {
 
 
 export interface StateMachineLogger {
-    log (eventType: EventType, details?: string, additionalLines?: [string, string][]): void;
+    log (eventType: EventType, details?: string, additionalLines?: [string, any][]): void;
 }
