@@ -1,11 +1,12 @@
 import {State, StateDef} from "./state";
 import {IKeyValuePairs, WithMetadataArray} from "../conan-utils/typesHelper";
-import {ListenerType, OnEventCallback, SmListener, SmListenerDefLike, SmListenerDefList} from "./stateMachineListeners";
+import {ListenerType, OnEventCallback, SmListener, SmListenerDefLike} from "./stateMachineListeners";
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
 import {EventType} from "./stateMachineLogger";
 import {ListenersController} from "./listenersController";
 import {SmEventThread} from "./smEventThread";
 import {ListenerDefType, ListenerMetadata, StateMachineCore, StateMachineEndpoint} from "./stateMachine";
+import {TransactionTree} from "../conan-tx/transactionTree";
 
 export enum ToProcessType {
     STAGE = 'STAGE'
@@ -64,12 +65,12 @@ export class StateMachineCoreImpl<
         return this;
     }
 
-    createReactions(eventName: string, type: ListenerDefType): WithMetadataArray<OnEventCallback<ACTIONS>, ListenerMetadata> {
-        return this.getListenerController(type).createReactions(this, eventName);
+    createReactions(eventName: string, type: ListenerDefType, txTree: TransactionTree): WithMetadataArray<OnEventCallback<ACTIONS>, ListenerMetadata> {
+        return this.getListenerController(type).createReactions(this, txTree, eventName);
     }
 
-    deleteListeners(listenerNames: string[], type: ListenerDefType) {
-        this.getListenerController(type).deleteListeners(this, listenerNames);
+    deleteListeners(listenerNames: string[], type: ListenerDefType, txTree: TransactionTree) {
+        this.getListenerController(type).deleteListeners(this, txTree, listenerNames);
     }
 
     getStateDef(name: string): StateDef<any, any, any> {

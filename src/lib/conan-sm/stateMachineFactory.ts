@@ -80,11 +80,11 @@ export class StateMachineFactory {
         let transactionTree: TransactionTree = new TransactionTree();
         let stateMachineCore = new StateMachineCoreImpl<any, any, any>(
             treeDef.rootDef.name,
-            new ListenersController([...treeDef.rootDef.listeners, ...systemListeners], (stateMachineCore)=>Logger$(treeDef.rootDef.name, stateMachineCore)),
-            new ListenersController(treeDef.rootDef.interceptors, (stateMachineCore)=>Logger$(treeDef.rootDef.name, stateMachineCore)),
+            new ListenersController([...treeDef.rootDef.listeners, ...systemListeners], (stateMachineCore, txTree)=>Logger$(treeDef.rootDef.name, stateMachineCore, txTree)),
+            new ListenersController(treeDef.rootDef.interceptors, (stateMachineCore, txTree)=>Logger$(treeDef.rootDef.name, stateMachineCore, txTree)),
         {...systemStages, ...treeDef.rootDef.stageDefsByKey}
         );
-        let Logger$ = (name: string, stateMachineCore: StateMachineCore<any>): StateMachineLogger=>({
+        let Logger$ = (name: string, stateMachineCore: StateMachineCore<any>, transactionTree : TransactionTree): StateMachineLogger=>({
             log: (eventType: EventType, details?: string, additionalLines?: [string, string][]): void => {
                 StateMachineLoggerHelper.log(
                     name,
@@ -99,26 +99,27 @@ export class StateMachineFactory {
             }
         });
 
+        let forkTree: TransactionTree = new TransactionTree();
         let stateMachineTx = new StateMachineTx();
         let forkDef = ForkStateMachineBuilder$.build().rootDef;
         let forkStateMachineCore: StateMachineCoreImpl<ForkStateMachineListener, any> = new StateMachineCoreImpl(
             `${treeDef.rootDef.name}[fork]`,
-            new ListenersController(forkDef.listeners, ()=>Logger$(`${treeDef.rootDef.name}[fork]`, forkStateMachineCore)),
-            new ListenersController(forkDef.interceptors, ()=>Logger$(`${treeDef.rootDef.name}[fork]`, forkStateMachineCore)),
+            new ListenersController(forkDef.listeners, ()=>Logger$(`${treeDef.rootDef.name}[fork]`, forkStateMachineCore, forkTree)),
+            new ListenersController(forkDef.interceptors, ()=>Logger$(`${treeDef.rootDef.name}[fork]`, forkStateMachineCore, forkTree)),
             forkDef.stageDefsByKey
         );
         let forkStateMachineTx = new StateMachineTx();
         let forkStateMachine: StateMachine<ForkStateMachineListener> = new StateMachineImpl(
             forkStateMachineCore,
-            (tx)=>transactionTree.createOrQueueTransaction(tx, ()=>null, ()=>null),
+            forkTree,
             (thisSm)=>new SmOrchestrator(),
             ()=>new SimpleSmRequestStrategy(),
             forkStateMachineTx,
-            Logger$(`${treeDef.rootDef.name}[fork]`, forkStateMachineCore)
+            Logger$(`${treeDef.rootDef.name}[fork]`, forkStateMachineCore, forkTree)
         );
 
 
-        Logger$(treeDef.rootDef.name, stateMachineCore).log(EventType.INIT,  '', [
+        Logger$(treeDef.rootDef.name, stateMachineCore, transactionTree).log(EventType.INIT,  '', [
             [`listeners`, `${treeDef.rootDef.listeners.map(it=>it.metadata).map(it => {
                 return it.name.split(',').map(it=>`(${it})`).join(',');
             })}`],
@@ -133,14 +134,14 @@ export class StateMachineFactory {
 
         finalStateMachine = new StateMachineImpl(
             stateMachineCore,
-            (tx) => transactionTree.createOrQueueTransaction(tx, () => null, () => null),
+            transactionTree,
             (stateMachineController) => new SmOrchestrator(),
             (thisSm) => new ForkSmRequestStrategy(
                 forkStateMachine,
                 new SimpleSmRequestStrategy()
             ),
             stateMachineTx,
-            Logger$(treeDef.rootDef.name, stateMachineCore)
+            Logger$(treeDef.rootDef.name, stateMachineCore, transactionTree)
         );
 
         forkStateMachine.requestStage({

@@ -7,6 +7,7 @@ import {Strings} from "../conan-utils/strings";
 import {ListenerDefType, ListenerMetadata, StateMachine, StateMachineEndpoint} from "./stateMachine";
 import {SmRequestStrategy} from "./smRequestStrategy";
 import {ForcedEvent} from "./stateMachineTx";
+import {TransactionTree} from "../conan-tx/transactionTree";
 
 
 export class SmOrchestrator {
@@ -17,13 +18,14 @@ export class SmOrchestrator {
         endpoint.moveToState(state);
     }
 
-    createStateReactions(stateMachine: StateMachine<any>, state: State, requestStrategy: SmRequestStrategy): WithMetadataArray<ICallback, ListenerMetadata> {
+    createStateReactions(stateMachine: StateMachine<any>, state: State, requestStrategy: SmRequestStrategy, transactionTree: TransactionTree): WithMetadataArray<ICallback, ListenerMetadata> {
         let eventName = Strings.camelCaseWithPrefix('on', state.name);
         return this.createReactions(
             stateMachine,
             eventName,
             ListenerDefType.LISTENER,
-            requestStrategy.stateActions(stateMachine, state, stateMachine.getStateDef(state.name))
+            requestStrategy.stateActions(stateMachine, state, stateMachine.getStateDef(state.name)),
+            transactionTree
         )
     }
 
@@ -37,21 +39,22 @@ export class SmOrchestrator {
         }]
     }
 
-    createTransitionReactions(stateMachine: StateMachine<any>, transition: SmTransition): WithMetadataArray<ICallback, ListenerMetadata> {
+    createTransitionReactions(stateMachine: StateMachine<any>, transition: SmTransition, transactionTree: TransactionTree): WithMetadataArray<ICallback, ListenerMetadata> {
         return this.createReactions(
             stateMachine,
             Strings.camelCaseWithPrefix('on',  transition.transitionName),
             ListenerDefType.INTERCEPTOR,
-            {}
+            {},
+            transactionTree
         )
     }
 
-    createReactions(stateMachine: StateMachine<any>, eventName: string, type: ListenerDefType, actions: any): WithMetadataArray<ICallback, ListenerMetadata> {
-        return this.reactionsAsCallbacks(stateMachine.createReactions(eventName, type), actions)
+    createReactions(stateMachine: StateMachine<any>, eventName: string, type: ListenerDefType, actions: any, transactionTree: TransactionTree): WithMetadataArray<ICallback, ListenerMetadata> {
+        return this.reactionsAsCallbacks(stateMachine.createReactions(eventName, type, transactionTree), actions)
     }
 
-    onReactionsProcessed(stateMachine: StateMachine<any>, reactionsProcessed: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, type: ListenerDefType): any {
-        this.deleteOnceListenersUsed(stateMachine, reactionsProcessed, type)
+    onReactionsProcessed(stateMachine: StateMachine<any>, reactionsProcessed: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, type: ListenerDefType, transactionTree: TransactionTree): any {
+        this.deleteOnceListenersUsed(stateMachine, reactionsProcessed, type, transactionTree)
     }
 
     moveToTransition(stateMachine: StateMachine<any>, endpoint: StateMachineEndpoint, transition: SmTransition): void {
@@ -68,11 +71,11 @@ export class SmOrchestrator {
         }));
     }
 
-    private deleteOnceListenersUsed(stateMachine: StateMachine<any>, reactionsProcessed: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, type: ListenerDefType): void {
+    private deleteOnceListenersUsed(stateMachine: StateMachine<any>, reactionsProcessed: WithMetadataArray<OnEventCallback<any>, ListenerMetadata>, type: ListenerDefType, transactionTree: TransactionTree): void {
         stateMachine.deleteListeners(
             reactionsProcessed
                 .filter(it => it.metadata.executionType === ListenerType.ONCE)
                 .map(it => it.metadata.name)
-            , type);
+            , type, transactionTree);
     }
 }

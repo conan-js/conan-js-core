@@ -6,6 +6,7 @@ import {SmOrchestrator} from "./smOrchestrator";
 import {SmRequestStrategy} from "./smRequestStrategy";
 import {IConsumer} from "../conan-utils/typesHelper";
 import {ListenerDefType, StateMachine, StateMachineEndpoint} from "./stateMachine";
+import {TransactionTree} from "../conan-tx/transactionTree";
 
 
 export interface ForcedEvent {
@@ -21,6 +22,7 @@ export class StateMachineTx {
         orchestrator: SmOrchestrator,
         endpoint: StateMachineEndpoint,
         stateMachine: StateMachine<any>,
+        txTree: TransactionTree,
         requestStrategy: SmRequestStrategy
     ): TransactionRequest {
         return {
@@ -33,8 +35,8 @@ export class StateMachineTx {
                     orchestrator.moveToState (stateMachine, endpoint, state);
                 }
             },
-            reactionsProducer: () => orchestrator.createStateReactions(stateMachine, state, requestStrategy),
-            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (stateMachine, reactionsProcessed, ListenerDefType.LISTENER),
+            reactionsProducer: () => orchestrator.createStateReactions(stateMachine, state, requestStrategy, txTree),
+            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (stateMachine, reactionsProcessed, ListenerDefType.LISTENER, txTree),
             onDone: {
                 metadata: `-tx[::${state.name}]`,
                 value: () => {
@@ -49,6 +51,7 @@ export class StateMachineTx {
         orchestrator: SmOrchestrator,
         endpoint: StateMachineEndpoint,
         stateMachine: StateMachine<any>,
+        txTree: TransactionTree,
         requestStrategy: SmRequestStrategy
     ): TransactionRequest {
         return {
@@ -61,7 +64,7 @@ export class StateMachineTx {
                     endpoint.moveToTransition(transition)
                 },
             },
-            reactionsProducer: () => orchestrator.createTransitionReactions(stateMachine, transition),
+            reactionsProducer: () => orchestrator.createTransitionReactions(stateMachine, transition, txTree),
             doChain: {
                 metadata: `[request-stage]::${transition.into.name}`,
                 value: () => {
@@ -69,10 +72,10 @@ export class StateMachineTx {
                     return this.createStageTxRequest( {
                         data: transition.payload,
                         name: transition.into.name
-                    }, orchestrator, endpoint, stateMachine, requestStrategy);
+                    }, orchestrator, endpoint, stateMachine, txTree, requestStrategy);
                 }
             },
-            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (stateMachine, reactionsProcessed, ListenerDefType.INTERCEPTOR),
+            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (stateMachine, reactionsProcessed, ListenerDefType.INTERCEPTOR, txTree),
             onDone: {
                 metadata: `-tx[=>${transition.transitionName}]`,
                 value: () => {
@@ -83,7 +86,13 @@ export class StateMachineTx {
         }
     }
 
-    forceEvent(stateMachine: StateMachine<any>, forcedEvent: ForcedEvent, orchestrator: SmOrchestrator, requestStrategy: SmRequestStrategy): TransactionRequest  {
+    forceEvent(
+        stateMachine: StateMachine<any>,
+        forcedEvent: ForcedEvent,
+        orchestrator: SmOrchestrator,
+        requestStrategy: SmRequestStrategy,
+        txTree: TransactionTree,
+    ): TransactionRequest  {
         return {
             name: `=>${forcedEvent.description}`,
             onStart: {
@@ -93,7 +102,7 @@ export class StateMachineTx {
                 },
             },
             reactionsProducer: () => orchestrator.createForcedEventReactions(stateMachine, forcedEvent, requestStrategy),
-            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (stateMachine, reactionsProcessed, ListenerDefType.INTERCEPTOR),
+            onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (stateMachine, reactionsProcessed, ListenerDefType.INTERCEPTOR, txTree),
             onDone: {
                 metadata: `-tx[=>${forcedEvent.description}]`,
                 value: () => {
