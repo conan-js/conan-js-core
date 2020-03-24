@@ -26,18 +26,19 @@ export class StateMachineTx {
         return {
             name: `::${state.name}`,
             onStart: {
-                metadata: `+tx[::${state.name}]>`,
+                metadata: `+tx[::${state.name}]`,
                 value: () => {
-                    stateMachine.log(EventType.TR_OPEN);
+                    stateMachine.log(EventType.TR_OPEN, `+tx[::${state.name}]`);
+                    stateMachine.log(EventType.REQUEST, `::${state.name}`);
                     orchestrator.moveToState (stateMachine, endpoint, state);
                 }
             },
             reactionsProducer: () => orchestrator.createStateReactions(stateMachine, state, requestStrategy),
             onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (stateMachine, reactionsProcessed, ListenerDefType.LISTENER),
             onDone: {
-                metadata: `-tx[::${state.name}]>`,
+                metadata: `-tx[::${state.name}]`,
                 value: () => {
-                    stateMachine.log(EventType.TR_CLOSE);
+                    stateMachine.log(EventType.TR_CLOSE, `-tx[::${state.name}]`);
                 }
             }
         };
@@ -53,9 +54,10 @@ export class StateMachineTx {
         return {
             name: `=>${transition.transitionName}`,
             onStart: {
-                metadata: `+tx[=>${transition.transitionName}]>`,
+                metadata: `+tx[=>${transition.transitionName}]`,
                 value: () => {
-                    stateMachine.log(EventType.TR_OPEN);
+                    stateMachine.log(EventType.TR_OPEN, `+tx[=>${transition.transitionName}]`);
+                    stateMachine.log(EventType.REQUEST, `=>${transition.transitionName}`);
                     endpoint.moveToTransition(transition)
                 },
             },
@@ -72,9 +74,9 @@ export class StateMachineTx {
             },
             onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (stateMachine, reactionsProcessed, ListenerDefType.INTERCEPTOR),
             onDone: {
-                metadata: `-tx[=>${transition.transitionName}]>`,
+                metadata: `-tx[=>${transition.transitionName}]`,
                 value: () => {
-                    stateMachine.log(EventType.TR_CLOSE);
+                    stateMachine.log(EventType.TR_CLOSE, `-tx[=>${transition.transitionName}]`);
                 }
             }
 
@@ -85,17 +87,17 @@ export class StateMachineTx {
         return {
             name: `=>${forcedEvent.description}`,
             onStart: {
-                metadata: `+tx[!${forcedEvent.description}]>`,
+                metadata: `+tx[!${forcedEvent.description}]`,
                 value: () => {
-                    stateMachine.log(EventType.TR_OPEN);
+                    stateMachine.log(EventType.TR_OPEN, `+tx[!${forcedEvent.description}]`);
                 },
             },
             reactionsProducer: () => orchestrator.createForcedEventReactions(stateMachine, forcedEvent, requestStrategy),
             onReactionsProcessed: (reactionsProcessed) => orchestrator.onReactionsProcessed (stateMachine, reactionsProcessed, ListenerDefType.INTERCEPTOR),
             onDone: {
-                metadata: `-tx[=>${forcedEvent.description}]>`,
+                metadata: `-tx[=>${forcedEvent.description}]`,
                 value: () => {
-                    stateMachine.log(EventType.TR_CLOSE);
+                    stateMachine.log(EventType.TR_CLOSE, `-tx[!${forcedEvent.description}]`);
                 }
             }
 

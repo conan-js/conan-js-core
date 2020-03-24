@@ -1,4 +1,10 @@
-import {ListenerType, SmListener, SmListenerDefLikeParser, SmListenerDefList} from "./stateMachineListeners";
+import {
+    BaseActions,
+    ListenerType,
+    SmListener,
+    SmListenerDefLikeParser,
+    SmListenerDefList
+} from "./stateMachineListeners";
 import {StateMachineDef, SyncStateMachineDef} from "./stateMachineDef";
 import {StateMachine, StateMachineCore, StateMachineImpl} from "./stateMachine";
 import {EventType, StateMachineLogger, StateMachineLoggerHelper} from "./stateMachineLogger";
@@ -51,8 +57,8 @@ export class StateMachineFactory {
         systemListeners.push(
             new SmListenerDefLikeParser().parse([
                 '::init=>doStart', {
-                    onInit: () => {
-                        finalStateMachine.requestTransition({
+                    onInit: (actions: BaseActions) => {
+                        actions.requestTransition({
                             transitionName: `doStart`,
                             into: {
                                 name: 'start'
@@ -93,18 +99,7 @@ export class StateMachineFactory {
             }
         });
 
-        let stateMachine: StateMachine<SM_ON_LISTENER>;
-        // noinspection JSUnusedAssignment
         let stateMachineTx = new StateMachineTx();
-        stateMachine = new StateMachineImpl(
-            stateMachineCore,
-            (tx)=>transactionTree.createOrQueueTransaction(tx, ()=>null, ()=>null),
-            (stateMachineController)=>new SmOrchestrator(),
-            (stateMachineController)=>new SimpleSmRequestStrategy(),
-            stateMachineTx,
-            Logger$(treeDef.rootDef.name, stateMachineCore)
-        );
-
         let forkDef = ForkStateMachineBuilder$.build().rootDef;
         let forkStateMachineCore: StateMachineCoreImpl<ForkStateMachineListener, any> = new StateMachineCoreImpl(
             `${treeDef.rootDef.name}[fork]`,

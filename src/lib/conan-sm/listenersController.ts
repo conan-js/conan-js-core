@@ -36,7 +36,7 @@ export class ListenersController<
 
             reactions.push({
                 value: (actions) => {
-                    this.Logger$(stateMachineCore).log(EventType.REACTION,  `(${listener.metadata})`);
+                    this.Logger$(stateMachineCore).log(EventType.REACTION,  `(${listener.metadata.name})`);
                     actionListener(actions)
                 },
                 metadata: listener.metadata

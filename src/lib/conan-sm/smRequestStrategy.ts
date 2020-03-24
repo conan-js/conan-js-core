@@ -16,12 +16,14 @@ export abstract class BaseSmRequestStrategy implements SmRequestStrategy{
     public stateActions(stateMachine: StateMachine<any>, state: State, stateDef: StateDef<any, any, any>): any {
         let baseActions: BaseActions = {
             requestTransition: (transition: SmTransition): void => {
+                stateMachine.log(EventType.PROXY, `(${transition.transitionName})=>::${transition.into.name}`);
                 stateMachine.requestTransition(transition);
             },
             getStateData: (): any => {
                 stateMachine.getStateData();
             },
             requestStage: (state: State): void => {
+                stateMachine.log(EventType.PROXY, `::${state.name}`);
                 stateMachine.requestStage(state);
             },
         };
@@ -31,6 +33,7 @@ export abstract class BaseSmRequestStrategy implements SmRequestStrategy{
         let actionsLogic: any = StateLogicParser.parse(stateDef.logic)(state.data);
         let proxied = Proxyfier.proxy(actionsLogic, (originalCall, metadata) => {
             let nextState: State = originalCall();
+            stateMachine.log(EventType.PROXY, `(${metadata.methodName})=>::${nextState.name}`);
             this.onTransitionRequest (stateMachine, metadata.methodName, nextState);
 
             return nextState;
@@ -49,7 +52,6 @@ export class SimpleSmRequestStrategy extends BaseSmRequestStrategy{
         } else if (nextStateDef.deferredInfo != null) {
             throw new Error('unexpected error');
         } else {
-            stateMachine.log(EventType.PROXY, `(${actionName})=>::${nextState.name}`);
             stateMachine.requestTransition({
                 transitionName: actionName,
                 ...nextState ? {payload: nextState.data} : undefined,
