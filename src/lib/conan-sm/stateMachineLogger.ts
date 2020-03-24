@@ -123,8 +123,8 @@ export class StateMachineLoggerHelper {
         additionalLines.forEach(it => {
             if (it[1] == null || it[1] === '{}' || it[1] == '') return;
             let detailLineName = it[0];
-            if (detailLinesToLog.indexOf(detailLineName) > -1) {
-                console.log("=>", Strings.padEnd(detailLineName, 18), it [1]);
+            if (detailLineName.indexOf('::') === 0 || detailLinesToLog.indexOf(detailLineName) > -1) {
+                console.log(Strings.padEnd(detailLineName, 30), it [1]);
             }
         });
         if (additionalLines && (eventType === EventType.INIT || eventType === EventType.SHUTDOWN)) {
