@@ -1,14 +1,14 @@
-import {ListenerType, OnEventCallback, SmListener, SmListenerDefLike} from "./stateMachineListeners";
+import {ListenerType, SmListener, SmListenerDefLike} from "./stateMachineListeners";
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {State, StateDef} from "./state";
-import {IFunction, WithMetadata, WithMetadataArray} from "../conan-utils/typesHelper";
+import {WithMetadata} from "../conan-utils/typesHelper";
 import {SmOrchestrator} from "./smOrchestrator";
 import {StateMachineTx} from "./stateMachineTx";
 import {SmRequestStrategy} from "./smRequestStrategy";
 import {Strings} from "../conan-utils/strings";
-import {StateMachineCoreImpl} from "./stateMachineCore";
 import {TransactionTree} from "../conan-tx/transactionTree";
+import {StateMachineCore, StateMachineCoreRead} from "./core/stateMachineCore";
 
 export interface ListenerMetadata {
     name: string,
@@ -20,26 +20,8 @@ export enum ListenerDefType {
     INTERCEPTOR = 'INTERCEPTOR',
 }
 
-export interface StateMachineCore<SM_ON_LISTENER extends SmListener> {
-    getStateDef(name: string): StateDef<any, any, any>;
 
-    addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, txTree: TransactionTree, type: ListenerType): this;
-
-    getEvents(): SerializedSmEvent[];
-
-    getStateData(): any;
-
-    createReactions(eventName: string, type: ListenerDefType, txTree: TransactionTree): WithMetadataArray<OnEventCallback<any>, ListenerMetadata>;
-
-    deleteListeners(listenerNames: string[], type: ListenerDefType, txTree: TransactionTree): void;
-
-    getCurrentStageName(): string;
-
-    getCurrentTransitionName(): string;
-}
-
-
-export interface StateMachine<SM_ON_LISTENER extends SmListener> extends StateMachineCore<SM_ON_LISTENER>, StateMachineLogger {
+export interface StateMachine<SM_ON_LISTENER extends SmListener> extends StateMachineCoreRead<SM_ON_LISTENER>, StateMachineLogger {
     requestStage(state: State): void;
 
     requestTransition(transition: SmTransition): this;
@@ -49,28 +31,17 @@ export interface StateMachine<SM_ON_LISTENER extends SmListener> extends StateMa
     getStateName(): string;
 }
 
-export interface StateMachineEndpoint {
-    moveToState(stage: State): void;
-
-    moveToTransition(transition: SmTransition): void;
-}
-
 export class StateMachineImpl<
     SM_ON_LISTENER extends SmListener,
-> implements StateMachine<SM_ON_LISTENER> {
-    private readonly orchestrator: SmOrchestrator;
-    private readonly requestStrategy: SmRequestStrategy;
-
+> implements StateMachine<SM_ON_LISTENER>, StateMachineCoreRead<SM_ON_LISTENER> {
     constructor(
-        private stateMachineCore: StateMachineCoreImpl<SM_ON_LISTENER, any>,
+        private stateMachineCore: StateMachineCore<SM_ON_LISTENER>,
         private txTree: TransactionTree,
-        private Orchestrator$: IFunction<StateMachine<any>, SmOrchestrator>,
-        private RequestStrategy$: IFunction<StateMachine<any>, SmRequestStrategy>,
+        private readonly orchestrator: SmOrchestrator,
+        private readonly requestStrategy: SmRequestStrategy,
         private txFactory: StateMachineTx,
         private readonly logger: StateMachineLogger
     ) {
-        this.orchestrator = Orchestrator$(this);
-        this.requestStrategy = RequestStrategy$(this);
     }
 
     requestStage(state: State): void {

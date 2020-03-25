@@ -1,23 +1,23 @@
 import {ListenerType, SmListener, SmListenerDefLike} from "../conan-sm/stateMachineListeners";
-import {
-    StateMachineBuilderEndpoint,
-    StateMachineDefBuilder
-} from "../conan-sm/stateMachineDefBuilder";
 import {IBiConsumer, IConstructor, IConsumer} from "../conan-utils/typesHelper";
 import {StateMachineDef, SyncListener} from "../conan-sm/stateMachineDef";
 import {StateLogic} from "../conan-sm/state";
 import {StateMachine} from "../conan-sm/stateMachine";
 import {StateMachineFactory} from "../conan-sm/stateMachineFactory";
+import {StateMachineBuilderEndpoint, StateMachineCoreDefBuilder} from "../conan-sm/core/stateMachineCoreDefBuilder";
 
 export class SmPrototype<SM_ON_LISTENER extends SmListener> implements StateMachineBuilderEndpoint <SM_ON_LISTENER> {
     constructor(
-        private defBuilder: StateMachineDefBuilder<SM_ON_LISTENER>
+        private defBuilder: StateMachineCoreDefBuilder<SM_ON_LISTENER>
     ) {
     }
 
     start(name: string): StateMachine<SM_ON_LISTENER> {
         this.defBuilder.withName(name);
-        return StateMachineFactory.create(this.defBuilder.build())
+        return StateMachineFactory.create({
+            rootDef: this.defBuilder.build(),
+            syncDefs: undefined
+        })
     }
 
     addInterceptor(interceptor: SmListenerDefLike<SM_ON_LISTENER>, type: ListenerType = ListenerType.ALWAYS): this {
@@ -36,8 +36,9 @@ export class SmPrototype<SM_ON_LISTENER extends SmListener> implements StateMach
         joiner: SyncListener<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>,
         initCb?: IConsumer<StateMachineDef<INTO_SM_ON_LISTENER, JOIN_SM_ON_LISTENER>>
     ): this {
-        this.defBuilder.sync(name, treeStateMachineDef, joiner, initCb);
-        return this;
+        throw new Error('TBI');
+        // this.defBuilder.sync(name, treeStateMachineDef, joiner, initCb);
+        // return this;
     }
 
     withDeferredState<NAME extends string,

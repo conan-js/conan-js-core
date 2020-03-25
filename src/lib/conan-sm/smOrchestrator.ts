@@ -4,14 +4,15 @@ import {ICallback, WithMetadataArray} from "../conan-utils/typesHelper";
 import {ListenerType, OnEventCallback} from "./stateMachineListeners";
 import {SmTransition} from "./stateMachineEvents";
 import {Strings} from "../conan-utils/strings";
-import {ListenerDefType, ListenerMetadata, StateMachine, StateMachineEndpoint} from "./stateMachine";
+import {ListenerDefType, ListenerMetadata, StateMachine} from "./stateMachine";
 import {SmRequestStrategy} from "./smRequestStrategy";
 import {ForcedEvent} from "./stateMachineTx";
 import {TransactionTree} from "../conan-tx/transactionTree";
+import {StateMachineCoreWrite} from "./core/stateMachineCore";
 
 
 export class SmOrchestrator {
-    moveToState(stateMachine: StateMachine<any>, endpoint: StateMachineEndpoint, state: State): void {
+    moveToState(stateMachine: StateMachine<any>, endpoint: StateMachineCoreWrite, state: State): void {
         stateMachine.log(EventType.STAGE,  `::${state.name}`, [
             [`::${state.name}`, state.data == null ? undefined : state.data]
         ]);
@@ -57,7 +58,7 @@ export class SmOrchestrator {
         this.deleteOnceListenersUsed(stateMachine, reactionsProcessed, type, transactionTree)
     }
 
-    moveToTransition(stateMachine: StateMachine<any>, endpoint: StateMachineEndpoint, transition: SmTransition): void {
+    moveToTransition(stateMachine: StateMachine<any>, endpoint: StateMachineCoreWrite, transition: SmTransition): void {
         stateMachine.log(EventType.ACTION, `=>${transition.transitionName}`, [
             [`::${stateMachine.getStateName()}=>${transition.transitionName}`, transition.payload == null ? undefined : transition.payload]
         ]);

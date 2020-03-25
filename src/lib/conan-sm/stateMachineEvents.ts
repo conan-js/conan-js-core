@@ -1,5 +1,5 @@
 import {State} from "./state";
-import {StateMachineCore} from "./stateMachine";
+import {StateMachineCore} from "./core/stateMachineCore";
 
 export interface SmTransition {
     transitionName: string;

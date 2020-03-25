@@ -5,8 +5,9 @@ import {SmTransition} from "./stateMachineEvents";
 import {SmOrchestrator} from "./smOrchestrator";
 import {SmRequestStrategy} from "./smRequestStrategy";
 import {IConsumer} from "../conan-utils/typesHelper";
-import {ListenerDefType, StateMachine, StateMachineEndpoint} from "./stateMachine";
+import {ListenerDefType, StateMachine} from "./stateMachine";
 import {TransactionTree} from "../conan-tx/transactionTree";
+import {StateMachineCoreWrite} from "./core/stateMachineCore";
 
 
 export interface ForcedEvent {
@@ -20,7 +21,7 @@ export class StateMachineTx {
     createStageTxRequest(
         state: State,
         orchestrator: SmOrchestrator,
-        endpoint: StateMachineEndpoint,
+        endpoint: StateMachineCoreWrite,
         stateMachine: StateMachine<any>,
         txTree: TransactionTree,
         requestStrategy: SmRequestStrategy
@@ -49,7 +50,7 @@ export class StateMachineTx {
     createActionTxRequest(
         transition: SmTransition,
         orchestrator: SmOrchestrator,
-        endpoint: StateMachineEndpoint,
+        endpoint: StateMachineCoreWrite,
         stateMachine: StateMachine<any>,
         txTree: TransactionTree,
         requestStrategy: SmRequestStrategy

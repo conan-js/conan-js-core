@@ -1,5 +1,6 @@
 import {Strings} from "../conan-utils/strings";
-import {StateMachineStatus} from "./stateMachineCore";
+import {StateMachineCore, StateMachineCoreRead} from "./core/stateMachineCore";
+import {TransactionTree} from "../conan-tx/transactionTree";
 
 export enum EventType {
     SLEEP='SLEEP',
@@ -70,7 +71,7 @@ export const redundantTransactionParts: string [] = [
 ];
 
 export class StateMachineLoggerHelper {
-    static log(smName: string, status: StateMachineStatus, stageName: string, actionName: string, eventType: EventType, transactionId: string, details?: string, additionalLines?: [string, any][]): void {
+    static log(smName: string, status: string, stageName: string, actionName: string, eventType: EventType, transactionId: string, details?: string, additionalLines?: [string, any][]): void {
         if (eventTypesToLog.indexOf(eventType) < 0) return;
         if (stagesToMute.indexOf(stageName) > -1) return;
         if (eventType === EventType.STAGE && stagesToIgnore.indexOf(stageName) > -1) return;
@@ -137,3 +138,18 @@ export class StateMachineLoggerHelper {
 export interface StateMachineLogger {
     log (eventType: EventType, details?: string, additionalLines?: [string, any][]): void;
 }
+
+export let Logger$ = (name: string, stateMachineCore: StateMachineCoreRead<any>, transactionTree : TransactionTree): StateMachineLogger=>({
+    log: (eventType: EventType, details?: string, additionalLines?: [string, string][]): void => {
+        StateMachineLoggerHelper.log(
+            name,
+            undefined,
+            stateMachineCore.getCurrentStageName(),
+            stateMachineCore.getCurrentTransitionName(),
+            eventType,
+            transactionTree ? transactionTree.getCurrentTransactionId(): '-',
+            details,
+            additionalLines
+        )
+    }
+});

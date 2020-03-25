@@ -1,6 +1,7 @@
-import {StateMachineDefBuilder} from "./stateMachineDefBuilder";
 import {OnEventCallback, SmListener} from "./stateMachineListeners";
 import {DeferredInfo, State} from "./state";
+import {IProducer} from "../conan-utils/typesHelper";
+import {StateMachineCoreDefBuilder} from "./core/stateMachineCoreDefBuilder";
 
 export interface ForkStateMachineListener extends SmListener{
     onIdle?: OnEventCallback <IdleActions>
@@ -19,7 +20,7 @@ export interface IdleActions {
     startForking (deferInfo: DeferredInfo<any, any>): State<'forking', ForkData>
 }
 
-export let ForkStateMachineBuilder$: StateMachineDefBuilder<ForkStateMachineListener> = new StateMachineDefBuilder<ForkStateMachineListener>()
+export let ForkStateMachineBuilder$: IProducer<StateMachineCoreDefBuilder<ForkStateMachineListener>> = ()=>new StateMachineCoreDefBuilder<ForkStateMachineListener>()
     .withState<
         IdleActions
     >(
