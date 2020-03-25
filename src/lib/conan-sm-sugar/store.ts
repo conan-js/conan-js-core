@@ -1,6 +1,6 @@
-import {OnEventCallback, SmListener} from "../conan-sm/stateMachineListeners";
+import {OnEventCallback, SmListener} from "../conan-sm/core/stateMachineListeners";
 import {IFunction} from "../conan-utils/typesHelper";
-import {State} from "../conan-sm/state";
+import {State} from "../conan-sm/core/state";
 import {Proxyfier} from "../conan-utils/proxyfier";
 import {SmPrototype} from "./smPrototype";
 import {StateMachineCoreDefBuilder} from "../conan-sm/core/stateMachineCoreDefBuilder";

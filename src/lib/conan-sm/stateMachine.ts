@@ -1,11 +1,11 @@
-import {ListenerType, SmListener, SmListenerDefLike} from "./stateMachineListeners";
+import {ListenerType, SmListener, SmListenerDefLike} from "./core/stateMachineListeners";
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
-import {State, StateDef} from "./state";
+import {State, StateDef} from "./core/state";
 import {WithMetadata} from "../conan-utils/typesHelper";
-import {SmOrchestrator} from "./smOrchestrator";
-import {StateMachineTx} from "./stateMachineTx";
-import {SmRequestStrategy} from "./smRequestStrategy";
+import {SmOrchestrator} from "./logic/smOrchestrator";
+import {StateMachineTx} from "./logic/stateMachineTx";
+import {SmRequestStrategy} from "./logic/smRequestStrategy";
 import {Strings} from "../conan-utils/strings";
 import {TransactionTree} from "../conan-tx/transactionTree";
 import {StateMachineCore, StateMachineCoreRead} from "./core/stateMachineCore";

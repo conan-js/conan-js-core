@@ -1,4 +1,4 @@
-import {IBiConsumer, IConstructor, IFunction} from "../conan-utils/typesHelper";
+import {IBiConsumer, IConstructor, IFunction} from "../../conan-utils/typesHelper";
 
 export interface State<NAME extends string = string, REQUIREMENTS = void> {
     name: NAME;

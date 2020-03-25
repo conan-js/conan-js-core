@@ -1,7 +1,7 @@
-import {IConsumer, IKeyValuePairs, WithMetadata, WithMetadataArray} from "../conan-utils/typesHelper";
+import {IConsumer, IKeyValuePairs, WithMetadata, WithMetadataArray} from "../../conan-utils/typesHelper";
 import {State} from "./state";
-import {SmTransition} from "./stateMachineEvents";
-import {ListenerMetadata} from "./stateMachine";
+import {SmTransition} from "../stateMachineEvents";
+import {ListenerMetadata} from "../stateMachine";
 
 
 export interface BaseActions {

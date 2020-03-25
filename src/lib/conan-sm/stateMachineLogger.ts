@@ -110,7 +110,7 @@ export class StateMachineLoggerHelper {
 
         console.log(
             Strings.padEnd(`${smName}`, 30),
-            Strings.padEnd(status, 15),
+            // Strings.padEnd(status, 15),
             Strings.padEnd(transactionRoot, 28),
             Strings.padEnd(`${stageName}`, 25),
             Strings.padEnd(`${actionName}`, 25),

@@ -1,11 +1,11 @@
-import {DeferredInfo, State, StateDef, StateLogicParser} from "./state";
-import {EventType} from "./stateMachineLogger";
-import {StateMachine} from "./stateMachine";
-import {BaseActions, ListenerType} from "./stateMachineListeners";
-import {SmTransition} from "./stateMachineEvents";
-import {Proxyfier} from "../conan-utils/proxyfier";
-import {ForkStateMachineListener} from "./forkStateMachine";
-import {TransactionTree} from "../conan-tx/transactionTree";
+import {DeferredInfo, State, StateDef, StateLogicParser} from "../core/state";
+import {EventType} from "../stateMachineLogger";
+import {StateMachine} from "../stateMachine";
+import {BaseActions, ListenerType} from "../core/stateMachineListeners";
+import {SmTransition} from "../stateMachineEvents";
+import {Proxyfier} from "../../conan-utils/proxyfier";
+import {ForkStateMachineListener} from "../prototypes/forkStateMachine";
+import {TransactionTree} from "../../conan-tx/transactionTree";
 
 export interface SmRequestStrategy {
     onTransitionRequest(stateMachine: StateMachine<any>, actionName: string, nextState: State, payload?: any): void;

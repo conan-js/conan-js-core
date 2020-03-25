@@ -1,5 +1,5 @@
 import {ICallback, IConsumer, IProducer, WithMetadata, WithMetadataArray} from "../conan-utils/typesHelper";
-import {OnEventCallback} from "../conan-sm/stateMachineListeners";
+import {OnEventCallback} from "../conan-sm/core/stateMachineListeners";
 import {Strings} from "../conan-utils/strings";
 import {ListenerMetadata} from "../conan-sm/stateMachine";
 

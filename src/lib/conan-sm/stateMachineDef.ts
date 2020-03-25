@@ -1,4 +1,4 @@
-import {SmListener} from "./stateMachineListeners";
+import {SmListener} from "./core/stateMachineListeners";
 import {IConsumer, IOptSetKeyValuePairs} from "../conan-utils/typesHelper";
 import {StateMachineCoreDef} from "./core/stateMachineCoreDef";
 import {StateMachineCoreDefBuilder} from "./core/stateMachineCoreDefBuilder";

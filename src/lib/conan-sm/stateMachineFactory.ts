@@ -1,12 +1,12 @@
-import {BaseActions, ListenerType, SmListener} from "./stateMachineListeners";
+import {BaseActions, ListenerType, SmListener} from "./core/stateMachineListeners";
 import {StateMachineDef, SyncStateMachineDef} from "./stateMachineDef";
 import {StateMachine, StateMachineImpl} from "./stateMachine";
 import {EventType, Logger$} from "./stateMachineLogger";
 import {TransactionTree} from "../conan-tx/transactionTree";
-import {StateMachineTx} from "./stateMachineTx";
-import {ForkStateMachineBuilder$} from "./forkStateMachine";
-import {SmOrchestrator} from "./smOrchestrator";
-import {ForkSmRequestStrategy, SimpleSmRequestStrategy, SmRequestStrategy} from "./smRequestStrategy";
+import {StateMachineTx} from "./logic/stateMachineTx";
+import {ForkStateMachineBuilder$} from "./prototypes/forkStateMachine";
+import {SmOrchestrator} from "./logic/smOrchestrator";
+import {ForkSmRequestStrategy, SimpleSmRequestStrategy, SmRequestStrategy} from "./logic/smRequestStrategy";
 import {StateMachineCoreFactory} from "./core/stateMachineCoreFactory";
 import {StateMachineCoreDefBuilder} from "./core/stateMachineCoreDefBuilder";
 import {StateMachineCoreDef} from "./core/stateMachineCoreDef";

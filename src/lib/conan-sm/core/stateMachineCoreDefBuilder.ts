@@ -1,7 +1,7 @@
 import {IBiConsumer, IConstructor, IConsumer} from "../../conan-utils/typesHelper";
-import {ListenerType, SmListener, SmListenerDefLike, SmListenerDefLikeParser} from "../stateMachineListeners";
+import {ListenerType, SmListener, SmListenerDefLike, SmListenerDefLikeParser} from "./stateMachineListeners";
 import {SmEventsPublisher} from "../_domain";
-import {State, StateDef, StateLogic} from "../state";
+import {State, StateDef, StateLogic} from "./state";
 import {StateMachineCoreDef} from "./stateMachineCoreDef";
 
 

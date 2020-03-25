@@ -1,9 +1,9 @@
-import {State, StateDef} from "../state";
+import {State, StateDef} from "./state";
 import {IKeyValuePairs, WithMetadataArray} from "../../conan-utils/typesHelper";
-import {ListenerType, OnEventCallback, SmListener, SmListenerDefLike} from "../stateMachineListeners";
+import {ListenerType, OnEventCallback, SmListener, SmListenerDefLike} from "./stateMachineListeners";
 import {SerializedSmEvent, SmTransition} from "../stateMachineEvents";
-import {ListenersController} from "../listenersController";
-import {SmEventThread} from "../smEventThread";
+import {ListenersController} from "./listenersController";
+import {SmEventThread} from "./smEventThread";
 import {ListenerDefType, ListenerMetadata} from "../stateMachine";
 import {TransactionTree} from "../../conan-tx/transactionTree";
 

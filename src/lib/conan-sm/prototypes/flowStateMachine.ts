@@ -1,7 +1,7 @@
-import {OnEventCallback, SmListener} from "./stateMachineListeners";
-import {State} from "./state";
-import {StateMachineCoreDefBuilder} from "./core/stateMachineDefBuilder";
-import {SmTransition} from "./stateMachineEvents";
+import {OnEventCallback, SmListener} from "../core/stateMachineListeners";
+import {State} from "../core/state";
+import {SmTransition} from "../stateMachineEvents";
+import {StateMachineCoreDefBuilder} from "../core/stateMachineCoreDefBuilder";
 
 interface ForkData {
 }

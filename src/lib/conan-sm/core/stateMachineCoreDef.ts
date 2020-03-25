@@ -1,6 +1,6 @@
-import {SmListener, SmListenerDefList} from "../stateMachineListeners";
+import {SmListener, SmListenerDefList} from "./stateMachineListeners";
 import {IKeyValuePairs} from "../../conan-utils/typesHelper";
-import {StateDef} from "../state";
+import {StateDef} from "./state";
 
 export interface StateMachineCoreDef<
     SM_ON_LISTENER extends SmListener,

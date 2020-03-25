@@ -1,4 +1,4 @@
-import {ListenerType, SmListener, SmListenerDefLike} from "./stateMachineListeners";
+import {ListenerType, SmListener, SmListenerDefLike} from "./core/stateMachineListeners";
 
 export interface SmEventsPublisher<
     SM_ON_LISTENER extends SmListener,

@@ -5,8 +5,8 @@ import {
     SerializedSmEvent,
     SmTransition,
     TransitionSmEvent
-} from "./stateMachineEvents";
-import {StateMachineCore} from "./core/stateMachineCore";
+} from "../stateMachineEvents";
+import {StateMachineCore} from "./stateMachineCore";
 
 export class SmEventThread  {
     public currentTransitionEvent: RawTransitionSmEvent;

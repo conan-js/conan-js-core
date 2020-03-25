@@ -1,7 +1,7 @@
-import {OnEventCallback, SmListener} from "./stateMachineListeners";
-import {DeferredInfo, State} from "./state";
-import {IProducer} from "../conan-utils/typesHelper";
-import {StateMachineCoreDefBuilder} from "./core/stateMachineCoreDefBuilder";
+import {OnEventCallback, SmListener} from "../core/stateMachineListeners";
+import {DeferredInfo, State} from "../core/state";
+import {IProducer} from "../../conan-utils/typesHelper";
+import {StateMachineCoreDefBuilder} from "../core/stateMachineCoreDefBuilder";
 
 export interface ForkStateMachineListener extends SmListener{
     onIdle?: OnEventCallback <IdleActions>

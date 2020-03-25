@@ -1,4 +1,4 @@
-import {State} from "./state";
+import {State} from "./core/state";
 import {StateMachineCore} from "./core/stateMachineCore";
 
 export interface SmTransition {

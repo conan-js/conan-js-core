@@ -1,13 +1,13 @@
-import {State, StateDef} from "./state";
-import {TransactionRequest} from "../conan-tx/transaction";
-import {EventType} from "./stateMachineLogger";
-import {SmTransition} from "./stateMachineEvents";
+import {State, StateDef} from "../core/state";
+import {TransactionRequest} from "../../conan-tx/transaction";
+import {EventType} from "../stateMachineLogger";
+import {SmTransition} from "../stateMachineEvents";
 import {SmOrchestrator} from "./smOrchestrator";
 import {SmRequestStrategy} from "./smRequestStrategy";
-import {IConsumer} from "../conan-utils/typesHelper";
-import {ListenerDefType, StateMachine} from "./stateMachine";
-import {TransactionTree} from "../conan-tx/transactionTree";
-import {StateMachineCoreWrite} from "./core/stateMachineCore";
+import {IConsumer} from "../../conan-utils/typesHelper";
+import {ListenerDefType, StateMachine} from "../stateMachine";
+import {TransactionTree} from "../../conan-tx/transactionTree";
+import {StateMachineCoreWrite} from "../core/stateMachineCore";
 
 
 export interface ForcedEvent {

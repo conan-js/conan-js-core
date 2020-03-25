@@ -6,11 +6,11 @@ import {
     SmListenerDefLikeParser,
     SmListenerDefList
 } from "./stateMachineListeners";
-import {EventType, StateMachineLogger} from "./stateMachineLogger";
-import {IBiFunction, WithMetadataArray} from "../conan-utils/typesHelper";
-import {ListenerMetadata} from "./stateMachine";
-import {TransactionTree} from "../conan-tx/transactionTree";
-import {StateMachineCoreRead} from "./core/stateMachineCore";
+import {EventType, StateMachineLogger} from "../stateMachineLogger";
+import {IBiFunction, WithMetadataArray} from "../../conan-utils/typesHelper";
+import {ListenerMetadata} from "../stateMachine";
+import {TransactionTree} from "../../conan-tx/transactionTree";
+import {StateMachineCoreRead} from "./stateMachineCore";
 
 export class ListenersController<
     ON_LISTENER extends SmListener,

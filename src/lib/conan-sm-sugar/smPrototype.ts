@@ -1,7 +1,7 @@
-import {ListenerType, SmListener, SmListenerDefLike} from "../conan-sm/stateMachineListeners";
+import {ListenerType, SmListener, SmListenerDefLike} from "../conan-sm/core/stateMachineListeners";
 import {IBiConsumer, IConstructor, IConsumer} from "../conan-utils/typesHelper";
 import {StateMachineDef, SyncListener} from "../conan-sm/stateMachineDef";
-import {StateLogic} from "../conan-sm/state";
+import {StateLogic} from "../conan-sm/core/state";
 import {StateMachine} from "../conan-sm/stateMachine";
 import {StateMachineFactory} from "../conan-sm/stateMachineFactory";
 import {StateMachineBuilderEndpoint, StateMachineCoreDefBuilder} from "../conan-sm/core/stateMachineCoreDefBuilder";
