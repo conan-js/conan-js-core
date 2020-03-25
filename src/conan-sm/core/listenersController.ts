@@ -7,7 +7,7 @@ import {
     SmListenerDefList
 } from "./stateMachineListeners";
 import {EventType, StateMachineLogger} from "../stateMachineLogger";
-import {IBiFunction, WithMetadataArray} from "../../conan-utils/typesHelper";
+import {IBiFunction, WithMetadataArray} from "../..";
 import {ListenerMetadata} from "../stateMachine";
 import {TransactionTree} from "../../conan-tx/transactionTree";
 import {StateMachineCoreRead} from "./stateMachineCore";
