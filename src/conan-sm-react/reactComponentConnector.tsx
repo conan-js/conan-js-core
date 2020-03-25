@@ -11,27 +11,28 @@ interface ConnectedState<ACTIONS, DATA> {
 }
 
 export class ReactComponentConnector {
-    static connect<
-        ACTIONS,
+    static connect<ACTIONS,
         DATA,
-        INTO_PROPS
-        >(
+        INTO_PROPS>(
         name: string,
         store: Store<any>,
         ConnectInto: React.ComponentType<INTO_PROPS>,
         connector: IFunction<{ data: DATA, actions: ACTIONS }, INTO_PROPS>
     ): React.ComponentClass {
         class Connector extends React.Component<{}, ConnectedState<ACTIONS, DATA>> {
-            private stateMachine = store.addListener([`::nextData->connect`, {
-                onNextData: (actions) => this.setState({
-                    actions,
-                    data: actions.getStateData(),
-                    stateName: actions.getStateName(),
-                })
-            }]);
+            private store: Store<ACTIONS>;
 
             componentDidMount(): void {
-                this.stateMachine.start(name);
+                this.store = store;
+                store.addListener([`::nextData->connect`, {
+                    onNextData: (actions) => this.setState({
+                        actions,
+                        data: actions.getStateData(),
+                        stateName: actions.getStateName(),
+                    })
+                }]);
+
+                this.store.start(name);
             }
 
             render(): ReactElement {
@@ -39,9 +40,9 @@ export class ReactComponentConnector {
 
                 return <ConnectInto
                     {...connector({
-                            data: this.state.data,
-                            actions: this.state.actions
-                        })}
+                        data: this.state.data,
+                        actions: this.state.actions
+                    })}
                 />;
             }
         }
