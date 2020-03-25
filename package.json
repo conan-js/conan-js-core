@@ -1,12 +1,16 @@
 {
   "name": "conan-ui-core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
-  "main": "src/main/bin/main.tsx",
+  "main": "dist/lib/main.min.js",
+  "types": "dist/lib/index.d.ts",
+  "typings": "dist/lib/index.d.ts",
   "scripts": {
-    "build": "webpack",
-    "start": "webpack-dev-server",
-    "test": "mocha -r ts-node/register 'test/**/*.ts'"
+    "_clear": "rimraf dist/lib/*",
+    "_tsc": "tsc",
+    "_make-bundle": "node dist/make-bundle",
+    "build": "run-s _clear _tsc _make-bundle",
+    "watch": "tsc --watch"
   },
   "author": "",
   "license": "ISC",
@@ -29,9 +33,13 @@
     "css-loader": "^3.2.0",
     "html-webpack-plugin": "^3.2.0",
     "mocha": "^5.2.0",
+    "npm-run-all": "^4.1.5",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.0.6",
     "style-loader": "^1.0.0",
     "ts-loader": "^6.0.4",
-    "typescript": "^3.7.0",
+    "typescript": "^3.8.3",
+    "uglify-es": "^3.3.9",
     "webpack": "^4.39.1",
     "webpack-cli": "^3.3.6",
     "webpack-dev-server": "^3.7.2"

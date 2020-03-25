@@ -1,4 +1,3 @@
-var HtmlWebpackPlugin = require('html-webpack-plugin');
 const path = require('path');
 
 const ROOT = path.resolve( __dirname, 'src' );
@@ -6,7 +5,7 @@ const ROOT = path.resolve( __dirname, 'src' );
 module.exports = {
     context: ROOT,
     mode: 'development',
-    entry: './main/main.tsx',
+    entry: './index.tsx',
     devtool: 'inline-source-map',
     module: {
         rules: [
@@ -36,16 +35,11 @@ module.exports = {
     },
     output: {
         filename: 'index.js',
-        path: path.resolve(__dirname, 'lib')
+        path: path.resolve(__dirname, '.')
     },
     devServer: {
         contentBase: path.join(__dirname, 'lib'),
         compress: true,
         port: 9000
     },
-    plugins: [
-        new HtmlWebpackPlugin({
-            template: "./index.html"
-        })
-    ]
 };
