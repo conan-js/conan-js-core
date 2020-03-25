@@ -3,12 +3,12 @@ import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {State, StateDef} from "./core/state";
 import {WithMetadata} from "../conan-utils/typesHelper";
-import {SmOrchestrator} from "./logic/smOrchestrator";
-import {StateMachineTx} from "./logic/stateMachineTx";
-import {SmRequestStrategy} from "./logic/smRequestStrategy";
 import {Strings} from "../conan-utils/strings";
 import {TransactionTree} from "../conan-tx/transactionTree";
 import {StateMachineCore, StateMachineCoreRead} from "./core/stateMachineCore";
+import {SmOrchestrator} from "./wiring/smOrchestrator";
+import {SmRequestStrategy} from "./wiring/smRequestStrategy";
+import {StateMachineTx} from "./wiring/stateMachineTx";
 
 export interface ListenerMetadata {
     name: string,

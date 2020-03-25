@@ -3,14 +3,14 @@ import {StateMachineDef, SyncStateMachineDef} from "./stateMachineDef";
 import {StateMachine, StateMachineImpl} from "./stateMachine";
 import {EventType, Logger$} from "./stateMachineLogger";
 import {TransactionTree} from "../conan-tx/transactionTree";
-import {StateMachineTx} from "./logic/stateMachineTx";
 import {ForkStateMachineBuilder$} from "./prototypes/forkStateMachine";
-import {SmOrchestrator} from "./logic/smOrchestrator";
-import {ForkSmRequestStrategy, SimpleSmRequestStrategy, SmRequestStrategy} from "./logic/smRequestStrategy";
 import {StateMachineCoreFactory} from "./core/stateMachineCoreFactory";
 import {StateMachineCoreDefBuilder} from "./core/stateMachineCoreDefBuilder";
 import {StateMachineCoreDef} from "./core/stateMachineCoreDef";
 import {StateMachineCore} from "./core/stateMachineCore";
+import {ForkSmRequestStrategy, SimpleSmRequestStrategy, SmRequestStrategy} from "./wiring/smRequestStrategy";
+import {SmOrchestrator} from "./wiring/smOrchestrator";
+import {StateMachineTx} from "./wiring/stateMachineTx";
 
 export interface Synchronisation {
     syncDef: SyncStateMachineDef<any, any, any>;
