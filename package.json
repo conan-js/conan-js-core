@@ -9,7 +9,8 @@
     "_clear": "rimraf dist/lib/*",
     "_tsc": "tsc",
     "_make-bundle": "node dist/make-bundle",
-    "build": "run-s _clear _tsc _make-bundle",
+    "_webpack": "webpack",
+    "build": "run-s _clear _tsc _webpack",
     "watch": "tsc --watch"
   },
   "author": "",

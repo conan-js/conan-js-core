@@ -5,3 +5,4 @@ node_modules/
 /elastic-ui-core.min.js
 /lib/
 /dist/
+/index.js

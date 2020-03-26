@@ -8,9 +8,10 @@ import {StateMachineCoreFactory} from "./core/stateMachineCoreFactory";
 import {StateMachineCoreDefBuilder} from "./core/stateMachineCoreDefBuilder";
 import {StateMachineCoreDef} from "./core/stateMachineCoreDef";
 import {StateMachineCore} from "./core/stateMachineCore";
-import {ForkSmRequestStrategy, SimpleSmRequestStrategy, SmRequestStrategy} from "./wiring/smRequestStrategy";
-import {SmOrchestrator} from "./wiring/smOrchestrator";
-import {StateMachineTx} from "./wiring/stateMachineTx";
+import {RuntimeInformation} from "./wiring/smOrchestrator";
+import {theOrchestrator} from "./wiring/singletons";
+import {SimpleSmRequestStrategy} from "./actions/simpleRequestStrategy";
+import {ForkSmRequestStrategy} from "./actions/forkRequestStrategy";
 
 export interface Synchronisation {
     syncDef: SyncStateMachineDef<any, any, any>;
@@ -40,11 +41,11 @@ export class StateMachineFactory {
         let finalStateMachine: StateMachine<SM_ON_LISTENER> = this.createForkSm(treeDef.rootDef, forkStateMachine, forkTree);
 
 
-        forkStateMachine.requestStage({
+        forkStateMachine.requestState({
             name: 'idle'
         });
 
-        finalStateMachine.requestStage({
+        finalStateMachine.requestState({
             name: 'init'
         });
 
@@ -61,11 +62,14 @@ export class StateMachineFactory {
             (core, txTree) => Logger$(this.createBaseCore(coreDef).name, core, txTree)
         );
         let transactionTree: TransactionTree = new TransactionTree();
-        let stateMachineImpl = this.createSm(stateMachineCore, transactionTree, new ForkSmRequestStrategy(
-            forkStateMachine,
-            new SimpleSmRequestStrategy(),
-            forkTree
-        ));
+        let stateMachineImpl = this.createSm(stateMachineCore, {
+            txTree: transactionTree,
+            requestStrategy: new ForkSmRequestStrategy(
+                forkStateMachine,
+                new SimpleSmRequestStrategy(),
+                forkTree
+            )
+        });
         Logger$(coreDef.name, stateMachineImpl, transactionTree).log(EventType.INIT, '', [
             [`listeners`, `${coreDef.listeners.map(it => it.metadata).map(it => {
                 return it.name.split(',').map(it => `(${it})`).join(',');
@@ -88,21 +92,21 @@ export class StateMachineFactory {
             def,
             (thisSm) => Logger$(`${def.name}`, thisSm, treeToUse)
         );
-        return this.createSm(stateMachineCore, treeToUse, new SimpleSmRequestStrategy());
+        return this.createSm(stateMachineCore, {
+            txTree: treeToUse,
+            requestStrategy: new SimpleSmRequestStrategy()
+        });
     }
 
     private static createSm<SM_ON_LISTENER extends SmListener>(
         stateMachineCore: StateMachineCore<SM_ON_LISTENER>,
-        treeToUse: TransactionTree,
-        requestStrategy: SmRequestStrategy
+        runtimeInfo: RuntimeInformation
     ) {
         return new StateMachineImpl(
             stateMachineCore,
-            treeToUse,
-            new SmOrchestrator(),
-            requestStrategy,
-            new StateMachineTx(),
-            Logger$(`${stateMachineCore.name}`, stateMachineCore, treeToUse)
+            runtimeInfo,
+            theOrchestrator,
+            Logger$(`${stateMachineCore.name}`, stateMachineCore, runtimeInfo.txTree)
         );
     }
 

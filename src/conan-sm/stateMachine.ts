@@ -2,13 +2,10 @@ import {ListenerType, SmListener, SmListenerDefLike} from "./core/stateMachineLi
 import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
 import {EventType, StateMachineLogger} from "./stateMachineLogger";
 import {State, StateDef} from "./core/state";
-import {WithMetadata} from "../conan-utils/typesHelper";
-import {Strings} from "../conan-utils/strings";
+import {WithMetadata} from "..";
 import {TransactionTree} from "../conan-tx/transactionTree";
-import {StateMachineCore, StateMachineCoreRead} from "./core/stateMachineCore";
-import {SmOrchestrator} from "./wiring/smOrchestrator";
-import {SmRequestStrategy} from "./wiring/smRequestStrategy";
-import {StateMachineTx} from "./wiring/stateMachineTx";
+import {StateMachineCore, StateMachineCoreRead, StateMachineCoreWrite} from "./core/stateMachineCore";
+import {RuntimeInformation, SmOrchestrator} from "./wiring/smOrchestrator";
 
 export interface ListenerMetadata {
     name: string,
@@ -22,7 +19,7 @@ export enum ListenerDefType {
 
 
 export interface StateMachine<SM_ON_LISTENER extends SmListener> extends StateMachineCoreRead<SM_ON_LISTENER>, StateMachineLogger {
-    requestStage(state: State): void;
+    requestState(state: State): void;
 
     requestTransition(transition: SmTransition): this;
 
@@ -31,61 +28,42 @@ export interface StateMachine<SM_ON_LISTENER extends SmListener> extends StateMa
     getStateName(): string;
 }
 
+export type StateMachineFacade<SM_ON_LISTENER extends SmListener> = StateMachine<SM_ON_LISTENER> & StateMachineCoreWrite;
+
 export class StateMachineImpl<
     SM_ON_LISTENER extends SmListener,
-> implements StateMachine<SM_ON_LISTENER>, StateMachineCoreRead<SM_ON_LISTENER> {
+> implements StateMachine<SM_ON_LISTENER> {
+    private readonly facade: StateMachineFacade<SM_ON_LISTENER>;
+
     constructor(
-        private stateMachineCore: StateMachineCore<SM_ON_LISTENER>,
-        private txTree: TransactionTree,
+        private readonly stateMachineCore: StateMachineCore<SM_ON_LISTENER>,
+        private readonly runtimeInfo: RuntimeInformation,
         private readonly orchestrator: SmOrchestrator,
-        private readonly requestStrategy: SmRequestStrategy,
-        private txFactory: StateMachineTx,
         private readonly logger: StateMachineLogger
     ) {
+        this.facade = {
+            ...this,
+            moveToState:(state: State): void =>{
+                this.stateMachineCore.moveToState(state);
+            },
+            moveToTransition: (transition: SmTransition): void => {
+                this.stateMachineCore.moveToTransition(transition);
+            }
+        }
     }
 
-    requestStage(state: State): void {
-        this.txTree.createOrQueueTransaction(
-            this.txFactory.createStageTxRequest(state, this.orchestrator, this.stateMachineCore, this, this.txTree, this.requestStrategy),
-            () => null,
-            () => null
-        );
+    requestState(state: State): void {
+        this.orchestrator.requestState (this.facade, state, this.runtimeInfo);
     }
 
     requestTransition(transition: SmTransition): this {
-        this.txTree.createOrQueueTransaction(
-            this.txFactory.createActionTxRequest(transition, this.orchestrator, this.stateMachineCore, this, this.txTree, this.requestStrategy),
-            () => null,
-            () => null
-        );
+        this.orchestrator.requestTransition (this.facade, transition, this.runtimeInfo);
         return this;
     }
 
 
     runNow(toRun: SmListenerDefLike<SM_ON_LISTENER>): void {
-        let currentState: string = this.stateMachineCore.getCurrentStageName();
-        let currentEvent: string = Strings.camelCaseWithPrefix('on', currentState);
-
-        if (currentEvent in toRun) {
-            this.txTree.createOrQueueTransaction(this.txFactory.forceEvent(this, {
-                    logic: (toRun as any)[currentEvent],
-                    stateDef: this.stateMachineCore.getStateDef(currentState),
-                    state: {
-                        name: currentState,
-                        data: this.stateMachineCore.getStateData()
-                    },
-                    description: `!${currentEvent}`
-                },
-                this.orchestrator,
-                this.requestStrategy,
-                this.txTree
-                ),
-                () => null,
-                () => null
-            );
-        } else {
-            throw new Error(`can't run now the listener with states: ${Object.keys(toRun)} it does not match the current state: ${currentState}`)
-        }
+        this.orchestrator.runNow (this.facade, toRun, this.runtimeInfo);
     }
 
     addListener(listener: [string, SM_ON_LISTENER] | SM_ON_LISTENER, txTree: TransactionTree, type: ListenerType): this {
@@ -94,11 +72,11 @@ export class StateMachineImpl<
     }
 
     createReactions(eventName: string, type: ListenerDefType): WithMetadata<(toConsume: any) => void, ListenerMetadata>[] {
-        return this.stateMachineCore.createReactions(eventName, type, this.txTree);
+        return this.stateMachineCore.createReactions(eventName, type, this.runtimeInfo.txTree);
     }
 
     deleteListeners(listenerNames: string[], type: ListenerDefType): void {
-        this.stateMachineCore.deleteListeners(listenerNames, type, this.txTree);
+        this.stateMachineCore.deleteListeners(listenerNames, type, this.runtimeInfo.txTree);
     }
 
     getCurrentStageName(): string {
