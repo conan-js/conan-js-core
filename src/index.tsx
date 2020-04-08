@@ -2,10 +2,11 @@
 //conan-sm-sugar
 //********************
 
-import {Store, NextDataListener} from "./conan-sm-sugar/store";
+import {Store, NextDataListener, StoreBuilderFactory} from "./conan-sm-sugar/store";
 export {
     Store,
     NextDataListener,
+    StoreBuilderFactory,
 }
 
 //********************
@@ -137,7 +138,6 @@ export {
     IReducer,
     ProvidedOrStaticOf,
     WithMetadataKeyValuePairs
-
 }
 
 //********************

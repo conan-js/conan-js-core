@@ -8,7 +8,7 @@
   "scripts": {
     "_clear": "rimraf dist/lib/*",
     "_tsc": "tsc",
-    "_make-bundle": "node dist/make-bundle",
+    "_make-bundle": "node make_bundle",
     "_webpack": "webpack",
     "build": "run-s _clear _tsc _webpack",
     "watch": "tsc --watch"
