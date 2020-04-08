@@ -1,131 +1,105 @@
-import {ListenerType, SmListener, SmListenerDefLike} from "./core/stateMachineListeners";
-import {SerializedSmEvent, SmTransition} from "./stateMachineEvents";
-import {EventType, StateMachineLogger} from "./stateMachineLogger";
-import {State, StateDef} from "./core/state";
-import {WithMetadata} from "../conan-utils/typesHelper";
-import {Strings} from "../conan-utils/strings";
-import {TransactionTree} from "../conan-tx/transactionTree";
-import {StateMachineCore, StateMachineCoreRead} from "./core/stateMachineCore";
+import {SmListener, SmListenerDefLike} from "./events/stateMachineListeners";
+import {State} from "./core/state";
+import {StateMachineCore} from "./core/stateMachineCore";
 import {SmOrchestrator} from "./wiring/smOrchestrator";
-import {SmRequestStrategy} from "./wiring/smRequestStrategy";
-import {StateMachineTx} from "./wiring/stateMachineTx";
+import {StateMachineController} from "./stateMachineController";
+import {EventType, StateMachineLogger} from "./logging/stateMachineLogger";
+import {SerializedSmEvent, SmTransition} from "./events/stateMachineEvents";
+import {SmEventsSerializer} from "./events/smEventsSerializer";
+import {StateMachineCoreRead, StateMachineCoreReader} from "./core/stateMachineCoreReader";
+import {ForkStateMachineListener} from "./prototypes/forkStateMachine";
+import {TransactionTree} from "../conan-tx/transactionTree";
+import {FlowStateMachineListener} from "./prototypes/flowStateMachine";
+import {AsapLike, AsapParser} from "../conan-utils/asap";
 
-export interface ListenerMetadata {
-    name: string,
-    executionType: ListenerType,
+export enum StateMachineType {
+    USER='USER',
+    FLOW='FLOW',
+    USER_FORK='USER_FORK',
+    FLOW_FORK='FLOW_FORK',
 }
 
-export enum ListenerDefType {
-    LISTENER = 'LISTENER',
-    INTERCEPTOR = 'INTERCEPTOR',
+export interface SmStartable <T> {
+    start(starter: T): this;
 }
 
-
-export interface StateMachine<SM_ON_LISTENER extends SmListener> extends StateMachineCoreRead<SM_ON_LISTENER>, StateMachineLogger {
-    requestStage(state: State): void;
+export interface StateMachine<
+    SM_ON_LISTENER extends SmListener
+> extends StateMachineCoreRead<SM_ON_LISTENER>, StateMachineLogger {
+    requestState<T = any>(state: State<any, T>): void;
 
     requestTransition(transition: SmTransition): this;
 
     runNow(toRun: SmListenerDefLike<SM_ON_LISTENER>): void;
 
-    getStateName(): string;
+    runIf(toRun: SmListenerDefLike<SM_ON_LISTENER>): void;
+
+    stop(): void;
+
+    type: StateMachineType;
 }
 
 export class StateMachineImpl<
     SM_ON_LISTENER extends SmListener,
-> implements StateMachine<SM_ON_LISTENER>, StateMachineCoreRead<SM_ON_LISTENER> {
+>
+extends StateMachineCoreReader<SM_ON_LISTENER>
+implements
+    StateMachine<SM_ON_LISTENER>,
+    SmStartable <AsapLike<State<any>>>
+{
+    private readonly controller: StateMachineController<SM_ON_LISTENER>;
+    public flowSm?: StateMachine<FlowStateMachineListener>;
+
     constructor(
-        private stateMachineCore: StateMachineCore<SM_ON_LISTENER>,
-        private txTree: TransactionTree,
+        private readonly stateMachineCore: StateMachineCore<SM_ON_LISTENER>,
+        private readonly txTree: TransactionTree,
         private readonly orchestrator: SmOrchestrator,
-        private readonly requestStrategy: SmRequestStrategy,
-        private txFactory: StateMachineTx,
-        private readonly logger: StateMachineLogger
+        private readonly logger: StateMachineLogger,
+        private readonly smEventsSerializer: SmEventsSerializer,
+        public readonly type: StateMachineType,
+        public readonly forkSm?: StateMachine<ForkStateMachineListener>,
     ) {
+        super(stateMachineCore);
+        this.controller = new StateMachineController<SM_ON_LISTENER>(this.stateMachineCore, this, forkSm);
     }
 
-    requestStage(state: State): void {
-        this.txTree.createOrQueueTransaction(
-            this.txFactory.createStageTxRequest(state, this.orchestrator, this.stateMachineCore, this, this.txTree, this.requestStrategy),
-            () => null,
-            () => null
-        );
+    requestState<T = any>(state: State<any, T>): void {
+        this.orchestrator.requestState (this.controller, state, this.txTree);
     }
 
     requestTransition(transition: SmTransition): this {
-        this.txTree.createOrQueueTransaction(
-            this.txFactory.createActionTxRequest(transition, this.orchestrator, this.stateMachineCore, this, this.txTree, this.requestStrategy),
-            () => null,
-            () => null
-        );
+        this.orchestrator.requestTransition (this.controller, transition, this.txTree);
         return this;
     }
 
+    runIf(toRun: SmListenerDefLike<SM_ON_LISTENER>): void {
+        this.orchestrator.runIf (this.controller, toRun, this.txTree);
+    }
 
     runNow(toRun: SmListenerDefLike<SM_ON_LISTENER>): void {
-        let currentState: string = this.stateMachineCore.getCurrentStageName();
-        let currentEvent: string = Strings.camelCaseWithPrefix('on', currentState);
-
-        if (currentEvent in toRun) {
-            this.txTree.createOrQueueTransaction(this.txFactory.forceEvent(this, {
-                    logic: (toRun as any)[currentEvent],
-                    stateDef: this.stateMachineCore.getStateDef(currentState),
-                    state: {
-                        name: currentState,
-                        data: this.stateMachineCore.getStateData()
-                    },
-                    description: `!${currentEvent}`
-                },
-                this.orchestrator,
-                this.requestStrategy,
-                this.txTree
-                ),
-                () => null,
-                () => null
-            );
-        } else {
-            throw new Error(`can't run now the listener with states: ${Object.keys(toRun)} it does not match the current state: ${currentState}`)
-        }
-    }
-
-    addListener(listener: [string, SM_ON_LISTENER] | SM_ON_LISTENER, txTree: TransactionTree, type: ListenerType): this {
-        this.stateMachineCore.addListener(listener, txTree, type);
-        return this;
-    }
-
-    createReactions(eventName: string, type: ListenerDefType): WithMetadata<(toConsume: any) => void, ListenerMetadata>[] {
-        return this.stateMachineCore.createReactions(eventName, type, this.txTree);
-    }
-
-    deleteListeners(listenerNames: string[], type: ListenerDefType): void {
-        this.stateMachineCore.deleteListeners(listenerNames, type, this.txTree);
-    }
-
-    getCurrentStageName(): string {
-        return this.stateMachineCore.getCurrentStageName();
-    }
-
-    getCurrentTransitionName(): string {
-        return this.stateMachineCore.getCurrentTransitionName();
-    }
-
-    getEvents(): SerializedSmEvent[] {
-        return this.stateMachineCore.getEvents();
-    }
-
-    getStateName(): any {
-        return this.stateMachineCore.getStateName();
-    }
-
-    getStateData(): any {
-        return this.stateMachineCore.getStateData();
-    }
-
-    getStateDef(name: string): StateDef<any, any, any> {
-        return this.stateMachineCore.getStateDef(name);
+        this.orchestrator.runNow (this.controller, toRun, this.txTree);
     }
 
     log(eventType: EventType, details?: string, additionalLines?: [string, string][]): void {
         this.logger.log(eventType, details, additionalLines);
+    }
+
+    stop (): void {
+        throw new Error(`TBI`);
+    }
+
+    start<STATE extends State<any> = any>(starter: AsapLike<STATE>): this {
+        if (this.flowSm == null) {
+            throw new Error(`unexpected error: can't start a state machine that does not have a flow SM: did you build this SM through the factory?`);
+        }
+
+        this.flowSm.runNow([`::init=>doStart`, {
+            onInit: (next)=>next.paths.doStart(AsapParser.from(starter))
+        }]);
+        return this;
+    }
+
+    getEvents(): SerializedSmEvent[] {
+        return this.smEventsSerializer.serialize(this.controller.getEventThread());
     }
 }

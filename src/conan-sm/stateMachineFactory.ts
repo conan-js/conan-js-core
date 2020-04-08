@@ -1,24 +1,26 @@
-import {BaseActions, ListenerType, SmListener} from "./core/stateMachineListeners";
+import {SmListener} from "./events/stateMachineListeners";
 import {StateMachineDef, SyncStateMachineDef} from "./stateMachineDef";
-import {StateMachine, StateMachineImpl} from "./stateMachine";
-import {EventType, Logger$} from "./stateMachineLogger";
+import {StateMachine, StateMachineImpl, StateMachineType} from "./stateMachine";
 import {TransactionTree} from "../conan-tx/transactionTree";
-import {ForkStateMachineBuilder$} from "./prototypes/forkStateMachine";
+import {ForkStateMachineBuilder$, ForkStateMachineListener} from "./prototypes/forkStateMachine";
 import {StateMachineCoreFactory} from "./core/stateMachineCoreFactory";
-import {StateMachineCoreDefBuilder} from "./core/stateMachineCoreDefBuilder";
 import {StateMachineCoreDef} from "./core/stateMachineCoreDef";
 import {StateMachineCore} from "./core/stateMachineCore";
-import {ForkSmRequestStrategy, SimpleSmRequestStrategy, SmRequestStrategy} from "./wiring/smRequestStrategy";
-import {SmOrchestrator} from "./wiring/smOrchestrator";
-import {StateMachineTx} from "./wiring/stateMachineTx";
+import {theOrchestrator} from "./wiring/singletons";
+import {EventType, Logger$} from "./logging/stateMachineLogger";
+import {SmEventsSerializer, SmEventsSerializerFactory} from "./events/smEventsSerializer";
+import {FlowStateMachineBuilder$, FlowStateMachineListener} from "./prototypes/flowStateMachine";
+import {StateMachineFacade} from "../stateMachineFacade";
+import {AsapLike} from "../conan-utils/asap";
+import {State} from "./core/state";
 
 export interface Synchronisation {
-    syncDef: SyncStateMachineDef<any, any, any>;
+    syncDef: SyncStateMachineDef<any, any>;
     tree: StartSmTree;
 }
 
 export interface StartSmTree {
-    stateMachineTreeDef: StateMachineDef<any, any>;
+    stateMachineTreeDef: StateMachineDef<any>;
     downSyncs: Synchronisation[];
 }
 
@@ -26,114 +28,106 @@ export interface StartSmTree {
 export class StateMachineFactory {
     static create<
         SM_ON_LISTENER extends SmListener,
-        SM_IF_LISTENER extends SmListener,
+        STARTER = AsapLike<State<any>>
     >(
-        treeDef: StateMachineDef<SM_ON_LISTENER, SM_IF_LISTENER>,
-    ): StateMachine<SM_ON_LISTENER> {
-        let forkTree: TransactionTree = new TransactionTree();
-
-        let forkStateMachine = this.createSimpleSm(
-            ForkStateMachineBuilder$().withName(`${treeDef.rootDef.name}[fork]`).build(),
-            forkTree
+        stateMachineDef: StateMachineDef<SM_ON_LISTENER, STARTER>,
+        smForkOpt?: StateMachine<ForkStateMachineListener>
+    ): StateMachineFacade<SM_ON_LISTENER, STARTER> {
+        let mainForkSm = smForkOpt != null ? smForkOpt : this.createForkSm(stateMachineDef.rootDef.name, StateMachineType.USER_FORK);
+        let finalStateMachine: StateMachineImpl<SM_ON_LISTENER> = this.createForkableSm(
+            stateMachineDef,
+            mainForkSm,
+            StateMachineType.USER
         );
 
-        let finalStateMachine: StateMachine<SM_ON_LISTENER> = this.createForkSm(treeDef.rootDef, forkStateMachine, forkTree);
-
-
-        forkStateMachine.requestStage({
-            name: 'idle'
-        });
-
-        finalStateMachine.requestStage({
-            name: 'init'
-        });
-
-        return finalStateMachine;
-    }
-
-    private static createForkSm<SM_ON_LISTENER extends SmListener>(
-        coreDef: StateMachineCoreDef<SM_ON_LISTENER>,
-        forkStateMachine: StateMachine<SmListener>,
-        forkTree: TransactionTree
-    ): StateMachine<SM_ON_LISTENER> {
-        let stateMachineCore = StateMachineCoreFactory.create(
-            this.createBaseCore(coreDef),
-            (core, txTree) => Logger$(this.createBaseCore(coreDef).name, core, txTree)
+        let flowForkSm = this.createForkSm('flow', StateMachineType.FLOW_FORK);
+        let flowStateMachine: StateMachine<FlowStateMachineListener> = this.createForkableSm(
+            FlowStateMachineBuilder$({
+                mainForkSm: mainForkSm,
+                mainSm: finalStateMachine,
+                thisForkSm: flowForkSm,
+            }).build(),
+            flowForkSm,
+            StateMachineType.FLOW,
         );
-        let transactionTree: TransactionTree = new TransactionTree();
-        let stateMachineImpl = this.createSm(stateMachineCore, transactionTree, new ForkSmRequestStrategy(
-            forkStateMachine,
-            new SimpleSmRequestStrategy(),
-            forkTree
-        ));
-        Logger$(coreDef.name, stateMachineImpl, transactionTree).log(EventType.INIT, '', [
-            [`listeners`, `${coreDef.listeners.map(it => it.metadata).map(it => {
-                return it.name.split(',').map(it => `(${it})`).join(',');
-            })}`],
-            [`system listeners`, `${['::init=>doStart'].map(it => {
-                return it.split(',').map(it => `(${it})`).join(',');
-            })}`],
-            [`interceptors`, `${coreDef.interceptors.map(it => it.metadata)}`],
-            [`stages`, `${Object.keys(coreDef.stageDefsByKey).join(', ')}`],
-            [`system stages`, 'init, start, stop'],
-        ]);
-        return stateMachineImpl;
+
+        finalStateMachine.flowSm = flowStateMachine;
+        flowStateMachine.requestState({name: 'init'});
+
+        return new StateMachineFacade<SM_ON_LISTENER, STARTER>(
+            finalStateMachine,
+            stateMachineDef.mapper ? stateMachineDef.mapper : (value)=> (value as any)
+        );
     }
 
-    private static createSimpleSm<SM_ON_LISTENER extends SmListener>(
-        def: StateMachineCoreDef<SM_ON_LISTENER>,
+    public static createSimpleSm<SM_ON_LISTENER extends SmListener>(
+        def: StateMachineDef<SM_ON_LISTENER>,
+        type: StateMachineType,
         treeToUse: TransactionTree = new TransactionTree()
     ): StateMachine<SM_ON_LISTENER> {
         let stateMachineCore = StateMachineCoreFactory.create(
             def,
-            (thisSm) => Logger$(`${def.name}`, thisSm, treeToUse)
+            (thisSm) => Logger$(type, `${def.rootDef.name}`, thisSm, treeToUse)
         );
-        return this.createSm(stateMachineCore, treeToUse, new SimpleSmRequestStrategy());
+        let stateMachine = this.createSm(
+            stateMachineCore,
+            treeToUse,
+            SmEventsSerializerFactory.simpleSerializer(),
+            type
+        );
+
+        return stateMachine;
+    }
+
+    private static createForkableSm<SM_ON_LISTENER extends SmListener>(
+        coreDef: StateMachineDef<SM_ON_LISTENER, any>,
+        forkStateMachine: StateMachine<SmListener>,
+        type: StateMachineType,
+    ): StateMachineImpl<SM_ON_LISTENER> {
+        let stateMachineCore = StateMachineCoreFactory.create(
+            coreDef,
+            (core, txTree) => Logger$(type, coreDef.rootDef.name, core, txTree)
+        );
+        let transactionTree: TransactionTree = new TransactionTree();
+        return this.createSm(
+            stateMachineCore,
+            transactionTree,
+            SmEventsSerializerFactory.forkSerializer(forkStateMachine),
+            type,
+            forkStateMachine
+        );
+    }
+
+    private static createForkSm<SM_ON_LISTENER, SM_IF_LISTENER>(fromName: string, type: StateMachineType.USER_FORK | StateMachineType.FLOW_FORK) {
+        return this.createSimpleSm(
+            ForkStateMachineBuilder$().withName(`${fromName}[fork]`).build(),
+            type,
+            new TransactionTree()
+        );
     }
 
     private static createSm<SM_ON_LISTENER extends SmListener>(
         stateMachineCore: StateMachineCore<SM_ON_LISTENER>,
-        treeToUse: TransactionTree,
-        requestStrategy: SmRequestStrategy
-    ) {
-        return new StateMachineImpl(
+        txTree: TransactionTree,
+        smEventsSerializer: SmEventsSerializer,
+        type: StateMachineType,
+        forkSm?: StateMachine<ForkStateMachineListener>
+    ): StateMachineImpl<SM_ON_LISTENER> {
+        Logger$(type, stateMachineCore.getName(), stateMachineCore, undefined).log(EventType.INIT, '', [
+            [`listeners`, `${stateMachineCore.listeners.listeners.map(it => it.metadata).map(it => {
+                return it.name.split(',').map(it => `(${it})`).join(',');
+            })}`],
+            [`interceptors`, `${stateMachineCore.interceptors.listeners.map(it => it.metadata)}`],
+            [`stages`, `${Object.keys(stateMachineCore.stageDefsByKey).join(', ')}`],
+        ]);
+        return new StateMachineImpl<SM_ON_LISTENER>(
             stateMachineCore,
-            treeToUse,
-            new SmOrchestrator(),
-            requestStrategy,
-            new StateMachineTx(),
-            Logger$(`${stateMachineCore.name}`, stateMachineCore, treeToUse)
+            txTree,
+            theOrchestrator,
+            Logger$(type, `${stateMachineCore.name}`, stateMachineCore, txTree),
+            smEventsSerializer,
+            type,
+            forkSm
         );
-    }
-
-    private static createBaseCore<SM_ON_LISTENER extends SmListener>(
-        baseDef: StateMachineCoreDef<SM_ON_LISTENER>
-    ): StateMachineCoreDef<SM_ON_LISTENER> {
-        return new StateMachineCoreDefBuilder(baseDef)
-            .addListener([
-                '::init=>doStart', {
-                    onInit: (actions: BaseActions) => {
-                        actions.requestTransition({
-                            transitionName: `doStart`,
-                            into: {
-                                name: 'start'
-                            }
-                        })
-                    }
-                } as any as SM_ON_LISTENER
-            ], ListenerType.ONCE)
-            .withState<void>(
-                'init',
-                undefined
-            )
-            .withState<void>(
-                'start',
-                undefined
-            )
-            .withState<void>(
-                'stop',
-                undefined
-            )
-            .build()
     }
 }

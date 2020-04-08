@@ -2,6 +2,7 @@ import * as React from "react";
 import {ReactElement} from "react";
 import {IFunction} from "../conan-utils/typesHelper";
 import {Store} from "../conan-sm-sugar/store";
+import {ReactionType, Reactor} from "../conan-sm/reactions/reactor";
 
 
 interface ConnectedState<ACTIONS, DATA> {
@@ -25,14 +26,19 @@ export class ReactComponentConnector {
             componentDidMount(): void {
                 this.store = store;
                 store.addListener([`::nextData->connect`, {
-                    onNextData: (actions) => this.setState({
-                        actions,
-                        data: actions.getStateData(),
-                        stateName: actions.getStateName(),
-                    })
-                }]);
+                    onNextData: this.onNextDataToProcess.bind(this)
+                }], ReactionType.ALWAYS);
+                store.runIf([`!::nextData-connect`,{
+                    onNextData:  this.onNextDataToProcess.bind(this)
+                }])
+            }
 
-                this.store.start(name);
+            onNextDataToProcess (next: Reactor<ACTIONS, DATA>): void {
+                this.setState({
+                    data: next.stateData,
+                    stateName: next.stateName,
+                    actions: next.paths,
+                })
             }
 
             render(): ReactElement {

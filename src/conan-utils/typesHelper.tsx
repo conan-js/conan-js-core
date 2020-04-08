@@ -27,15 +27,7 @@ export interface IVarArgConstructor<T> {
     new (...args:any[]): T;
 }
 
-export type OneOrManyOf <T> = T | T [];
-
 export type ProvidedOrStaticOf <RESULT extends {}, BASED_ON> = IFunction<BASED_ON, RESULT> | RESULT;
-
-export class OneOrMany {
-    static asArray<T> (toIterate: OneOrManyOf<T>): T[] {
-        return Array.isArray(toIterate) ? toIterate : [toIterate];
-    }
-}
 
 export class DynamicOrStatics {
     static result<BASED_ON, RESULT> (dynamicOrStatic: ProvidedOrStaticOf<BASED_ON, RESULT>, basedOn: BASED_ON): RESULT {

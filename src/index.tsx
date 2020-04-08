@@ -2,15 +2,11 @@
 //conan-sm-sugar
 //********************
 
-import {SmPrototype} from "./conan-sm-sugar/smPrototype";
-export {SmPrototype}
-
-import {StoreFactory, Store, NextData, NextDataListener} from "./conan-sm-sugar/store";
+import {Store, NextDataListener, StoreBuilderFactory} from "./conan-sm-sugar/store";
 export {
-    StoreFactory,
     Store,
-    NextData,
     NextDataListener,
+    StoreBuilderFactory,
 }
 
 //********************
@@ -20,8 +16,8 @@ export {
 import {SmEventsPublisher} from "./conan-sm/_domain";
 export {SmEventsPublisher}
 
-import {StateMachine, ListenerMetadata, StateMachineImpl, ListenerDefType} from "./conan-sm/stateMachine";
-export {StateMachine, ListenerMetadata, StateMachineImpl, ListenerDefType}
+import {StateMachine, StateMachineImpl} from "./conan-sm/stateMachine";
+export {StateMachine, StateMachineImpl}
 
 import {StateMachineDef, SyncStateMachineDef, SyncListener} from "./conan-sm/stateMachineDef";
 export {StateMachineDef, SyncStateMachineDef, SyncListener};
@@ -32,46 +28,46 @@ import {
     SmTransition,
     RawTransitionSmEvent,
     isStageEvent
-} from "./conan-sm/stateMachineEvents";
+} from "./conan-sm/events/stateMachineEvents";
 export {
     SerializedSmEvent,
-    TransitionSmEvent
+    TransitionSmEvent,
+    SmTransition,
+    RawTransitionSmEvent,
+    isStageEvent
 }
 
 import {StateMachineFactory, StartSmTree, Synchronisation} from "./conan-sm/stateMachineFactory";
 export {StateMachineFactory, StartSmTree, Synchronisation}
 
-import {StateMachineLogger} from "./conan-sm/stateMachineLogger";
+import {StateMachineLogger} from "./conan-sm/logging/stateMachineLogger";
 export {StateMachineLogger}
 
 //********************
 //conan-sm/core
 //********************
 
-import {ListenersController} from "./conan-sm/core/listenersController";
+import {ListenersController} from "./conan-sm/events/listenersController";
 export {ListenersController}
 
-import {SmEventThread} from "./conan-sm/core/smEventThread";
+import {SmEventThread} from "./conan-sm/events/smEventThread";
 export {SmEventThread}
 
-import {State, StateDef, StateLogic, DeferredInfo, StateLogicParser} from "./conan-sm/core/state";
-export {State, StateDef, StateLogic, DeferredInfo, StateLogicParser}
+import {State} from "./conan-sm/core/state";
+export {State}
 
 
-import {StateMachineCore, StateMachineCoreRead, StateMachineCoreWrite} from "./conan-sm/core/stateMachineCore";
-export {StateMachineCore, StateMachineCoreRead, StateMachineCoreWrite}
+import {StateMachineCore} from "./conan-sm/core/stateMachineCore";
+export {StateMachineCore}
 
 import {StateMachineCoreDef} from "./conan-sm/core/stateMachineCoreDef";
 export {StateMachineCoreDef}
 
-import {StateMachineCoreDefBuilder, StateMachineBuilderEndpoint} from "./conan-sm/core/stateMachineCoreDefBuilder";
-export {StateMachineCoreDefBuilder, StateMachineBuilderEndpoint}
 
 import {StateMachineCoreFactory} from "./conan-sm/core/stateMachineCoreFactory";
 export {StateMachineCoreFactory}
 
 import {
-    ListenerType,
     SmListener,
     BaseActions,
     SmListenerDefLikeParser,
@@ -80,11 +76,8 @@ import {
     SmListenerDefTuple,
     SmListenerDefList,
     AnonymousDefTuple,
-    BasicSmListener,
-    OnEventCallback
-} from "./conan-sm/core/stateMachineListeners";
+} from "./conan-sm/events/stateMachineListeners";
 export {
-    ListenerType,
     SmListener,
     BaseActions,
     SmListenerDefLikeParser,
@@ -93,8 +86,6 @@ export {
     SmListenerDefTuple,
     SmListenerDefList,
     AnonymousDefTuple,
-    BasicSmListener,
-    OnEventCallback,
 }
 
 //********************
@@ -114,7 +105,6 @@ import {
     IBiFunction,
     ISetKeyValuePairs,
     DynamicOrStatics,
-    OneOrMany,
     IPredicate,
     IVarArgConstructor,
     IConstructorProxy,
@@ -122,7 +112,6 @@ import {
     IOptSetKeyValuePairs,
     IPartial,
     IReducer,
-    OneOrManyOf,
     ProvidedOrStaticOf,
     WithMetadataKeyValuePairs
 } from "./conan-utils/typesHelper";
@@ -140,7 +129,6 @@ export {
     IBiFunction,
     ISetKeyValuePairs,
     DynamicOrStatics,
-    OneOrMany,
     IPredicate,
     IVarArgConstructor,
     IConstructorProxy,
@@ -148,10 +136,8 @@ export {
     IOptSetKeyValuePairs,
     IPartial,
     IReducer,
-    OneOrManyOf,
     ProvidedOrStaticOf,
     WithMetadataKeyValuePairs
-
 }
 
 //********************
@@ -163,4 +149,3 @@ import {ReactComponentConnector} from "./conan-sm-react/reactComponentConnector"
 export {
     ReactComponentConnector,
 }
-

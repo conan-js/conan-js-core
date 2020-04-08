@@ -1,35 +1,19 @@
-import {State, StateDef} from "./state";
+import {State} from "./state";
 import {IKeyValuePairs, WithMetadataArray} from "../../conan-utils/typesHelper";
-import {ListenerType, OnEventCallback, SmListener, SmListenerDefLike} from "./stateMachineListeners";
-import {SerializedSmEvent, SmTransition} from "../stateMachineEvents";
-import {ListenersController} from "./listenersController";
-import {SmEventThread} from "./smEventThread";
-import {ListenerDefType, ListenerMetadata} from "../stateMachine";
+import {
+    ListenerDefType,
+    SmListener,
+    SmListenerDefLike
+} from "../events/stateMachineListeners";
+import {ListenersController} from "../events/listenersController";
+import {SmEventThread} from "../events/smEventThread";
 import {TransactionTree} from "../../conan-tx/transactionTree";
+import {SerializedSmEvent, SmTransition} from "../events/stateMachineEvents";
+import {StateMachineCoreRead} from "./stateMachineCoreReader";
+import {StateMachineCoreWrite} from "./stateMachineCoreWriter";
+import {ReactionMetadata, Reaction, ReactionType} from "../reactions/reactor";
+import {StateDef} from "./stateDef";
 
-export interface StateMachineCoreRead<SM_ON_LISTENER extends SmListener> {
-    getStateDef(name: string): StateDef<any, any, any>;
-
-    addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, txTree: TransactionTree, type: ListenerType): this;
-
-    getEvents(): SerializedSmEvent[];
-
-    getStateData(): any;
-
-    createReactions(eventName: string, type: ListenerDefType, txTree: TransactionTree): WithMetadataArray<OnEventCallback<any>, ListenerMetadata>;
-
-    deleteListeners(listenerNames: string[], type: ListenerDefType, txTree: TransactionTree): void;
-
-    getCurrentStageName(): string;
-
-    getCurrentTransitionName(): string;
-}
-
-export interface StateMachineCoreWrite {
-    moveToState(stage: State): void;
-
-    moveToTransition(transition: SmTransition): void;
-}
 
 export class StateMachineCore<
     SM_ON_LISTENER extends SmListener,
@@ -38,32 +22,31 @@ export class StateMachineCore<
 
     constructor(
         readonly name: string,
-        private readonly listeners: ListenersController<SM_ON_LISTENER, any>,
-        private readonly interceptors: ListenersController<SM_ON_LISTENER, any>,
-        private readonly stageDefsByKey: IKeyValuePairs<StateDef<any, any, any, any>>,
+        public readonly listeners: ListenersController<SM_ON_LISTENER>,
+        public readonly interceptors: ListenersController<SM_ON_LISTENER>,
+        public readonly stageDefsByKey: IKeyValuePairs<StateDef<any>>,
     ) {
     }
 
     getStateData(): any {
-        return this.eventThread.currentStageEvent.data;
+        return this.eventThread.currentStateEvent.data;
     }
 
     getStateName (): string{
-        return this.eventThread.currentStageEvent.name;
+        return this.eventThread.currentStateEvent.name;
     }
 
-
-    addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, txTree: TransactionTree, type: ListenerType = ListenerType.ALWAYS): this {
-        this.listeners.addListener(this, txTree, listener, type);
+    addListener(listener: SmListenerDefLike<SM_ON_LISTENER>, type: ReactionType = ReactionType.ALWAYS): this {
+        this.listeners.addListener(this, listener, type);
         return this;
     }
 
-    addInterceptor(interceptor: SmListenerDefLike<SM_ON_LISTENER>, txTree: TransactionTree, type: ListenerType = ListenerType.ALWAYS): this {
-        this.interceptors.addListener(this, txTree, interceptor, type);
+    addInterceptor(interceptor: SmListenerDefLike<SM_ON_LISTENER>, type: ReactionType = ReactionType.ALWAYS): this {
+        this.interceptors.addListener(this, interceptor, type);
         return this;
     }
 
-    createReactions(eventName: string, type: ListenerDefType, txTree: TransactionTree): WithMetadataArray<OnEventCallback<any>, ListenerMetadata> {
+    createReactions(eventName: string, type: ListenerDefType, txTree: TransactionTree): WithMetadataArray<Reaction<any>, ReactionMetadata> {
         return this.getListenerController(type).createReactions(this, txTree, eventName);
     }
 
@@ -71,7 +54,7 @@ export class StateMachineCore<
         this.getListenerController(type).deleteListeners(this, txTree, listenerNames);
     }
 
-    getStateDef(name: string): StateDef<any, any, any> {
+    getStateDef(name: string): StateDef<any> {
         return this.stageDefsByKey [name];
     }
 
@@ -79,16 +62,16 @@ export class StateMachineCore<
         return this.eventThread.serialize();
     }
 
-    moveToState (stage: State): void {
-        this.eventThread.addStageEvent(stage);
+    moveToState (state: State<any, any>): void {
+        this.eventThread.addStageEvent(state);
     }
 
     moveToTransition (transition: SmTransition): void {
         this.eventThread.addActionEvent(transition);
     }
 
-    getCurrentStageName (): string {
-        return this.eventThread.getCurrentStageName();
+    getCurrentStateName (): string {
+        return this.eventThread.getCurrentStateName();
     }
 
     getCurrentTransitionName (): string {
@@ -98,4 +81,17 @@ export class StateMachineCore<
     private getListenerController(type: ListenerDefType) {
         return type === ListenerDefType.INTERCEPTOR ? this.interceptors : this.listeners;
     }
+
+    getName(): string {
+        return this.name;
+    }
+
+    getState(): State {
+        return this.eventThread.getCurrentState();
+    }
+
+    getEventThread(): SmEventThread {
+        return this.eventThread;
+    }
+
 }

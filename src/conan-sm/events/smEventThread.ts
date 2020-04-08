@@ -1,16 +1,16 @@
-import {State} from "./state";
+import {State} from "../core/state";
+import {StateMachineCore} from "../core/stateMachineCore";
 import {
     isStageEvent,
     RawTransitionSmEvent,
     SerializedSmEvent,
     SmTransition,
     TransitionSmEvent
-} from "../stateMachineEvents";
-import {StateMachineCore} from "./stateMachineCore";
+} from "./stateMachineEvents";
 
 export class SmEventThread  {
     public currentTransitionEvent: RawTransitionSmEvent;
-    public currentStageEvent: State;
+    public currentStateEvent: State<any, any>;
     public currentEvent: RawTransitionSmEvent | State;
     private readonly events: (RawTransitionSmEvent | State)[] = [];
 
@@ -35,15 +35,15 @@ export class SmEventThread  {
     }
 
     public addStageEvent(
-        stage: State
+        stage: State<any, any>
     ): void {
-        this.currentStageEvent = stage;
+        this.currentStateEvent = stage;
         this.addEvent(stage);
     }
 
-    getCurrentStageName(): string {
-        if (this.currentStageEvent == null) return '-';
-        return this.currentStageEvent.name;
+    getCurrentStateName(): string {
+        if (this.currentStateEvent == null) return '-';
+        return this.currentStateEvent.name;
     }
 
     private addEvent(event: RawTransitionSmEvent | State) {
@@ -55,4 +55,9 @@ export class SmEventThread  {
         if (this.currentTransitionEvent == null) return '-';
         return this.currentTransitionEvent.transitionName;
     }
+
+    getCurrentState() {
+        return this.currentStateEvent;
+    }
+
 }
