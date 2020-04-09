@@ -1,6 +1,6 @@
 {
-  "name": "conan-ui-core",
-  "version": "1.0.15",
+  "name": "conan-js-core",
+  "version": "0.0.0",
   "description": "",
   "main": "dist/lib/main.min.js",
   "types": "dist/lib/index.d.ts",
