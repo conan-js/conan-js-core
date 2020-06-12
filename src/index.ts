@@ -64,6 +64,7 @@ import {MonitorInfo, MonitorStatus} from "./conan-monitor/domain/monitorInfo"
 import {Asap, AsapLike, AsapParser, Asaps, AsapType, isAsap} from "./conan-utils/asap"
 import {Reducers, ReducersFn} from "./conan-thread/domain/reducers"
 import {Flows} from "./conan-flow/factories/flows"
+import {ActionsFn, Then} from "./conan-thread/domain/threadActions"
 
 //********************
 //conan-sm
@@ -146,3 +147,5 @@ export {Asaps, Asap, AsapLike, AsapParser, AsapType, isAsap}
 export {Reducers, ReducersFn}
 
 export {Flows}
+
+export {ActionsFn, Then}
