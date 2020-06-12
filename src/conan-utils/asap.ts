@@ -1,103 +1,271 @@
-import {IConsumer, IFunction} from "./typesHelper";
+import {IBiConsumer, ICallback, IConsumer, IFunction} from "./typesHelper";
+import {Flow} from "../conan-flow/domain/flow";
+import {Flows} from "../conan-flow/factories/flows";
 
 export enum AsapType {
     NOW = 'NOW',
-    LATER = 'LATER'
+    LATER = 'LATER',
 }
-
 export type AsapLike<T> = Promise<T> | T | Asap<T>;
+
 export interface Asap<T> {
-    consume (consumer: IConsumer<T>): void;
+    catch(error: IConsumer<Error>): this;
+
+    then(consumer: IConsumer<T>): this;
+
+    onCancel(consumer: ICallback): this;
 
     map<Z>(mapper: IFunction<T, Z>): Asap<Z>;
 
-    ifPromise (ifPromise: IConsumer<Promise<T>>, _else?: IConsumer<T>): void;
+    merge<Z>(mapper: IFunction<T, Asap<Z>>): Asap<Z>;
 
     type: AsapType;
 
-    assertNow(): T;
+    cancel(): boolean;
 }
 
-function isPromise<T> (toParse: AsapLike<T>): toParse is Promise<T> {
-    return ('then' in toParse) && typeof(toParse.then) === 'function'
+function isPromise<T>(toParse: AsapLike<T>): toParse is Promise<T> {
+    if (toParse == null) return false;
+    if (typeof toParse != "object") return false;
+
+    return ('then' in toParse) && typeof (toParse.then) === 'function'
 }
 
-function isAsapAlready<T> (toParse: AsapLike<T>): toParse is Asap<T> {
-    return (toParse instanceof NowImpl) || (toParse instanceof PromiseImpl);
+export function isAsap<T>(toParse: AsapLike<T>): toParse is Asap<T> {
+    return (toParse instanceof NowImpl) || (toParse instanceof LaterImpl);
 }
 
-class NowImpl<T> implements Asap<T>{
+class NowImpl<T> implements Asap<T> {
     public readonly type: AsapType = AsapType.NOW;
-
     constructor(
         private readonly rawValue: T
-    ) {}
+    ) {
+    }
 
-    consume (consumer: IConsumer<T>): void{
+    cancel(): boolean {
+        return false;
+    }
+
+    then(consumer: IConsumer<T>): this {
         consumer(this.rawValue);
+        return this;
     }
 
     map<Z>(mapper: IFunction<T, Z>): Asap<Z> {
         return Asaps.now(mapper(this.rawValue));
     }
 
-    ifPromise(ifPromise: IConsumer<Promise<T>>, _else?: IConsumer<T>): void {
-        if (_else){
-            _else(this.rawValue);
-        }
+    merge<Z>(mapper: IFunction<T, Asap<Z>>): Asap<Z> {
+        const [next, asap] = Asaps.next<Z>();
+        this.then(value=>
+            mapper(value).then(toMerge=> next(toMerge))
+        )
+        return asap;
     }
 
-    assertNow(): T {
-        return this.rawValue;
+    catch(error: IConsumer<any>): this {
+        //Since is not async, it would never fail
+        return this;
+    }
+
+    onCancel(consumer: ICallback): this {
+        //Since is not async, it would never cancel
+        return this;
     }
 }
 
-class PromiseImpl<T> implements Asap<T> {
-    public readonly type: AsapType = AsapType.LATER;
+interface ResolvingData<T> {
+    then: IConsumer<T>[];
+    catch: IBiConsumer<Error, T>[];
+    onCancel: ICallback[];
+}
+
+interface LaterAsapFlow<T> {
+    resolving: ResolvingData<T>;
+    resolved: T;
+    errored: T;
+    cancelled: void;
+}
+
+class LaterImpl<T> implements Asap<T> {
+    type: AsapType = AsapType.LATER;
 
     constructor(
-        private readonly promise: Promise<T>
-    ) {}
-
-    consume(consumer: IConsumer<T>): void {
-        this.promise.then(consumer);
+        private readonly flow: Flow<LaterAsapFlow<T>>
+    ) {
     }
 
     map<Z>(mapper: IFunction<T, Z>): Asap<Z> {
-        return Asaps.later(new Promise ((done)=>
-            this.promise.then(value=> done(mapper(value)))
-        ));
+        let [setNext, nextAsap] = Asaps.next<Z>();
+        this.then(value=>setNext (mapper(value)));
+        this.onCancel(()=>nextAsap.cancel());
+        return nextAsap;
     }
 
-    ifPromise(ifPromise: IConsumer<Promise<T>>, _else?: IConsumer<T>): void {
-        ifPromise(this.promise);
+    then(consumer: IConsumer<T>): this {
+        if (this.flow.getCurrentStatusName() === 'resolved') {
+            consumer(this.flow.on('resolved').getLastData());
+        } else {
+            this.flow.on('resolving').steps.$update((current)=>({
+                ...current,
+                then: [...current.then, consumer],
+            }));
+        }
+        return this;
     }
 
-    assertNow(): T {
-        throw new Error(`you are asserting that this ASAP can be resolved now, but it can't. try calling consume or checking the type`);
+    resolve (value: T): void{
+        if (this.flow.getCurrentStatusName() === 'cancelled') return;
+
+        try{
+            this.flow.assertOn<'resolving'>('resolving', (onResolving)=>{
+                onResolving.getData().then.forEach(subscriber=>{
+                    subscriber(value)
+                });
+                this.flow.on('resolving').transitions.$toStatus({
+                    name: "resolved",
+                    data: value
+                });
+            })
+        }catch (e) {
+            console.error(e);
+            this.flow.assertOn<'resolving'>('resolving', (onResolving)=>{
+                onResolving.getData().catch.forEach(subscriber => {
+                    subscriber(e, value)
+                })
+                onResolving.do.$toStatus ({name: "errored", data: value})
+            })
+        }
     }
+
+    onCancel(consumer: ICallback): this {
+        if (this.flow.getCurrentStatusName() === 'cancelled'){
+            consumer();
+            return;
+        }
+
+        if (this.flow.getCurrentStatusName() === 'resolving') {
+            this.flow.on('resolving').steps.$update((current)=>({
+                ...current,
+                onCancel: [...current.onCancel, consumer],
+            }));
+        }
+        return this;
+
+    }
+
+    cancel(): boolean {
+        if (this.flow.getCurrentStatusName() !== 'resolving'){
+            return false;
+        }
+
+        this.flow.assertOn('resolving', onResolving=>{
+            onResolving.getData().onCancel.forEach(subscriber=>{
+                subscriber()
+            });
+            this.flow.on('resolving').transitions.$toStatus({name: "cancelled",});
+        })
+
+        return true;
+
+    }
+
+    merge<Z>(mapper: IFunction<T, Asap<Z>>): Asap<Z> {
+        const [next, asap] = Asaps.next<Z>();
+        this.then(value=>
+            mapper(value)
+                .then(toMerge=> next(toMerge))
+                .onCancel(()=>asap.cancel())
+        ).onCancel(()=>asap.cancel());
+
+        return asap;
+    }
+
+    catch(consumer: IBiConsumer<Error, T>): this {
+        if (this.flow.getCurrentStatusName() === 'resolving') {
+            this.flow.on('resolving').steps.$update((current)=>({
+                ...current,
+                catch: [...current.catch, consumer],
+            }));
+        }
+        return this;
+    }
+
 }
 
 export class AsapParser {
-    static from<T> (toParse: AsapLike<T>): Asap<T> {
-        return isAsapAlready(toParse) ?
+    static from<T>(toParse: AsapLike<T>): Asap<T> {
+        return isAsap(toParse) ?
             toParse :
             isPromise(toParse) ?
-                new PromiseImpl<T> (toParse) :
-                new NowImpl(toParse);
+                Asaps.fromPromise(toParse) :
+                Asaps.now(toParse);
     }
 }
 
 export class Asaps {
-    static now<T> (value: T): Asap<T>{
-        return AsapParser.from(value);
+    static now<T>(value: T): Asap<T> {
+        return new NowImpl(value);
     }
 
-    static later<T> (promise: Promise<T>): Asap<T> {
-        return AsapParser.from(promise);
+    static fromPromise<T>(promise: Promise<T>): Asap<T> {
+        let promiseImpl: LaterImpl<T> = new LaterImpl<T>(Flows.createController<LaterAsapFlow<T>>({
+            name: 'next-promise',
+            statuses: {
+                resolving: {},
+                resolved: {},
+                errored: {},
+                cancelled: {}
+            },
+            initialStatus: {
+                name: 'resolving',
+                data: {
+                    then: [],
+                    catch: [],
+                    onCancel: [],
+                }
+            }
+        }).start());
+
+        promise.then(value=>promiseImpl.resolve(value));
+        promise.catch(e=>promiseImpl.catch(e) as any);
+
+        return promiseImpl;
     }
 
-    static delayed<T> (value: T, ms: number): Asap<T> {
-        return Asaps.later(new Promise ((done)=>setTimeout(()=> done(value), ms)));
+    static delayed<T>(value: T, ms: number): Asap<T> {
+        return Asaps.fromPromise(new Promise((done) => setTimeout(() => done(value), ms)));
     }
+
+    static fetch<T>(url: string): Asap<T> {
+        return Asaps.fromPromise(new Promise<T>((done) => {
+            fetch(url)
+                .then((resp) => resp.json()) // Transform the data into json
+                .then(function (data: T) {
+                    done(data)
+                })
+        }))
+    }
+
+    static next<T> (): [IConsumer<T>, Asap<T>] {
+        let laterImpl: LaterImpl<T> = new LaterImpl<T>(Flows.createController<LaterAsapFlow<T>>({
+            name: 'next-promise',
+            statuses: {
+                resolving: {},
+                resolved: {},
+                errored: {},
+                cancelled: {}
+            },
+            initialStatus: {
+                name: 'resolving',
+                data: {
+                    then: [],
+                    catch: [],
+                    onCancel: []
+                }
+            }
+        }).start());
+        return [(value)=>laterImpl.resolve(value), laterImpl];
+    }
+
 }

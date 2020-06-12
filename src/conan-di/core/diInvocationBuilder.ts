@@ -1,4 +1,4 @@
-import {DiInvocation} from './diDomain';
+import {DiInvocation, Injectable} from './diDomain';
 import {DiAnnotationsMetadataFactory} from './annotations/diAnnotatinosMetadataFactory';
 import {IConsumer, IKeyValuePairs, IProducer, IVarArgConstructor} from "../../conan-utils/typesHelper";
 
@@ -18,7 +18,7 @@ export class DiInvocationBuilderFactory {
             .if(propsProvider != null, (it) => it.withProperties(propsProvider()));
     }
 
-    root<T, P>(from: IVarArgConstructor<T>): DiInvocationBuilder<T, P> {
+    root<T, P>(from: Injectable<T>): DiInvocationBuilder<T, P> {
         return new DiInvocationBuilder<T, P>(this.diAnnotationsMetadataFactory, from);
     }
 }
@@ -40,7 +40,7 @@ export class DiInvocationBuilder<T, P> {
 
     constructor(
         private readonly diAnnotationsMetadataFactory: DiAnnotationsMetadataFactory,
-        private readonly constructor: IVarArgConstructor<any>,
+        private readonly _constructor: Injectable<any>,
     ) {}
 
     if (condition: boolean, cb: IConsumer<DiInvocationBuilder<T, P>>): DiInvocationBuilder<T, P> {
@@ -67,7 +67,7 @@ export class DiInvocationBuilder<T, P> {
 
     build (): DiInvocation<P> {
         return {
-            diMetadata: this.diAnnotationsMetadataFactory.create(this.constructor),
+            diMetadata: this.diAnnotationsMetadataFactory.create(this._constructor),
             inProcessDiInvocations: this.inProcessDiInvocations,
             transitiveBeans: this.transitiveBeans,
             properties: this.properties

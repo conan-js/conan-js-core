@@ -1,11 +1,12 @@
 import {DiUtils} from '../diUtils';
-import {DiParamMetadata, DiRawAnnotationsMetadata, DiMetadata} from './diAnnotationsDomain';
+import {DiMetadata, DiParamMetadata, DiRawAnnotationsMetadata} from './diAnnotationsDomain';
 import {diAnnotationsCrud} from './diAnnotations';
 import {Functions} from "../../../conan-utils/functions";
-import {IKeyValuePairs, IVarArgConstructor} from "../../../conan-utils/typesHelper";
+import {IKeyValuePairs} from "../../../conan-utils/typesHelper";
+import {Injectable} from "../diDomain";
 
 export class DiAnnotationsMetadataFactory {
-    create (from: IVarArgConstructor<any>): DiMetadata {
+    create (from: Injectable<any>): DiMetadata {
         let dependencyName = DiUtils.beanName(from);
         let argumentNames = Functions.extractArgNames(from);
         let diParams: IKeyValuePairs<DiParamMetadata> = {};

@@ -30,11 +30,35 @@ describe('diContext', () => {
         }
 
         expect(DiContextFactory.createContext<TestContextDef>({
+            complexBean: ComplexBean,
             simpleBean: SimpleBean,
-            complexBean: ComplexBean
         })).to.deep.eq({
             simpleBean: new SimpleBean(),
             complexBean: new ComplexBean(new SimpleBean())
         })
     })
+
+    it ("should work with a function", ()=>{
+        expect(DiContextFactory.createContext<{complexBean: ComplexBean, simpleBean: SimpleBean} >({
+            complexBean: (simpleBean)=>new ComplexBean(simpleBean),
+            simpleBean: SimpleBean
+        })).to.deep.eq({
+            simpleBean: new SimpleBean(),
+            complexBean: new ComplexBean(new SimpleBean())
+        })
+
+    })
+
+
+    it ("should let us hardcore a value", ()=>{
+        expect(DiContextFactory.createContext<{complexBean: ComplexBean, simpleBean: SimpleBean} >({
+            complexBean: (simpleBean)=>new ComplexBean(simpleBean),
+            simpleBean: new SimpleBean()
+        })).to.deep.eq({
+            simpleBean: new SimpleBean(),
+            complexBean: new ComplexBean(new SimpleBean())
+        })
+
+    })
+
 });

@@ -1,5 +1,5 @@
 import {DiMetadata} from './annotations/diAnnotationsDomain';
-import {IKeyValuePairs, IVarArgConstructor} from "../../conan-utils/typesHelper";
+import {IFunctionVarArg, IKeyValuePairs, IVarArgConstructor} from "../../conan-utils/typesHelper";
 
 export interface InvocationResult<T> {
     circularDependencyEndOf?: string;
@@ -14,19 +14,23 @@ export interface DiInvocation<P> {
     properties?: P | null;
 }
 
+export type Injectable<T> = (IVarArgConstructor<T> | IFunctionVarArg<T> | T)
+
 export type DiContextDef<T> = {
-    [P in keyof T]: IVarArgConstructor<T[P]>;
+    [P in keyof T]: Injectable<T[P]>;
 };
 
 export interface Runtime {
     invoke<T>(
         from: IVarArgConstructor<T>,
-        transitiveBeans?: IKeyValuePairs<any>,
+        transitiveBeans: IKeyValuePairs<any>,
+        context: IKeyValuePairs<Injectable<any>>
     ): T;
 
     invokeWithProps<T, P>(
         from: IVarArgConstructor<T>,
         props: P,
-        transitiveBeans?: IKeyValuePairs<any>,
+        transitiveBeans: IKeyValuePairs<any>,
+        context: IKeyValuePairs<Injectable<any>>
     ): T;
 }

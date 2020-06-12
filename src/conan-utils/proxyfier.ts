@@ -1,4 +1,4 @@
-import {IBiFunction, IKeyValuePairs, IPredicate, IProducer} from "./typesHelper";
+import {IBiFunction, IKeyValuePairs, IProducer} from "./typesHelper";
 
 export interface FunctionMetadata {
     methodName: string,
@@ -16,8 +16,8 @@ export class Proxyfier {
             let toProxy = (methodHost as any)[key];
             if (typeof toProxy !== 'function') return;
 
-            (proxy as any)[key] = (payload: any) => {
-                let originalCall = ()=>(from as any)[key](payload);
+            (proxy as any)[key] = (...payload: any) => {
+                let originalCall = ()=>(from as any)[key](...payload);
                 return enricher(originalCall, {
                     methodName: key,
                     payload

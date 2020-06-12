@@ -23,7 +23,7 @@ describe('beanRuntime', () => {
             }
 
             checkDeepEquality(
-                beanRuntime.invoke<LeafBean>(LeafBean),
+                beanRuntime.invoke<LeafBean>(LeafBean, {}, {}),
                 new LeafBean()
             );
         });
@@ -39,7 +39,7 @@ describe('beanRuntime', () => {
                 checkDeepEquality(
                     beanRuntime.invoke<SimpleBean>(SimpleBean, {
                         name: 'a'
-                    }),
+                    }, {}),
                     new SimpleBean('a')
                 );
             });
@@ -57,7 +57,7 @@ describe('beanRuntime', () => {
                 checkDeepEquality(
                     beanRuntime.invoke<SimpleBean>(SimpleBean, {
                         theName: 'a'
-                    }),
+                    }, {}),
                     new SimpleBean('a')
                 );
             });
@@ -77,7 +77,7 @@ describe('beanRuntime', () => {
                     beanRuntime.invoke<SimpleBean>(SimpleBean, {
                         name: 'a',
                         qty: 1
-                    }),
+                    }, {}),
                     new SimpleBean('a', 1)
                 );
             });
@@ -95,7 +95,7 @@ describe('beanRuntime', () => {
                     beanRuntime.invoke<SimpleBean>(SimpleBean, {
                         name: 'a',
                         amount: 1
-                    }),
+                    }, {}),
                     new SimpleBean('a', 1)
                 );
             });
@@ -119,7 +119,7 @@ describe('beanRuntime', () => {
                     beanRuntime.invokeWithProps<SimpleBean, Props>(SimpleBean, {
                         name: 'a',
                         qty: 1
-                    }),
+                    }, {}, {}),
                     new SimpleBean({
                         name: 'a',
                         qty: 1
@@ -149,7 +149,7 @@ describe('beanRuntime', () => {
                     }, {
                         name: 'a',
                         amount: 1
-                    }),
+                    }, {}),
                     new SimpleBean('a',
                         {
                             p1: 'a',
@@ -192,8 +192,8 @@ describe('beanRuntime', () => {
             class LeafBean {
             }
 
-            let original = beanRuntime.invoke(LeafBean);
-            expect(beanRuntime.invoke(LeafBean)).to.eq(original);
+            let original = beanRuntime.invoke(LeafBean, {}, {});
+            expect(beanRuntime.invoke(LeafBean, {}, {})).to.eq(original);
         });
 
         it('nested - should return the same instance', () => {
@@ -207,8 +207,8 @@ describe('beanRuntime', () => {
                 }
             }
 
-            let original = beanRuntime.invoke(Container);
-            expect(beanRuntime.invoke(Container).leafBean).to.eq(original.leafBean);
+            let original = beanRuntime.invoke(Container, {}, {});
+            expect(beanRuntime.invoke(Container, {}, {}).leafBean).to.eq(original.leafBean);
         });
     });
 });

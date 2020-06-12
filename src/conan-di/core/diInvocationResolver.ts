@@ -1,6 +1,6 @@
 import {DiMetadata, DiParamMetadata, InjectableType} from './annotations/diAnnotationsDomain';
 import {DiRuntime} from './diRuntime';
-import {DiInvocation, InvocationResult} from './diDomain';
+import {DiInvocation, Injectable, InvocationResult} from './diDomain';
 import {DiInvocationFactory} from './diInvocationBuilder';
 import {KeyValueCache} from "../../conan-utils/keyValueCache";
 import {IBiFunction, IKeyValuePairs, IProducer, IVarArgConstructor} from "../../conan-utils/typesHelper";
@@ -12,7 +12,11 @@ export class DiInvocationResolver {
         private readonly diEnricher: IBiFunction<DiMetadata, any, any> | null
     ) {}
 
-    resolve<T, P>(invocation: DiInvocation<P>): InvocationResult<T> {
+    resolve<T, P>(
+        invocation: DiInvocation<P>,
+        context: IKeyValuePairs<Injectable<any>>,
+        diRuntime: DiRuntime
+    ): InvocationResult<T> {
         if (this.causesCircularDependency(invocation)) {
             return {
                 circularDependencyEndOf: invocation.diMetadata.dependencyName,
@@ -27,7 +31,7 @@ export class DiInvocationResolver {
         let bean: T = this.diCache.resolve<T>(
             invocation.diMetadata.dependencyName,
             (): T => {
-                freshInvocationResult = this.doCreate<T, P>(invocation);
+                freshInvocationResult = this.doCreate<T, P>(invocation, context, diRuntime);
                 if (this.diEnricher) {
                     freshInvocationResult.result = this.diEnricher(invocation.diMetadata, freshInvocationResult.result);
                 }
@@ -50,15 +54,24 @@ export class DiInvocationResolver {
         return invocation.inProcessDiInvocations.indexOf(invocation.diMetadata.dependencyName) > -1;
     }
 
-    private doCreate<T, P>(invocation: DiInvocation<P>): InvocationResult<T> {
+    private doCreate<T, P>(invocation: DiInvocation<P>, context: IKeyValuePairs<Injectable<any>>, diRuntime: DiRuntime): InvocationResult<T> {
+        const useConstructorOrFn = (invocation: DiInvocation<P>, params: any): any =>{
+            let constructor = <any>invocation.diMetadata.constructor;
+            if (!!constructor.prototype && !!constructor.prototype.constructor.name) {
+                return params ? new constructor (...params): new constructor()
+            } else {
+                return params ? constructor (...params): constructor();
+            }
+        }
         if (invocation.diMetadata.argumentNames.length === 0) {
+            let result = useConstructorOrFn(invocation, undefined);
             return {
-                result: new (<any>invocation.diMetadata.constructor)(),
+                result: result,
                 pendingDependencies: {}
             };
         }
 
-        let childrenInvocationResults: InvocationResult<any>[] = this.invokeChildren(invocation);
+        let childrenInvocationResults: InvocationResult<any>[] = this.invokeChildren(invocation, context, diRuntime);
         let params: any[] = [];
         let startsCircularDependencies: IKeyValuePairs<string[]> = {};
 
@@ -76,7 +89,7 @@ export class DiInvocationResolver {
         });
 
         return {
-            result: new (<any>invocation.diMetadata.constructor)(...params),
+            result: useConstructorOrFn(invocation, params),
             pendingDependencies: startsCircularDependencies
         };
     }
@@ -101,7 +114,7 @@ export class DiInvocationResolver {
     }
 
 
-    private invokeChildren<P>(invocation: DiInvocation<P>): InvocationResult<any> [] {
+    private invokeChildren<P>(invocation: DiInvocation<P>, context: IKeyValuePairs<Injectable<any>>, diRuntime: DiRuntime): InvocationResult<any> [] {
         let
             params: InvocationResult<any>[] = [];
 
@@ -111,7 +124,7 @@ export class DiInvocationResolver {
             .forEach(argumentName => {
                     let resolvedParam = this.resolveParamDef<P>(invocation, argumentName);
                     params.push(
-                        this.invokeChild(invocation, resolvedParam)
+                        this.invokeChild(invocation, resolvedParam, context, diRuntime)
                     );
                 }
             );
@@ -133,20 +146,20 @@ export class DiInvocationResolver {
         return fromAnnotation;
     }
 
-    private invokeChild<P>(invocation: DiInvocation<P>, resolvedParam: DiParamMetadata): InvocationResult<any> {
+    private invokeChild<P>(invocation: DiInvocation<P>, resolvedParam: DiParamMetadata, context: IKeyValuePairs<Injectable<any>>, diRuntime: DiRuntime): InvocationResult<any> {
         if (resolvedParam.name === DiRuntime.PROPS_PROPERTY_NAME) {
             return this.resolveChildProps(invocation);
         }
 
         if (resolvedParam.type === InjectableType.TYPE) {
-            return this.resolveChildByType(invocation, resolvedParam);
+            return this.resolveChildByType(invocation, resolvedParam, context, diRuntime);
         }
 
         if (resolvedParam.type === InjectableType.DYNAMIC) {
-            return this.resolveDynamicChild(invocation, resolvedParam);
+            return this.resolveDynamicChild(invocation, resolvedParam, context, diRuntime);
         }
 
-        return this.resolveChildByName(invocation, resolvedParam);
+        return this.resolveChildByName(invocation, resolvedParam, context, diRuntime);
 
     }
 
@@ -162,17 +175,19 @@ export class DiInvocationResolver {
         };
     }
 
-    private resolveChildByType<P>(invocation: DiInvocation<P>, childParamMetadata: DiParamMetadata): InvocationResult<any> {
+    private resolveChildByType<P>(invocation: DiInvocation<P>, childParamMetadata: DiParamMetadata, context: IKeyValuePairs<Injectable<any>>, diRuntime: DiRuntime): InvocationResult<any> {
         return this.resolve(
             this.diInvocationFactory.childrenOf(
                 invocation,
                 <IVarArgConstructor<any>>childParamMetadata.payload,
-                childParamMetadata.propsProvider
-            )
+                childParamMetadata.propsProvider,
+            ),
+            context,
+            diRuntime
         );
     }
 
-    private resolveDynamicChild<P>(invocation: DiInvocation<P>, resolvedParam: DiParamMetadata): InvocationResult<any> {
+    private resolveDynamicChild<P>(invocation: DiInvocation<P>, resolvedParam: DiParamMetadata, context: IKeyValuePairs<Injectable<any>>, diRuntime: DiRuntime): InvocationResult<any> {
         return this.resolveChildByType(
             invocation,
             {
@@ -180,15 +195,25 @@ export class DiInvocationResolver {
                 type: InjectableType.TYPE,
                 propsProvider: resolvedParam.propsProvider,
                 name: resolvedParam.name
-            }
+            },
+            context,
+            diRuntime
         );
     }
 
 
-    private resolveChildByName<P>(invocation: DiInvocation<P>, resolvedParam: DiParamMetadata): InvocationResult<any> {
+    private resolveChildByName<P>(invocation: DiInvocation<P>, resolvedParam: DiParamMetadata, context: IKeyValuePairs<Injectable<any>>, diRuntime: DiRuntime): InvocationResult<any> {
         let nameToResolve: string = <string>resolvedParam.payload;
         if (invocation.transitiveBeans == null || invocation.transitiveBeans[nameToResolve] == null) {
-            throw Error(`can't resolve param '${nameToResolve}' - There are no transitive beans passed into the runtime`);
+            if (context[nameToResolve] != null){
+                let byName = diRuntime.invoke(context[nameToResolve], invocation.transitiveBeans, context);
+                return {
+                    result: byName,
+                    pendingDependencies: {}
+                };
+            }else {
+                throw Error(`can't resolve param '${nameToResolve}' - There are no transitive beans passed into the runtime`);
+            }
         }
 
         return {

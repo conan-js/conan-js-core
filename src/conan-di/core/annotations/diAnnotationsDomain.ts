@@ -1,6 +1,7 @@
 import {IKeyValuePairs, IProducer, IVarArgConstructor} from "../../../conan-utils/typesHelper";
+import {Injectable} from "../diDomain";
 
-export type Injectable = IProducer<IVarArgConstructor<any>> | string | IVarArgConstructor<any>;
+export type InjectableResult = IProducer<IVarArgConstructor<any>> | string | IVarArgConstructor<any>;
 
 export enum InjectableType {
     DYNAMIC = 'dynamic',
@@ -10,7 +11,7 @@ export enum InjectableType {
 
 export interface DiRawAnnotationMetadata<P> {
     onConstructorParamIndex: number;
-    injectable: Injectable;
+    injectable: InjectableResult;
     type: InjectableType;
     cascadeProperties: IProducer<P> | undefined;
 }
@@ -22,7 +23,7 @@ export interface DiRawAnnotationsMetadata {
 export interface DiParamMetadata {
     name: string;
     type: InjectableType;
-    payload: Injectable;
+    payload: InjectableResult;
     propsProvider: IProducer<any> | undefined | null;
 }
 
@@ -30,6 +31,6 @@ export interface DiMetadata {
     dependencyName: string;
     argumentNames: string[];
     diParams: IKeyValuePairs <DiParamMetadata>;
-    constructor: IVarArgConstructor<any>;
+    constructor: Injectable<any>;
 }
 

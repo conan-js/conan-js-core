@@ -31,7 +31,7 @@ describe('beanRuntime', () => {
             }
 
             checkDeepEquality(
-                beanRuntime.invoke<ParentBean>(ParentBean),
+                beanRuntime.invoke<ParentBean>(ParentBean, {}, {}),
                 new ParentBean(new LeafBean())
             );
         });
@@ -65,7 +65,7 @@ describe('beanRuntime', () => {
             }
 
             checkDeepEquality(
-                beanRuntime.invoke<ParentBean>(ParentBean),
+                beanRuntime.invoke<ParentBean>(ParentBean, {}, {}),
                 new ParentBean(new LeafBean({
                     p1: 'a',
                     p2: 1
@@ -108,7 +108,7 @@ describe('beanRuntime', () => {
             // TODO Note that there is a bug introduced intentionally, this is a trap to prove that the tracker can
             // help fix issues
             checkDeepEquality(
-                beanRuntime.invoke<ParentBean>(ParentBean, {a: 'a', b: 1}),
+                beanRuntime.invoke<ParentBean>(ParentBean, {a: 'a', b: 1}, {}),
                 new ParentBean(new LeafBean({
                     p1: 'a',
                     p2: 1
@@ -134,7 +134,7 @@ describe('beanRuntime', () => {
                 }
             }
 
-            let result: StartingPoint = beanRuntime.invoke<StartingPoint>(StartingPoint);
+            let result: StartingPoint = beanRuntime.invoke<StartingPoint>(StartingPoint, {}, {});
             expect(result.circularDependency.startingPoint).to.eq (result);
         });
     });

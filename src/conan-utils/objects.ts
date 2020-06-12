@@ -1,4 +1,5 @@
 import {IBiConsumer, IFunction, IKeyValuePairs, IPredicate} from "./typesHelper";
+import {StatusDef} from "../conan-flow/def/status/statusDef";
 
 export class Objects {
     public static mapKeys<
@@ -15,9 +16,9 @@ export class Objects {
         return result as RESULT;
     }
 
-    public static foreachEntry<T> (from: IKeyValuePairs<T>, cb: IBiConsumer<T, string>) {
+    public static foreachEntry<DATA_TYPE> (from: {[KEY in keyof DATA_TYPE]: DATA_TYPE}, cb: IBiConsumer<DATA_TYPE, string>) {
         Object.keys(from).forEach(key=>{
-            cb(from[key], key)
+            cb(from[key], key as any)
         })
     }
 
@@ -47,5 +48,43 @@ export class Objects {
 
 
         return result;
+    }
+
+    public static deepEqualsArrays<T extends { }> (left: T[], right: T[]): boolean {
+        if (left.length !== right.length) return false;
+
+        for (let leftItem of left) {
+            if (right.indexOf(leftItem) === -1) return false;
+        }
+
+        return true;
+    }
+
+    public static deepEqualsObjects<T extends { }> (left: T, right: T): boolean {
+        for (let key of Object.keys(left)) {
+            if (!Objects.deepEquals(left[key], right[key])){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static deepEquals<T> (left: T, right: T): boolean {
+        if ((left == null) && (right == null)) return true;
+        if ((left == null) && (right != null)) return false;
+        if ((left != null) && (right == null)) return false;
+
+        if ( (typeof left === "string") && (typeof right === "string")) return left === right;
+        if ( (typeof left === "number") && (typeof right === "number")) return left === right;
+        if ( (typeof left === "function") && (typeof right === "function")) return left === right;
+        if ( (typeof left === "boolean") && (typeof right === "boolean")) return left === right;
+        if ( (typeof left === "undefined") && (typeof right === "undefined")) return left === right;
+
+        if (Array.isArray(left) && (Array.isArray(right))) return Objects.deepEqualsArrays(left, right);
+        if (Array.isArray(left) && (!Array.isArray(right))) return false;
+        if (!Array.isArray(left) && (Array.isArray(right))) return false;
+
+        if ( (typeof left === "object") && (typeof right === "object")) return Objects.deepEqualsObjects(left, right);
+        return left === right;
     }
 }
