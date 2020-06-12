@@ -7,11 +7,12 @@ import {FlowEventsTracker} from "../../conan-flow/logic/flowEventsTracker";
 import {Context} from "../../conan-flow/domain/context";
 import {DefaultStepFn} from "../../conan-flow/domain/steps";
 import {ITriFunction} from "../../conan-utils/typesHelper";
+import {ThreadFacade} from "../../conan-thread/domain/threadFacade";
+import {DefaultActionsFn} from "../../conan-flow/domain/actions";
+import {PipeThreadDef} from "../domain/pipeThreadDef";
 
-export class PipeMerge<LEFT, RIGHT, MERGED> implements Thread<MERGED>{
-    isRunning: boolean;
-
-    private baseThread: Thread<MERGED>;
+export class PipeMerge<LEFT, RIGHT, MERGED, ACTIONS= void> implements ThreadFacade<MERGED, {}, ACTIONS>{
+    private baseThread: ThreadFacade<MERGED, {}, ACTIONS>;
 
     private lastLeftData: LEFT;
     private lastRightData: RIGHT;
@@ -23,6 +24,7 @@ export class PipeMerge<LEFT, RIGHT, MERGED> implements Thread<MERGED>{
         private readonly leftMapper: ITriFunction<LEFT, RIGHT, MERGED, MERGED>,
         private readonly rightThread: Thread<RIGHT>,
         private readonly rightMapper: ITriFunction<RIGHT, LEFT, MERGED, MERGED>,
+        private readonly pipeThreadDef?: PipeThreadDef<MERGED, ACTIONS>
     ) {
     }
 
@@ -52,9 +54,10 @@ export class PipeMerge<LEFT, RIGHT, MERGED> implements Thread<MERGED>{
 
     start(): this {
         if (this.baseThread == null){
-            this.baseThread = Threads.create<MERGED>({
+            this.baseThread = Threads.create<MERGED, {}, ACTIONS>({
                 name: this.name,
-                initialData: this.base
+                initialData: this.base,
+                ...this.pipeThreadDef
             });
 
             this.leftThread.addReaction({
@@ -87,12 +90,28 @@ export class PipeMerge<LEFT, RIGHT, MERGED> implements Thread<MERGED>{
         return this;
     }
 
-    stop(eventsConsumer: (events) => void): void {
+    stop(eventsConsumer: (events) => void): this {
         this.baseThread.stop(undefined);
+        return this;
     }
 
     get reducers (): DefaultStepFn<MERGED> {
         return this.baseThread.reducers;
     }
 
+    get do(): DefaultActionsFn<MERGED> & ACTIONS & DefaultStepFn<MERGED> {
+        return this.baseThread.do;
+    }
+
+    get isRunning(): boolean {
+        return this.baseThread.isRunning;
+    }
+
+    get actions(): ACTIONS {
+        return this.baseThread.actions;
+    }
+
+    get thread(): Thread<MERGED> {
+        return this.baseThread.thread;
+    }
 }

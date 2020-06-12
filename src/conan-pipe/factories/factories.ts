@@ -5,6 +5,8 @@ import {MonitorInfo} from "../../conan-monitor/domain/monitorInfo";
 import {PipeMerge} from "../logic/pipeMerge";
 import {PipeFilter} from "../logic/pipeFilter";
 import {Objects} from "../../conan-utils/objects";
+import {PipeThreadDef} from "../domain/pipeThreadDef";
+import {ThreadFacade} from "../../conan-thread/domain/threadFacade";
 
 export class Pipes {
     static fromMonitor<FROM, INTO> (
@@ -27,6 +29,23 @@ export class Pipes {
             (current, previous)=> !Objects.deepEquals(current, previous),
             `pipeMonitor[${monitor.getName()}]`,
             baseValue
+        ).start();
+    }
+
+    static tupleCombine <LEFT, RIGHT, ACTIONS = void> (
+        left: Thread<LEFT>,
+        right: Thread<RIGHT>,
+        baseValue: [LEFT, RIGHT],
+        pipeThreadDef ?: PipeThreadDef<[LEFT, RIGHT], ACTIONS>
+    ): ThreadFacade<[LEFT, RIGHT], {}, ACTIONS>{
+        return new PipeMerge<LEFT, RIGHT, [LEFT, RIGHT], ACTIONS>(
+            `combineArray => [${left.getName()}, ${right.getName()}]`,
+            baseValue,
+            left,
+            (left, right, into) => [left, into[1]],
+            right,
+            (right, left, into) => [into[0], right],
+            pipeThreadDef
         ).start();
     }
 }

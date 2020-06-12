@@ -11,8 +11,8 @@ import {DefaultActionsFn} from "../../conan-flow/domain/actions";
 
 export class ThreadFacade<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = void> implements Thread<DATA, REDUCERS>{
     constructor(
-        private readonly thread: Thread<DATA, REDUCERS>,
-        public readonly actions: ACTIONS
+        readonly thread: Thread<DATA, REDUCERS>,
+        public readonly actions: ACTIONS,
     ) {}
 
     chain(mutatorsCb: IConsumer<REDUCERS>): Asap<DATA> {
