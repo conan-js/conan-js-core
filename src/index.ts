@@ -59,6 +59,9 @@ import {
 } from "./conan-react/live/stateLive"
 import {Conan, DefaultActions, DefaultReducers} from "./conan-react/conan"
 import {ConanState} from "./conan-react/conanState"
+import {MonitorInfo, MonitorStatus} from "./conan-monitor/domain/monitorInfo"
+import {Asap, AsapLike, AsapParser, Asaps, AsapType, isAsap} from "./conan-utils/asap"
+import {Reducers, ReducersFn} from "./conan-thread/domain/reducers"
 
 //********************
 //conan-sm
@@ -132,3 +135,9 @@ export {ContextStateLive, contextStateLive, ContextStateLiveProps, StateLive, st
 export {Conan, DefaultActions, DefaultReducers}
 
 export {ConanState}
+
+export {MonitorInfo, MonitorStatus}
+
+export {Asaps, Asap, AsapLike, AsapParser, AsapType, isAsap}
+
+export {Reducers, ReducersFn}
