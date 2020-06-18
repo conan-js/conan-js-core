@@ -48,7 +48,7 @@ export class FlowDefFactory {
         return {
             statusesByStatusName: statusesByStatusName,
             name: userFlowDef.name,
-            ... userFlowDef.initialStatus ? {starter: ()=>userFlowDef.initialStatus}: undefined
+            ... userFlowDef.hasOwnProperty('initialStatus') ? {starter: ()=>userFlowDef.initialStatus}: undefined
         } as any
     }
 
@@ -73,7 +73,7 @@ export class FlowDefFactory {
                 };
             })
         }else {
-            Objects.foreachEntry<UserStatusDef<STATUSES>>(userStatusesDefLike, (value, key)=>{
+            Objects.foreachEntry<UserStatusDef<STATUSES>>(userStatusesDefLike as any, (value, key)=>{
                 statusesByName [key] = {
                     name: key,
                     steps: MutatorsFactory.createSteps(key as any, flowAnchor as any, value.steps as any) as any,

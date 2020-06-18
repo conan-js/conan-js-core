@@ -6,7 +6,6 @@ import {Mutators, VoidMutators} from "../domain/mutators";
 import {FlowOrchestrator} from "./flowOrchestrator";
 import {FlowImpl} from "./flowImpl";
 import {FlowEventsTracker} from "./flowEventsTracker";
-import {FlowRuntimeEventTiming} from "../domain/flowRuntimeEvents";
 
 export enum BindBackType {
     STEP = "STEP",
@@ -58,7 +57,13 @@ export class FlowAnchor<
 
     getDataFn<STATUS extends keyof STATUSES>(status: STATUS): IProducer<STATUSES[STATUS]> {
         return ():STATUSES[STATUS]=> {
+            if (this.currentThread == null){
+                throw new Error(`error getting the data function associated to this flow, this might happen if you try to mutate the state of the flow before it has been started.`)
+            }
             let currentStatus = this.currentThread.flowEvents.currentStatus.name;
+            if (currentStatus === '$init'){
+                return undefined;
+            }
             if (status !== currentStatus) {
                 throw new Error(`unexpected error trying to retrieve the last status for [${status}, but the current status is [${currentStatus}]]`)
             }
@@ -75,17 +80,35 @@ export class FlowAnchor<
             return
         }
 
-        if (param.result.name != "$stop" && (!this.currentStatus || this.currentStatus.name !== expectedStatusName)) {
+        let isNotGoingToStop = param.result && param.result.name != "$stop";
+        let isNotCurrentlyOnInit = this.currentStatus && this.currentStatus.name != "$init";
+        if (isNotGoingToStop && isNotCurrentlyOnInit &&(!this.currentStatus || this.currentStatus.name !== expectedStatusName)) {
             throw Error(`unable to request [${param.methodName}] as is meant for status [${expectedStatusName}], but the current status is [${this.currentStatus ? this.currentStatus.name : '-'}]`);
         }
 
         if (type === BindBackType.STEP) {
-            this.currentThread.flowThread.requestStep(
-                param.statusName,
-                param.methodName,
-                param.payload,
-                param.result
-            )
+            let initialStep = this.currentThread.flowThread.getCurrentStatusName() === '$init';
+            if (initialStep){
+                this.currentThread.flowThread.requestTransition(
+                    {
+                        into: {
+                            name: expectedStatusName,
+                            data: param.result
+                        },
+                        payload: param.payload,
+                        transitionName: param.methodName
+                    },
+                    false
+                )
+
+            } else {
+                this.currentThread.flowThread.requestStep(
+                    param.statusName,
+                    param.methodName,
+                    param.payload,
+                    param.result
+                )
+            }
         } else {
             this.currentThread.flowThread.requestTransition(
                 {

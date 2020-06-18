@@ -31,7 +31,7 @@ import {
 import {DiAnnotationsMetadataFactory} from "./conan-di/core/annotations/diAnnotatinosMetadataFactory"
 import {diAnnotationsCrud, InjectByName, InjectByType, InjectDynamic} from "./conan-di/core/annotations/diAnnotations"
 import {DiContextFactory} from "./conan-di/core/diContext"
-import {useConantState, useContextConantState, useFlow, useFlowStatus} from "./conan-react/connect/conanHooks"
+import {useConanState, useContextConanState, useFlow, useFlowStatus} from "./conan-react/connect/conanHooks"
 import {
     ContextStateConnect,
     contextStateConnect,
@@ -113,7 +113,7 @@ export {diAnnotationsCrud, InjectByName, InjectByType, InjectDynamic}
 
 export {DiContextFactory}
 
-export {useConantState, useContextConantState, useFlow, useFlowStatus}
+export {useConanState, useContextConanState, useFlow, useFlowStatus}
 
 export {
     ContextStateConnect,

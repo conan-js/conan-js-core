@@ -1,42 +1,51 @@
 import {expect} from "chai";
 import {Threads} from "../../../../src/core/conan-thread/factories/threads";
-import {Pipes} from "../../../../src/core/conan-pipe/factories/factories";
+import {Pipes} from "../../../../src/core/conan-pipe/factories/pipes";
 import {ThreadFacade} from "../../../../src/core/conan-thread/domain/threadFacade";
+import {ReactionType} from "../../../../src/core/conan-flow/domain/reactions";
 
 describe(`combining states`, function () {
-    let stringReactions:string[] = [];
-    let numberReactions:number[] = [];
+    let stringReactions:string[];
+    let numberReactions:number[];
 
-    let string$ : ThreadFacade<string> = Threads.create<string>({
+    let String$ = ()=>Threads.create<string>({
         name: 'string',
-        initialData: 'a'
-    });
-    let number$: ThreadFacade<number> = Threads.create<number>({
+        initialData: 'a',
+        reactions: [{
+            action: (onNextData)=>stringReactions.push(onNextData.getData()),
+            reactionType: ReactionType.ALWAYS,
+            name: ''
+        }]
+    }) as ThreadFacade<string>;
+
+    let Number$ = ()=>Threads.create<number>({
         name: 'number',
-        initialData: 1
-    })
+        initialData: 1,
+        reactions: [{
+            action: (onNextData)=>numberReactions.push(onNextData.getData()),
+            reactionType: ReactionType.ALWAYS,
+            name: ''
+        }]
 
-    string$.addReaction({
-        name: `string reaction`,
-        dataConsumer: (value)=>stringReactions.push(value)
-    });
+    }) as ThreadFacade<number>;
 
-    number$.addReaction({
-        name: `number reaction`,
-        dataConsumer: (value)=>numberReactions.push(value)
-    });
-
+    interface CombinedActions{
+        setNumber (value: number): void;
+        setString (value: string): void;
+    }
     it (`should let us combine tuples`, function (){
+        stringReactions = [];
+        numberReactions = [];
+
+        let number$ = Number$();
+        let string$ = String$();
+
         let stringAndNumberReactions:[number, string][] = [];
-        interface CombinedActions{
-            setNumber (value: number): void;
-            setString (value: string): void;
-        }
 
         let stringAndNumber$: ThreadFacade<[number, string], {}, CombinedActions> = Pipes.tupleCombine<number, string, CombinedActions>(
+            `test tuple combine`,
             number$,
             string$,
-            [0, 'a'],
             {
                 actions: thread=>({
                     setNumber(value: number) {
@@ -45,7 +54,8 @@ describe(`combining states`, function () {
                     setString(value: string) {
                         string$.do.update(value);
                     }
-                })
+                }),
+                initialData: [0, 'a']
             }
         );
 
@@ -83,14 +93,115 @@ describe(`combining states`, function () {
     })
 
     it (`should let us combine into objects`, function (){
+        stringReactions = [];
+        numberReactions = [];
+
+        let stringAndNumberReactions:CombinedObject[] = [];
+
         interface CombinedObject {
             theNumber: number,
             theString: string
         }
 
-        // Pipes.objectCombine <CombinedObject> ([
-        //     ['theNumber', number$],
-        //     ['theString', number$],
-        // ])
+        let number$ = Number$();
+        let string$ = String$();
+
+        let stringAndNumber$: ThreadFacade<CombinedObject, {}, CombinedActions> = Pipes.combine <CombinedObject, CombinedActions> (
+            'numberAndString',
+            {
+                theNumber: number$,
+                theString: string$
+            },
+            {
+                reactions: [{
+                    name: `store data`,
+                    reactionType: ReactionType.ALWAYS,
+                    action: (onNextData)=>stringAndNumberReactions.push(onNextData.getData())
+                }],
+                actions: ()=>({
+                    setString(value: string) {
+                        string$.do.update(value)
+                    },
+                    setNumber(value: number) {
+                        number$.do.update(value)
+                    }
+                }),
+                initialData: {
+                    theNumber: undefined,
+                    theString: undefined
+                }
+            },
+        )
+
+        number$.reducers.$update(2);
+        string$.reducers.$update('b');
+
+        string$.reducers.$update('c');
+        number$.reducers.$update(3);
+
+
+        stringAndNumber$.reducers.$update({
+            theNumber: 4,
+            theString: 'd'
+        });
+
+        number$.reducers.$update(5);
+        string$.reducers.$update('e');
+
+        stringAndNumber$.do.setNumber(1);
+        stringAndNumber$.do.setString('a');
+
+        expect (stringReactions).to.deep.eq(['a','b','c','e','a']);
+        expect (numberReactions).to.deep.eq([1, 2, 3, 5, 1]);
+        expect (stringAndNumberReactions).to.deep.eq([
+            {
+                "theNumber": undefined,
+                "theString": undefined
+            },
+            {
+                "theNumber": 1,
+                "theString": undefined
+            },
+            {
+                "theNumber": 1,
+                "theString": "a"
+            },
+            {
+                "theNumber": 2,
+                "theString": "a"
+            },
+            {
+                "theNumber": 2,
+                "theString": "b"
+            },
+            {
+                "theNumber": 2,
+                "theString": "c"
+            },
+            {
+                "theNumber": 3,
+                "theString": "c"
+            },
+            {
+                "theNumber": 4,
+                "theString": "d"
+            },
+            {
+                "theNumber": 5,
+                "theString": "d"
+            },
+            {
+                "theNumber": 5,
+                "theString": "e"
+            },
+            {
+                "theNumber": 1,
+                "theString": "e"
+            },
+            {
+                "theNumber": 1,
+                "theString": "a"
+            }
+        ]);
     })
 })

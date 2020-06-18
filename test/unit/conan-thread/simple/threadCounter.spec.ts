@@ -67,4 +67,19 @@ describe(`counter`, function () {
         });
     })
 
+    it (`should let us do a counter with no intial state`, ()=>{
+        let counter = Threads.create<number>({
+            name: 'counter',
+        });
+
+        counter.do.update (0)
+        counter.do.update ((current)=>current+1)
+        counter.stop(events =>{
+            expect(
+                events.serializeStates(
+                    {excludeStop: true, excludeInit: true}
+                ).map(it=>it.data)
+            ).to.deep.eq([0, 1])
+        });
+    })
 })

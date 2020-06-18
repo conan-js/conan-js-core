@@ -6,6 +6,7 @@ export enum AsapType {
     NOW = 'NOW',
     LATER = 'LATER',
 }
+
 export type AsapLike<T> = Promise<T> | T | Asap<T>;
 
 export interface Asap<T> {
@@ -37,6 +38,7 @@ export function isAsap<T>(toParse: AsapLike<T>): toParse is Asap<T> {
 
 class NowImpl<T> implements Asap<T> {
     public readonly type: AsapType = AsapType.NOW;
+
     constructor(
         private readonly rawValue: T
     ) {
@@ -57,8 +59,8 @@ class NowImpl<T> implements Asap<T> {
 
     merge<Z>(mapper: IFunction<T, Asap<Z>>): Asap<Z> {
         const [next, asap] = Asaps.next<Z>();
-        this.then(value=>
-            mapper(value).then(toMerge=> next(toMerge))
+        this.then(value =>
+            mapper(value).then(toMerge => next(toMerge))
         )
         return asap;
     }
@@ -97,8 +99,8 @@ class LaterImpl<T> implements Asap<T> {
 
     map<Z>(mapper: IFunction<T, Z>): Asap<Z> {
         let [setNext, nextAsap] = Asaps.next<Z>();
-        this.then(value=>setNext (mapper(value)));
-        this.onCancel(()=>nextAsap.cancel());
+        this.then(value => setNext(mapper(value)));
+        this.onCancel(() => nextAsap.cancel());
         return nextAsap;
     }
 
@@ -106,7 +108,7 @@ class LaterImpl<T> implements Asap<T> {
         if (this.flow.getCurrentStatusName() === 'resolved') {
             consumer(this.flow.on('resolved').getLastData());
         } else {
-            this.flow.on('resolving').steps.$update((current)=>({
+            this.flow.on('resolving').steps.$update((current) => ({
                 ...current,
                 then: [...current.then, consumer],
             }));
@@ -114,12 +116,12 @@ class LaterImpl<T> implements Asap<T> {
         return this;
     }
 
-    resolve (value: T): void{
+    resolve(value: T): void {
         if (this.flow.getCurrentStatusName() === 'cancelled') return;
 
-        try{
-            this.flow.assertOn<'resolving'>('resolving', (onResolving)=>{
-                onResolving.getData().then.forEach(subscriber=>{
+        try {
+            this.flow.assertOn<'resolving'>('resolving', (onResolving) => {
+                onResolving.getData().then.forEach(subscriber => {
                     subscriber(value)
                 });
                 this.flow.on('resolving').transitions.$toStatus({
@@ -127,25 +129,25 @@ class LaterImpl<T> implements Asap<T> {
                     data: value
                 });
             })
-        }catch (e) {
+        } catch (e) {
             console.error(e);
-            this.flow.assertOn<'resolving'>('resolving', (onResolving)=>{
+            this.flow.assertOn<'resolving'>('resolving', (onResolving) => {
                 onResolving.getData().catch.forEach(subscriber => {
                     subscriber(e, value)
                 })
-                onResolving.do.$toStatus ({name: "errored", data: value})
+                onResolving.do.$toStatus({name: "errored", data: value})
             })
         }
     }
 
     onCancel(consumer: ICallback): this {
-        if (this.flow.getCurrentStatusName() === 'cancelled'){
+        if (this.flow.getCurrentStatusName() === 'cancelled') {
             consumer();
             return;
         }
 
         if (this.flow.getCurrentStatusName() === 'resolving') {
-            this.flow.on('resolving').steps.$update((current)=>({
+            this.flow.on('resolving').steps.$update((current) => ({
                 ...current,
                 onCancel: [...current.onCancel, consumer],
             }));
@@ -155,12 +157,12 @@ class LaterImpl<T> implements Asap<T> {
     }
 
     cancel(): boolean {
-        if (this.flow.getCurrentStatusName() !== 'resolving'){
+        if (this.flow.getCurrentStatusName() !== 'resolving') {
             return false;
         }
 
-        this.flow.assertOn('resolving', onResolving=>{
-            onResolving.getData().onCancel.forEach(subscriber=>{
+        this.flow.assertOn('resolving', onResolving => {
+            onResolving.getData().onCancel.forEach(subscriber => {
                 subscriber()
             });
             this.flow.on('resolving').transitions.$toStatus({name: "cancelled",});
@@ -172,18 +174,18 @@ class LaterImpl<T> implements Asap<T> {
 
     merge<Z>(mapper: IFunction<T, Asap<Z>>): Asap<Z> {
         const [next, asap] = Asaps.next<Z>();
-        this.then(value=>
+        this.then(value =>
             mapper(value)
-                .then(toMerge=> next(toMerge))
-                .onCancel(()=>asap.cancel())
-        ).onCancel(()=>asap.cancel());
+                .then(toMerge => next(toMerge))
+                .onCancel(() => asap.cancel())
+        ).onCancel(() => asap.cancel());
 
         return asap;
     }
 
     catch(consumer: IBiConsumer<Error, T>): this {
         if (this.flow.getCurrentStatusName() === 'resolving') {
-            this.flow.on('resolving').steps.$update((current)=>({
+            this.flow.on('resolving').steps.$update((current) => ({
                 ...current,
                 catch: [...current.catch, consumer],
             }));
@@ -227,8 +229,8 @@ export class Asaps {
             }
         }).start());
 
-        promise.then(value=>promiseImpl.resolve(value));
-        promise.catch(e=>promiseImpl.catch(e) as any);
+        promise.then(value => promiseImpl.resolve(value));
+        promise.catch(e => promiseImpl.catch(e) as any);
 
         return promiseImpl;
     }
@@ -247,7 +249,7 @@ export class Asaps {
         }))
     }
 
-    static next<T> (): [IConsumer<T>, Asap<T>] {
+    static next<T>(): [IConsumer<T>, Asap<T>] {
         let laterImpl: LaterImpl<T> = new LaterImpl<T>(Flows.createController<LaterAsapFlow<T>>({
             name: 'next-promise',
             statuses: {
@@ -265,7 +267,7 @@ export class Asaps {
                 }
             }
         }).start());
-        return [(value)=>laterImpl.resolve(value), laterImpl];
+        return [(value) => laterImpl.resolve(value), laterImpl];
     }
 
 }

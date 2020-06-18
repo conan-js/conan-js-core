@@ -334,13 +334,18 @@ export class FlowImpl<
             asap
         ] = Asaps.next<Context<STATUSES, STATUS_TO, MUTATORS>>()
 
-        this.assertOn(statusFrom);
-        this.addReactionNext<STATUS_TO>(this.on<STATUS_TO>(statusTo) as any, {
-            name: `once on next`,
-            reactionType: ReactionType.ONCE,
-            action: onChain => next(onChain)
-        });
-        this.onceOn(statusFrom, onThisStatus=>mutatorsCb(onThisStatus.do));
+        if (this.getCurrentStatusName() !== '$init'){
+            this.assertOn(statusFrom);
+            this.addReactionNext<STATUS_TO>(this.on<STATUS_TO>(statusTo) as any, {
+                name: `once on next`,
+                reactionType: ReactionType.ONCE,
+                action: onChain => next(onChain)
+            });
+            this.onceOn(statusFrom, onThisStatus=>mutatorsCb(onThisStatus.do));
+        } else {
+            let statusToDef: StatusDef<STATUSES, any> = this.getStatusDefs()[statusTo as string];
+            this.onceOn(`$init` as any, ()=>mutatorsCb(statusToDef.steps as any));
+        }
         return asap;
     }
 

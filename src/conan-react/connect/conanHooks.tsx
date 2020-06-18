@@ -45,7 +45,7 @@ export function useFlowStatus<
 }
 
 
-export function useConantState<STATE, ACTIONS = DefaultActionsFn<STATE>> (state: ConanState<STATE, ACTIONS>, fallbackValue?: STATE): [STATE, ACTIONS, React.ComponentType] {
+export function useConanState<STATE, ACTIONS = DefaultActionsFn<STATE>> (state: ConanState<STATE, ACTIONS>, fallbackValue?: STATE): [STATE, ACTIONS, React.ComponentType] {
     let lastData = state.getData();
     const [compState, compStateSetter] = useState(lastData == null ? fallbackValue : lastData);
 
@@ -66,8 +66,8 @@ export function useConantState<STATE, ACTIONS = DefaultActionsFn<STATE>> (state:
 }
 
 
-export function useContextConantState<STATE, ACTIONS = DefaultActions<STATE>> (): [STATE, ACTIONS] {
+export function useContextConanState<STATE, ACTIONS = DefaultActions<STATE>> (): [STATE, ACTIONS] {
     const state$ = useContext(ReactStateContext);
-    let result = useConantState<STATE, ACTIONS> (state$);
+    let result = useConanState<STATE, ACTIONS> (state$);
     return [result[0], result[1]];
 }

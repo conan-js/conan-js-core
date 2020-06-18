@@ -13,9 +13,9 @@ import {
 import {IFunction} from "../../../../src/core";
 import {Monitors} from "../../../../src/core/conan-monitor/factories/monitors";
 import {MonitorFacade} from "../../../../src/core/conan-monitor/domain/monitorFacade";
-import {Pipes} from "../../../../src/core/conan-pipe/factories/factories";
+import {Pipes} from "../../../../src/core/conan-pipe/factories/pipes";
 import {Lists} from "../../../../src/core/conan-utils/lists";
-import {MonitorInfo, MonitorStatus} from "../../../../src/core/conan-monitor/domain/monitorInfo";
+import {MonitorStatus} from "../../../../src/core/conan-monitor/domain/monitorInfo";
 
 enum OptimisticStatus {
     SETTLED= 'SETTLED',
@@ -37,6 +37,7 @@ describe(`todo`, function () {
         addTodo (todo: ToDo): Then<TodoListData>
         toggleTodo(todo: ToDo): Then<TodoListData>
     }
+
 
     type TodoMonitor = MonitorFacade<TodoListData, TodoListReducers, TodoActions>;
 
@@ -82,11 +83,7 @@ describe(`todo`, function () {
 
         let optimisticTodoListData$ = Pipes.fromMonitor<TodoListData, OptimisticTodoListData>(
             todos$,
-            {
-                appliedFilter: VisibilityFilters.ALL,
-                todos: []
-            },
-            (monitorInfo, current)=>{
+            (monitorInfo, data, current)=>{
                 if (monitorInfo.status !== MonitorStatus.ASYNC_START) {
                     return current;
                 }
@@ -99,7 +96,8 @@ describe(`todo`, function () {
                     }]
                 };
             },
-            (data, current)=>({
+            (data, monitoInfo
+             , current)=>({
                 appliedFilter: data.appliedFilter,
                 todos: Lists.mergeCombine(
                     data.todos,
@@ -109,8 +107,14 @@ describe(`todo`, function () {
                             status: OptimisticStatus.SETTLED,
                             data: todo
                         })
-                )
-            })
+                ),
+            }),
+            {
+                initialData: {
+                    appliedFilter: VisibilityFilters.ALL,
+                    todos: []
+                }
+            }
         );
 
         optimisticTodoListData$.addReaction({

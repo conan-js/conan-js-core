@@ -17,7 +17,10 @@ export class Proxyfier {
             if (typeof toProxy !== 'function') return;
 
             (proxy as any)[key] = (...payload: any) => {
-                let originalCall = ()=>(from as any)[key](...payload);
+                let originalCall = ()=>{
+                    let originalResult = (from as any)[key](...payload);
+                    return originalResult;
+                }
                 return enricher(originalCall, {
                     methodName: key,
                     payload

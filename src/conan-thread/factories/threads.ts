@@ -22,10 +22,11 @@ export class Threads {
             name: data.name,
             statuses: {
                 nextData: {
-                    ...(data.reducers ? {steps: data.reducers} : undefined)
+                    ...(data.reducers ? {steps: data.reducers} : undefined),
+                    ...(data.reactions? {reactions: data.reactions}: undefined),
                 }
             },
-            ...(data.initialData == null ? undefined : {
+            ...(!data.hasOwnProperty('initialData') ? undefined : {
                 initialStatus: AsapParser.from(data.initialData).map(data => ({
                     name: 'nextData',
                     data

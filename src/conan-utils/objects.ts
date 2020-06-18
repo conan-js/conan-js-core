@@ -3,20 +3,19 @@ import {StatusDef} from "../conan-flow/def/status/statusDef";
 
 export class Objects {
     public static mapKeys<
-        RESULT extends IKeyValuePairs<FINAL_VALUE_TYPE>,
         VALUE_TYPE,
         FINAL_VALUE_TYPE = VALUE_TYPE
-    >(from: IKeyValuePairs<any>, valueMapper: IFunction<VALUE_TYPE, FINAL_VALUE_TYPE>, keyMapper?: IPredicate<string>) : RESULT {
+    >(from: IKeyValuePairs<any>, valueMapper: IFunction<VALUE_TYPE, FINAL_VALUE_TYPE>, keyMapper?: IPredicate<string>) : IKeyValuePairs<FINAL_VALUE_TYPE> {
         let result: IKeyValuePairs<any> = {};
         Object.keys(from).forEach(key=>{
             let newKey = keyMapper ? keyMapper(key) : key;
             result [newKey] = valueMapper(from[key])
         });
 
-        return result as RESULT;
+        return result;
     }
 
-    public static foreachEntry<DATA_TYPE> (from: {[KEY in keyof DATA_TYPE]: DATA_TYPE}, cb: IBiConsumer<DATA_TYPE, string>) {
+    public static foreachEntry<DATA_TYPE> (from: {[p: string]: DATA_TYPE}, cb: IBiConsumer<DATA_TYPE, string>) {
         Object.keys(from).forEach(key=>{
             cb(from[key], key as any)
         })

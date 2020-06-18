@@ -4,17 +4,18 @@ import {expect} from "chai";
 
 
 describe(`counter`, function () {
+    interface CounterFlow {
+        numberUpdated: number;
+    }
+
+    interface CounterFlowMutators extends Mutators<CounterFlow>{
+        numberUpdated: {
+            $increaseByOne (): number
+        }
+    }
+
     it(`should let us create a counter`, () => {
 
-        interface CounterFlow {
-            numberUpdated: number;
-        }
-
-        interface CounterFlowMutators extends Mutators<CounterFlow>{
-            numberUpdated: {
-                $increaseByOne (): number
-            }
-        }
 
         let counter = Flows.create<
             CounterFlow,
@@ -46,6 +47,39 @@ describe(`counter`, function () {
         })
 
         counter.stop(events =>{
+            expect(
+                events.serializeStates(
+                    {excludeStop: true, excludeInit: true}
+                ).map(it=>it.data)
+            ).to.deep.eq([0, 1, 2])
+        });
+    })
+
+
+    it (`should let us create a counter without initial state`, ()=>{
+        let counter$ = Flows.create<
+            CounterFlow,
+            CounterFlowMutators
+            >({
+            name: 'counter',
+            statuses: {
+                numberUpdated:  {
+                    steps: getData =>({
+                        $increaseByOne (): number {
+                            return getData() + 1
+                        }
+                    })
+                },
+            },
+        })
+
+        counter$.start();
+
+        counter$.on('numberUpdated').steps.$update(0);
+        counter$.on('numberUpdated').steps.$increaseByOne();
+        counter$.on('numberUpdated').steps.$increaseByOne();
+
+        counter$.stop(events =>{
             expect(
                 events.serializeStates(
                     {excludeStop: true, excludeInit: true}
