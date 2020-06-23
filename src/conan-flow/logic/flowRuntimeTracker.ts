@@ -54,6 +54,15 @@ export class FlowRuntimeTracker {
         return this.doTick(FlowEventLevel.MILESTONE, FlowEventTiming.IN_PROCESS, shortDesc, payload);
     }
 
+    withLevel (
+        level: FlowEventLevel,
+        shortDesc?: any,
+        payload?: any
+    ): FlowRuntimeTracker {
+        return this.doTick(level, FlowEventTiming.IN_PROCESS, shortDesc, payload);
+    }
+
+
     private doTick(
         level: FlowEventLevel,
         timing: FlowEventTiming,
