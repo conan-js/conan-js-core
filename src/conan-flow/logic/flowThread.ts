@@ -7,7 +7,7 @@ import {ReactionDef} from "../def/reactionDef";
 import {Mutators, VoidMutators} from "../domain/mutators";
 import {FlowRuntimeTracker} from "./flowRuntimeTracker";
 import {FlowOrchestrator} from "./flowOrchestrator";
-import {FlowEventLevel, FlowEventNature, FlowEventSource, FlowEventType} from "../domain/flowRuntimeEvents";
+import {FlowEventNature, FlowEventSource, FlowEventType} from "../domain/flowRuntimeEvents";
 import {FlowImpl} from "./flowImpl";
 import {FlowEventsTracker} from "./flowEventsTracker";
 
@@ -154,9 +154,9 @@ export class FlowThread<
 
         this.flowEvents.settleProcessingStatus(statusRequest, isStep);
         if (!isStep){
-            tracker.milestone( `STATUS - ${statusRequest.status.name}`, statusRequest.status.data)
+            tracker.milestone(`STATUS - ${statusRequest.status.name}`, statusRequest.status.data)
         } else {
-            tracker.milestone(  'STATE', statusRequest.status.data)
+            tracker.milestone( 'STATE', statusRequest.status.data)
         }
         tracker.end();
     }
