@@ -1,6 +1,6 @@
 import {Mutators, VoidMutators} from "../domain/mutators";
 import {FlowThread} from "./flowThread";
-import {AsapType, FlowDef, ICallback, IConsumer, IKeyValuePairs} from "../..";
+import {AsapType, FlowDef, ICallback, IConsumer, IKeyValuePairs} from "../../index";
 import {FlowAnchor} from "./flowAnchor";
 import {FlowOrchestrator} from "./flowOrchestrator";
 import {Status, StatusLike, StatusLikeParser} from "../domain/status";
