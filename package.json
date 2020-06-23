@@ -1,6 +1,6 @@
 {
   "name": "conan-js-core",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "description": "",
   "main": "dist/lib/main.min.js",
   "types": "dist/lib/index.d.ts",
