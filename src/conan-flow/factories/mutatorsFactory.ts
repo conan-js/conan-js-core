@@ -21,7 +21,7 @@ export class MutatorsFactory {
                     flowThread.flowController,
                     FlowEventSource.CONTEXT,
                     FlowEventType.USER_CODE,
-                    finalValue
+                    status
                 ).start();
                 if (typeof reducer !== 'function') {
                     finalValue = reducer;
