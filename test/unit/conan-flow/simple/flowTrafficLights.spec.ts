@@ -33,7 +33,7 @@ describe(``, function () {
             statuses: {
                 red:  {
                     reactions: [
-                        onRedLight => onRedLight.trace ('red: ' + onRedLight.getData()),
+                        onRedLight => onRedLight.log ('red: ' + onRedLight.getData()),
                         onRedLight => setTimeout(()=>onRedLight.do.$toGreenLight(), 100)
                     ],
                     transitions: getStatusData =>({
@@ -47,7 +47,7 @@ describe(``, function () {
                 },
                 green: {
                     reactions: [
-                        onGreenLight => onGreenLight.trace('green: ' + onGreenLight.getData()),
+                        onGreenLight => onGreenLight.log('green: ' + onGreenLight.getData()),
                         onGreenLight => setTimeout(()=>onGreenLight.do.$toAmberLight(), 100)
                     ],
                     transitions: getStatusData =>({
@@ -62,7 +62,7 @@ describe(``, function () {
                 },
                 amber: {
                     reactions: [
-                        onAmberLight => onAmberLight.trace('amber: ' + onAmberLight.getData()),
+                        onAmberLight => onAmberLight.log('amber: ' + onAmberLight.getData()),
                         onAmberLight => setTimeout(()=>onAmberLight.do.$toRedLight(), 20)
                     ],
                     transitions: getStatusData =>({

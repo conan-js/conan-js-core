@@ -9,6 +9,7 @@ import {$INIT, $STOP} from "../domain/flow";
 import {ReactionType} from "../domain/reactions";
 import {ReactionDefLikeParser} from "../def/reactionDef";
 import {Mutators, VoidMutators} from "../domain/mutators";
+import {FlowEventNature} from "../domain/flowRuntimeEvents";
 
 export class FlowDefFactory {
     static create<
@@ -48,7 +49,9 @@ export class FlowDefFactory {
         return {
             statusesByStatusName: statusesByStatusName,
             name: userFlowDef.name,
-            ... userFlowDef.hasOwnProperty('initialStatus') ? {starter: ()=>userFlowDef.initialStatus}: undefined
+            nature: userFlowDef.nature ? userFlowDef.nature : FlowEventNature.MAIN,
+            ... userFlowDef.hasOwnProperty('initialStatus') ? {starter: ()=>userFlowDef.initialStatus}: undefined,
+            ... userFlowDef.hasOwnProperty('logger') ? {logger: userFlowDef.logger}: undefined
         } as any
     }
 

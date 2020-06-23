@@ -7,6 +7,7 @@ import {ThreadFacade} from "../domain/threadFacade";
 import {AsapParser} from "../../conan-utils/asap";
 import {Proxyfier} from "../../conan-utils/proxyfier";
 import {MethodFinder} from "../../conan-utils/methodFinder";
+import {FlowEventNature} from "../../conan-flow/domain/flowRuntimeEvents";
 
 
 export interface ThreadFlow<DATA> {
@@ -32,7 +33,8 @@ export class Threads {
                     data
                 }))
             }),
-            pipelineListener: data.pipelineListener
+            pipelineListener: data.pipelineListener,
+            nature: data.nature ? data.nature : FlowEventNature.MAIN
         });
 
         let threadImpl = new ThreadImpl<DATA, REDUCERS>(flow);

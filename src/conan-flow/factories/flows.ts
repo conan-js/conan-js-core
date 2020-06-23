@@ -3,22 +3,17 @@ import {UserFlowDef} from "../def/flow/userFlowDef";
 import {FlowAnchor} from "../logic/flowAnchor";
 import {Mutators, VoidMutators} from "../domain/mutators";
 import {FlowOrchestrator} from "../logic/flowOrchestrator";
-import {
-    FlowRuntimeEvent,
-    FlowRuntimeEventSource,
-    FlowRuntimeEventTiming,
-    FlowRuntimeEventType
-} from "../domain/flowRuntimeEvents";
-import {FLOW_LOGGER, LoggingOptions} from "../logic/flowLogger";
+import {FlowEvent, FlowEventNature, FlowEventSource, FlowEventType} from "../domain/flowRuntimeEvents";
+import {FLOW_LOGGER} from "../logic/flowLogger";
 import {FlowImpl} from "../logic/flowImpl";
 import {FlowFacade, FlowFacadeImpl} from "../domain/flowFacade";
 import {Flow} from "../domain/flow";
 import {FlowActionsDef} from "../domain/actions";
-import {IBiConsumer, IFunction} from "../..";
+import {IConsumer, IFunction} from "../..";
 
 
-const FlowOrchestrator$: IFunction<IBiConsumer<FlowRuntimeEvent, LoggingOptions>[], FlowOrchestrator> = (pipeline) => new FlowOrchestrator([
-        (event, loggingOptions)=>FLOW_LOGGER.log(event, loggingOptions),
+const FlowOrchestrator$: IFunction<IConsumer<FlowEvent>[], FlowOrchestrator> = (pipeline) => new FlowOrchestrator([
+        (event)=>FLOW_LOGGER.log(event),
         ...pipeline,
 ]);
 
@@ -53,11 +48,11 @@ export class Flows {
         );
         let tracker = flowOrchestrator.createRuntimeTracker(
             flowImpl,
-            FlowRuntimeEventSource.FLOW_FACTORY,
-            FlowRuntimeEventType.CREATE_FLOW,
+            FlowEventSource.FLOW_FACTORY,
+            FlowEventType.CREATING,
             flowDef
-        ).trace(FlowRuntimeEventTiming.REQUEST_START);
-        tracker.trace(FlowRuntimeEventTiming.REQUEST_END, flowImpl)
+        ).start();
+        tracker.end();
         return flowImpl;
     }
 }

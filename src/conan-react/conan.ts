@@ -5,6 +5,7 @@ import {IReducer, IVarArgConstructor} from "..";
 import {Asap} from "../conan-utils/asap";
 import {DefaultActionsFn} from "../conan-flow/domain/actions";
 import {Monitors} from "../conan-monitor/factories/monitors";
+import {FlowEventNature} from "../conan-flow/domain/flowRuntimeEvents";
 
 export type DefaultActions<DATA> = { update (reducer: IReducer<DATA> | DATA): Asap<DATA> };
 export type DefaultReducers<DATA> = { $update (reducer: IReducer<DATA> | DATA): DATA };
@@ -12,12 +13,14 @@ export type DefaultReducers<DATA> = { $update (reducer: IReducer<DATA> | DATA): 
 export class Conan {
     static light<DATA>(
         name: string,
-        initialData?: DATA
+        initialData?: DATA,
+        nature: FlowEventNature = FlowEventNature.MAIN
     ): ConanState<DATA, DefaultActionsFn<DATA>> {
         return new ConanState<DATA, DefaultActionsFn<DATA>>(
             Monitors.create<DATA, DefaultReducers<DATA>, DefaultActionsFn<DATA>>({
                 name,
-                initialData
+                initialData,
+                ... (nature? {nature}: undefined)
             })
         )
     }

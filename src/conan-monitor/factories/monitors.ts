@@ -5,7 +5,7 @@ import {Threads} from "../../conan-thread/factories/threads";
 import {MonitorInfo, MonitorStatus} from "../domain/monitorInfo";
 import {MonitorActions} from "../domain/monitorActions";
 import {MonitorDef} from "../domain/monitorDef";
-import {FlowRuntimeEventTiming, FlowRuntimeEventType} from "../../conan-flow/domain/flowRuntimeEvents";
+import {FlowEventNature, FlowEventTiming, FlowEventType} from "../../conan-flow/domain/flowRuntimeEvents";
 import {AsynAction} from "../domain/asynAction";
 
 export class Monitors {
@@ -15,13 +15,14 @@ export class Monitors {
         let asyncThread = this.createAsyncThread(data);
         let mainThread = Threads.create<DATA, REDUCERS, ACTIONS>({
             ...data,
+            nature: data.nature,
             pipelineListener: (event)=> {
-                if (event.runtimeEvent === FlowRuntimeEventType.MONITOR){
-                    if ( event.timing === FlowRuntimeEventTiming.REQUEST_START) {
+                if (event.runtimeEvent === FlowEventType.MONITORING){
+                    if ( event.timing === FlowEventTiming.START) {
                         asyncThread.do.tick (event.payload)
-                    } else if (event.timing === FlowRuntimeEventTiming.REQUEST_END){
+                    } else if (event.timing === FlowEventTiming.END){
                         asyncThread.do.unTick (event.payload, false)
-                    } else if (event.timing === FlowRuntimeEventTiming.REQUEST_CANCEL){
+                    } else if (event.timing === FlowEventTiming.CANCEL){
                         asyncThread.do.unTick (event.payload, true)
                     }
                     return;
@@ -40,7 +41,7 @@ export class Monitors {
 
     private static createAsyncThread<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = void>(data: MonitorDef<DATA, REDUCERS, ACTIONS>) {
         return Threads.create<MonitorInfo, {}, MonitorActions>({
-            name: `monitor[${data.name}]`,
+            name: `async[${data.name}]`,
             actions: thread => ({
                 tick(toMonitor: AsynAction<any>) {
                     thread.reducers.$update(current => ({
@@ -71,7 +72,8 @@ export class Monitors {
                 inProgressActions: [],
                 status: MonitorStatus.IDLE,
                 currentAction: undefined
-            }
+            },
+            nature: FlowEventNature.AUX
         });
     }
 }

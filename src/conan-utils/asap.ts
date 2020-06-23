@@ -1,6 +1,8 @@
 import {IBiConsumer, ICallback, IConsumer, IFunction} from "./typesHelper";
 import {Flow} from "../conan-flow/domain/flow";
 import {Flows} from "../conan-flow/factories/flows";
+import {FlowEventNature} from "../conan-flow/domain/flowRuntimeEvents";
+import {Strings} from "./strings";
 
 export enum AsapType {
     NOW = 'NOW',
@@ -58,7 +60,7 @@ class NowImpl<T> implements Asap<T> {
     }
 
     merge<Z>(mapper: IFunction<T, Asap<Z>>): Asap<Z> {
-        const [next, asap] = Asaps.next<Z>();
+        const [next, asap] = Asaps.next<Z>('map', FlowEventNature.AUX);
         this.then(value =>
             mapper(value).then(toMerge => next(toMerge))
         )
@@ -98,7 +100,7 @@ class LaterImpl<T> implements Asap<T> {
     }
 
     map<Z>(mapper: IFunction<T, Z>): Asap<Z> {
-        let [setNext, nextAsap] = Asaps.next<Z>();
+        let [setNext, nextAsap] = Asaps.next<Z>('map', FlowEventNature.AUX);
         this.then(value => setNext(mapper(value)));
         this.onCancel(() => nextAsap.cancel());
         return nextAsap;
@@ -173,7 +175,7 @@ class LaterImpl<T> implements Asap<T> {
     }
 
     merge<Z>(mapper: IFunction<T, Asap<Z>>): Asap<Z> {
-        const [next, asap] = Asaps.next<Z>();
+        const [next, asap] = Asaps.next<Z>('merge', FlowEventNature.AUX);
         this.then(value =>
             mapper(value)
                 .then(toMerge => next(toMerge))
@@ -210,9 +212,9 @@ export class Asaps {
         return new NowImpl(value);
     }
 
-    static fromPromise<T>(promise: Promise<T>): Asap<T> {
+    static fromPromise<T>(promise: Promise<T>, name?: string): Asap<T> {
         let promiseImpl: LaterImpl<T> = new LaterImpl<T>(Flows.createController<LaterAsapFlow<T>>({
-            name: 'next-promise',
+            name: `future[${name? name: 'anonymous'}]`,
             statuses: {
                 resolving: {},
                 resolved: {},
@@ -226,7 +228,8 @@ export class Asaps {
                     catch: [],
                     onCancel: [],
                 }
-            }
+            },
+            nature: FlowEventNature.ASAP
         }).start());
 
         promise.then(value => promiseImpl.resolve(value));
@@ -235,8 +238,8 @@ export class Asaps {
         return promiseImpl;
     }
 
-    static delayed<T>(value: T, ms: number): Asap<T> {
-        return Asaps.fromPromise(new Promise((done) => setTimeout(() => done(value), ms)));
+    static delayed<T>(value: T, ms: number, name?: string): Asap<T> {
+        return Asaps.fromPromise(new Promise((done) => setTimeout(() => done(value), ms)), `delay[${name? name: 'anonymous'}]`);
     }
 
     static fetch<T>(url: string): Asap<T> {
@@ -246,12 +249,14 @@ export class Asaps {
                 .then(function (data: T) {
                     done(data)
                 })
-        }))
+        }),
+            `fetch[${Strings.padEnd(url, 15)}]`
+        )
     }
 
-    static next<T>(): [IConsumer<T>, Asap<T>] {
+    static next<T>(name?: string, nature?: FlowEventNature): [IConsumer<T>, Asap<T>] {
         let laterImpl: LaterImpl<T> = new LaterImpl<T>(Flows.createController<LaterAsapFlow<T>>({
-            name: 'next-promise',
+            name: `asap-${name ? name : 'anonymous'}`,
             statuses: {
                 resolving: {},
                 resolved: {},
@@ -265,7 +270,8 @@ export class Asaps {
                     catch: [],
                     onCancel: []
                 }
-            }
+            },
+            nature: nature ? nature : FlowEventNature.ASAP
         }).start());
         return [(value) => laterImpl.resolve(value), laterImpl];
     }

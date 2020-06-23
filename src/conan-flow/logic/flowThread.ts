@@ -7,7 +7,7 @@ import {ReactionDef} from "../def/reactionDef";
 import {Mutators, VoidMutators} from "../domain/mutators";
 import {FlowRuntimeTracker} from "./flowRuntimeTracker";
 import {FlowOrchestrator} from "./flowOrchestrator";
-import {FlowRuntimeEventSource, FlowRuntimeEventTiming, FlowRuntimeEventType} from "../domain/flowRuntimeEvents";
+import {FlowEventLevel, FlowEventNature, FlowEventSource, FlowEventType} from "../domain/flowRuntimeEvents";
 import {FlowImpl} from "./flowImpl";
 import {FlowEventsTracker} from "./flowEventsTracker";
 
@@ -27,7 +27,7 @@ export class FlowThread<
 
     constructor(
         readonly flowController: FlowImpl<STATUSES, MUTATORS>,
-        private readonly flowOrchestrator: FlowOrchestrator,
+        readonly flowOrchestrator: FlowOrchestrator,
         private readonly flowEvents: FlowEventsTracker<STATUSES>
     ) {}
 
@@ -35,17 +35,17 @@ export class FlowThread<
         let status = StatusLikeParser.parse(statusLike);
         let tracker = this.flowOrchestrator.createRuntimeTracker(
             this.flowController,
-            FlowRuntimeEventSource.FLOW_THREAD,
-            FlowRuntimeEventType.REQUEST_STATUS,
+            FlowEventSource.FLOW_THREAD,
+            FlowEventType.REQUESTING_STATUS,
             statusLike
-        ).highlight(FlowRuntimeEventTiming.REQUEST_START, `${status.name}`);
+        ).start( `${status.name}`);
         this.assertValidStatus(status.name);
         if (this.currentRequest != null) {
             if (!isStep) {
-                tracker.trace(FlowRuntimeEventTiming.TRACE, `queueing status [${status.name}]`)
+                tracker.debug(`queueing status [${status.name}]`)
                 this.currentRequest.queueStatus(status);
             } else {
-                tracker.trace(FlowRuntimeEventTiming.TRACE, `queueing state [${status.name}]`)
+                tracker.debug(`queueing state [${status.name}]`)
                 this.currentRequest.queueState(status);
             }
             return;
@@ -54,26 +54,26 @@ export class FlowThread<
         let id = this.getNextId(status);
         this.currentRequest = FlowRequest.statusRequest(this as any, id + '', status, isStep);
         this.currentRequest.start();
-        tracker.trace(FlowRuntimeEventTiming.REQUEST_END)
+        tracker.end();
     }
 
     requestTransition(transition: Transition, isStep: boolean): this {
         let intoStatusName = StatusLikeParser.parse(transition.into).name;
         let tracker = this.flowOrchestrator.createRuntimeTracker(
             this.flowController,
-            FlowRuntimeEventSource.FLOW_THREAD,
-            FlowRuntimeEventType.REQUEST_TRANSITION,
+            FlowEventSource.FLOW_THREAD,
+            FlowEventType.REQUESTING_TRANSITION,
             transition
-        ).highlight(FlowRuntimeEventTiming.REQUEST_START, `${transition.transitionName}`);
-        tracker.highlight(FlowRuntimeEventTiming.INFO, isStep ? 'step' : 'Transition', transition.transitionName)
+        ).start( `${transition.transitionName}`);
+        tracker.info( isStep ? 'step' : 'transition', [transition.transitionName, transition.payload])
         this.assertValidStatus(intoStatusName);
 
         if (this.currentRequest != null) {
             if (!isStep) {
-                tracker.trace(FlowRuntimeEventTiming.TRACE, `queueing transition [${transition.transitionName}]`)
+                tracker.debug( `queueing transition [${transition.transitionName}]`)
                 this.currentRequest.queueTransition(transition);
             } else {
-                tracker.trace(FlowRuntimeEventTiming.TRACE, `queueing step [${transition.transitionName}]`)
+                tracker.debug(`queueing step [${transition.transitionName}]`)
                 this.currentRequest.queueStep(transition);
             }
             return;
@@ -83,7 +83,7 @@ export class FlowThread<
         this.currentRequest = FlowRequest.transitionRequest(this as any, id + '', transition, isStep);
         this.onTransitionRequested(transition, isStep);
         this.currentRequest.start();
-        tracker.trace(FlowRuntimeEventTiming.REQUEST_END)
+        tracker.end()
     }
 
     requestStep(statusName: string, reducerName: string, payload: any, data: any) {
@@ -147,18 +147,18 @@ export class FlowThread<
     flagAsSettled(statusRequest: StatusRequest, isStep: boolean): void {
         let tracker = this.flowOrchestrator.createRuntimeTracker(
             this.flowController,
-            FlowRuntimeEventSource.FLOW_THREAD,
-            FlowRuntimeEventType.FLAG_AS_SETTLED,
+            FlowEventSource.FLOW_THREAD,
+            FlowEventType.SETTLING_STATUS,
             statusRequest
-        ).highlight(FlowRuntimeEventTiming.REQUEST_START, `${statusRequest.status.name}`);
+        ).start( `${statusRequest.status.name}`);
 
         this.flowEvents.settleProcessingStatus(statusRequest, isStep);
         if (!isStep){
-            tracker.highlight(FlowRuntimeEventTiming.INFO, 'STATUS', statusRequest.status)
+            tracker.milestone( `STATUS - ${statusRequest.status.name}`, statusRequest.status.data)
         } else {
-            tracker.highlight(FlowRuntimeEventTiming.INFO, 'STATE', statusRequest.status.data)
+            tracker.milestone(  'STATE', statusRequest.status.data)
         }
-        tracker.trace(FlowRuntimeEventTiming.REQUEST_END);
+        tracker.end();
     }
 
     onStateRequestCompleted(stateMachineRequest: FlowRequest, queuedReactions: [string, ReactionDef<any, any>] [], queuedStatuses: Status[], queuedStates: Status[], queuedTransitions: Transition[], queuedSteps: Transition[]): void {
@@ -190,8 +190,6 @@ export class FlowThread<
         let status: Status<STATUSES, STATUS> = StatusLikeParser.parse<STATUSES, STATUS>(statusLike);
 
         return {
-            // step: this.flowController.on(status.name).steps,
-            // transitions: this.flowController.on(status.name).transitions,
             getData: this.flowController.getState.bind(this.flowController),
             getStatusData: this.flowController.getStatusData.bind(this.flowController),
             do: {
@@ -204,16 +202,16 @@ export class FlowThread<
             interruptFlow:()=> {
                 this.flowController.stop();
             },
-            trace:(msg: string): FlowRuntimeTracker=> {
+            log:(msg: string): FlowRuntimeTracker=> {
                 let tracker = this.flowOrchestrator.createRuntimeTracker(
                     this.flowController,
-                    FlowRuntimeEventSource.CONTEXT,
-                    FlowRuntimeEventType.USER_MSG,
+                    FlowEventSource.USER_MSG,
+                    FlowEventType.USER_CODE,
                     msg
-                ).highlight(FlowRuntimeEventTiming.REQUEST_START, `${msg}`);
+                ).start();
 
-                let flowRuntimeTracker = tracker.highlight(FlowRuntimeEventTiming.USER_TRACE, undefined, msg);
-                tracker.trace(FlowRuntimeEventTiming.REQUEST_END);
+                let flowRuntimeTracker = tracker.milestone( undefined, msg);
+                tracker.end();
                 return flowRuntimeTracker;
             }
         }

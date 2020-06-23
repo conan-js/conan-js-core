@@ -8,6 +8,7 @@ import {Asap} from "../../conan-utils/asap";
 import {DataReactionDef, DataReactionLock} from "./dataReaction";
 import {FlowEventsTracker} from "../../conan-flow/logic/flowEventsTracker";
 import {DefaultActionsFn} from "../../conan-flow/domain/actions";
+import {FlowEventNature} from "../../conan-flow/domain/flowRuntimeEvents";
 
 export class ThreadFacade<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = void> implements Thread<DATA, REDUCERS>{
     constructor(
@@ -64,5 +65,9 @@ export class ThreadFacade<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = 
 
     getName(): string {
         return this.thread.getName();
+    }
+
+    changeLoggingNature(nature: FlowEventNature) {
+        this.thread.changeLoggingNature(nature);
     }
 }

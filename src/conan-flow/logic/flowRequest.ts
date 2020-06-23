@@ -18,8 +18,8 @@ export class FlowRequest {
     private started: boolean = false;
 
 
-    public static statusRequest(smFlow: FlowThread<any>, id: string, state: Status, isStep: boolean): FlowRequest {
-        return new FlowRequest(smFlow, id, state, isStep);
+    public static statusRequest(smFlow: FlowThread<any>, id: string, status: Status, isStep: boolean): FlowRequest {
+        return new FlowRequest(smFlow, id, status, isStep);
     }
 
     public static transitionRequest(smFlow: FlowThread<any>, id: string, transition: Transition, isStep: boolean): FlowRequest {

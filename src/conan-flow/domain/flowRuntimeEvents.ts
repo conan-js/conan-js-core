@@ -1,37 +1,60 @@
 import {FlowImpl} from "../logic/flowImpl";
 
-export enum FlowRuntimeEventSource {
+export enum FlowEventNature {
+    MAIN = "MAIN",
+    HELPER = "HELPER",
+    ASYNC = "ASYNC",
+    AUX = "AUX",
+    ASAP = "ASAP",
+}
+
+export enum FlowEventSource {
     FLOW_CONTROLLER = "FLOW_CONTROLLER",
     FLOW_THREAD = "FLOW_THREAD",
     CONTEXT = "CONTEXT",
+    USER_MSG = "USER_MSG",
     FLOW_FACTORY = "FLOW_FACTORY"
 }
 
-export enum FlowRuntimeEventTiming {
-    REQUEST_START = "REQUEST_START",
-    REQUEST_END = "REQUEST_END",
-    REQUEST_CANCEL = "REQUEST_CANCEL",
-    USER_TRACE = "USER_TRACE",
+export enum FlowEventLevel {
+    DEBUG = "DEBUG",
     TRACE = "TRACE",
     INFO = "INFO",
+    MILESTONE = "MILESTONE",
+    WARN = "WARN",
+    ERROR = "ERROR",
 }
 
-export enum FlowRuntimeEventType {
-    MONITOR = "MONITOR",
-    PROCESS_REACTIONS = "PROCESS_REACTIONS",
+export enum FlowEventTiming {
     START = "START",
-    REQUEST_STATUS = "REQUEST_STATUS",
-    FLAG_AS_SETTLED = "FLAG_AS_SETTLED",
-    USER_MSG = "USER_MSG",
-    REQUEST_TRANSITION = "REQUEST_TRANSITION",
-    CREATE_FLOW = "CREATE_FLOW",
+    END = "END",
+    CANCEL = "CANCEL",
+    IN_PROCESS = "IN_PROCESS",
 }
 
-export interface FlowRuntimeEvent {
+export enum FlowEventType {
+    MONITORING = "MONITORING",
+    PROCESSING_REACTIONS = "PROCESSING_REACTIONS",
+    STARTING = "STARTING",
+    ONCE_ON = "ONCE_ON",
+    RUN_IF = "RUN_IF",
+    RUN = "RUN",
+    ADDING_REACTION = "ADDING_REACTION",
+    REQUESTING_STATUS = "REQUESTING_STATUS",
+    SETTLING_STATUS = "SETTLING_STATUS",
+    REQUESTING_TRANSITION = "REQUESTING_TRANSITION",
+    CREATING = "CREATING",
+    USER_REACTIONS = "USER_REACTIONS",
+    USER_CODE = "USER_CODE",
+}
+
+export interface FlowEvent {
+    nature: FlowEventNature,
     flowController: FlowImpl<any, any>,
-    source: FlowRuntimeEventSource,
-    runtimeEvent: FlowRuntimeEventType,
-    timing: FlowRuntimeEventTiming,
+    source: FlowEventNature,
+    runtimeEvent: FlowEventType,
+    timing: FlowEventTiming,
+    level: FlowEventLevel,
     payload?: any,
     shortDesc?: any,
 }

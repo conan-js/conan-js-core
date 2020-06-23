@@ -82,6 +82,7 @@ describe(`todo`, function () {
         let todos$ = Todos$ (new MockTodoListServiceImpl());
 
         let optimisticTodoListData$ = Pipes.fromMonitor<TodoListData, OptimisticTodoListData>(
+            `test-monitor`,
             todos$,
             (monitorInfo, data, current)=>{
                 if (monitorInfo.status !== MonitorStatus.ASYNC_START) {

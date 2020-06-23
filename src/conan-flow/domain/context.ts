@@ -14,5 +14,5 @@ export interface Context<
     do: MUTATORS[STATUS] & DefaultTransitionFn<STATUSES> & DefaultStepFn<STATUSES[STATUS]>
     chain(cb :ICallback): void;
     interruptFlow(): void;
-    trace(msg: string): void;
+    log(msg: string): void;
 }

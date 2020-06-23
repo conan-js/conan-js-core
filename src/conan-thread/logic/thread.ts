@@ -10,6 +10,7 @@ import {ReactionDef} from "../../conan-flow/def/reactionDef";
 import {ReactionType} from "../../conan-flow/domain/reactions";
 import {DeferLike} from "../../conan-flow/domain/defer";
 import {FlowEventsTracker} from "../../conan-flow/logic/flowEventsTracker";
+import {FlowEventNature} from "../../conan-flow/domain/flowRuntimeEvents";
 
 export interface Thread<DATA, REDUCERS extends Reducers<DATA> = {}> {
     isRunning: boolean;
@@ -35,6 +36,8 @@ export interface Thread<DATA, REDUCERS extends Reducers<DATA> = {}> {
     stop(eventsConsumer: (events) => void): void;
 
     getName(): string;
+
+    changeLoggingNature(nature: FlowEventNature): void;
 }
 
 export class ThreadImpl<DATA, REDUCERS extends Reducers<DATA> = {}> implements Thread<DATA, REDUCERS> {
@@ -108,5 +111,9 @@ export class ThreadImpl<DATA, REDUCERS extends Reducers<DATA> = {}> implements T
 
     getName(): string {
         return this.flow.getName();
+    }
+
+    changeLoggingNature(nature: FlowEventNature) {
+        this.flow.changeLoggingNature (nature);
     }
 }

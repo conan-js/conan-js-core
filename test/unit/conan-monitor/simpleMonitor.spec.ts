@@ -5,8 +5,7 @@ import {Asap, Asaps} from "../../../../src/core/conan-utils/asap";
 import {Monitors} from "../../../../src/core/conan-monitor/factories/monitors";
 import {MonitorInfo, MonitorStatus} from "../../../../src/core/conan-monitor/domain/monitorInfo";
 import {extractNamesFromMonitorInfos} from "../../utils/asyncUtils";
-import {MockTodoListServiceImpl} from "../../utils/todos";
-import {IFunction, IProducer} from "../../../../src/core";
+import {IProducer} from "../../../../src/core";
 
 describe(`simple monitor`, function () {
     interface MonitorActions {

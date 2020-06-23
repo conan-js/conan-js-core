@@ -1,30 +1,51 @@
 import {Steps, StepsDef} from "../def/stepsDef";
-import {IFunction, IReducer} from "../../index";
-import {DefaultTransitionDefFnPayload, DefaultTransitionFn, Transitions, TransitionsDef} from "../domain/transitions";
+import {IReducer} from "../../index";
+import {DefaultTransitionFn, Transitions, TransitionsDef} from "../domain/transitions";
 import {Status, StatusLike, StatusLikeParser} from "../domain/status";
 import {BindBackType, FlowAnchor} from "../logic/flowAnchor";
 import {Proxyfier} from "../../conan-utils/proxyfier";
 import {BaseStates} from "../domain/flow";
-import {StatusDataProducer} from "../domain/flowEvents";
 import {DefaultStepFn} from "../domain/steps";
+import {FlowEventLevel, FlowEventNature, FlowEventSource, FlowEventType} from "../domain/flowRuntimeEvents";
 
 export class MutatorsFactory {
     static createDefaultStepsDef<
         STATUSES extends BaseStates,
         STATUS extends keyof STATUSES
-    > ():StepsDef<STATUSES, STATUS> {
+    > (flowAnchor: FlowAnchor<any>):StepsDef<STATUSES, STATUS> {
         return (getData)=>({
             $update(reducer: IReducer<STATUSES[STATUS]> | STATUSES[STATUS]): STATUSES[STATUS] {
-                if (typeof reducer !== 'function') return reducer;
-                return (reducer as IReducer<STATUSES[STATUS]>)(getData());
+                let finalValue: STATUSES[STATUS];
+                let flowThread = flowAnchor.currentThread.flowThread;
+                let tracker = flowThread.flowOrchestrator.createRuntimeTracker(
+                    flowThread.flowController,
+                    FlowEventSource.CONTEXT,
+                    FlowEventType.USER_CODE,
+                    finalValue
+                ).start();
+                if (typeof reducer !== 'function') {
+                    finalValue = reducer;
+                }else{
+                    finalValue = (reducer as IReducer<STATUSES[STATUS]>)(getData());
+                }
+                tracker.debug(`$update`, finalValue).end()
+                return finalValue;
             }
         })
     }
 
-    static createDefaultTransitionDef<STATUSES, STATUS extends keyof STATUSES> ():TransitionsDef<STATUSES> {
+    static createDefaultTransitionDef<STATUSES, STATUS extends keyof STATUSES> (flowAnchor: FlowAnchor<any>):TransitionsDef<STATUSES> {
         return (()=>({
             $toStatus<STATUS extends keyof STATUSES>(toStatus: StatusLike<STATUSES, STATUS>): Status<STATUSES, STATUS> {
-                return StatusLikeParser.parse<STATUSES, STATUS>(toStatus);
+                let status = StatusLikeParser.parse<STATUSES, STATUS>(toStatus);
+                let flowThread = flowAnchor.currentThread.flowThread;
+                flowThread.flowOrchestrator.createRuntimeTracker(
+                    flowThread.flowController,
+                    FlowEventSource.CONTEXT,
+                    FlowEventType.USER_CODE,
+                    status
+                ).start().debug(`$toStatus`, status).end();
+                return status;
             }
         }));
     }
@@ -39,7 +60,7 @@ export class MutatorsFactory {
         return this.createSteps <STATUSES, STATUS>(
             statusName,
             flowAnchor,
-            this.createDefaultStepsDef<STATUSES, STATUS>()
+            this.createDefaultStepsDef<STATUSES, STATUS>(flowAnchor)
         )
     }
 
@@ -51,7 +72,7 @@ export class MutatorsFactory {
         flowAnchor: FlowAnchor<STATUSES>,
         userTransitions?: TransitionsDef<STATUSES>
     ): Transitions<STATUSES> & DefaultTransitionFn<STATUSES>{
-        let defaultTransitionDef: TransitionsDef<STATUSES> = this.createDefaultTransitionDef();
+        let defaultTransitionDef: TransitionsDef<STATUSES> = this.createDefaultTransitionDef(flowAnchor);
         return this.doCreateTransitions(
             statusName,
             flowAnchor,
@@ -67,7 +88,7 @@ export class MutatorsFactory {
         flowAnchor: FlowAnchor<STATUSES>,
         userStepsDef?: StepsDef<STATUSES, STATUS>,
     ): Steps<STATUSES, STATUS> & DefaultStepFn<STATUSES[STATUS]>{
-        let defaultStepDef: StepsDef<STATUSES, STATUS> = this.createDefaultStepsDef();
+        let defaultStepDef: StepsDef<STATUSES, STATUS> = this.createDefaultStepsDef(flowAnchor);
         return this.doCreateSteps(
             statusName,
             flowAnchor,
@@ -149,6 +170,18 @@ export class MutatorsFactory {
         type: BindBackType,
     ): TYPE{
         return Proxyfier.proxy(toBind, (originalCall, metadata) => {
+            let flowController = flowAnchor.currentThread.flowThread.flowController;
+            let tracker = flowAnchor.currentThread.flowThread.flowOrchestrator.createRuntimeTracker(
+                flowController,
+                FlowEventSource.CONTEXT,
+                FlowEventType.USER_REACTIONS,
+                flowController.flowDef.nature
+            ).start();
+
+
+            let isMainNature = flowController.flowDef.nature === FlowEventNature.MAIN;
+            let level = isMainNature && metadata.methodName !== '$update'? FlowEventLevel.MILESTONE : FlowEventLevel.DEBUG;
+            tracker.withLevel(level, `calling: ${metadata.methodName}`, (typeof metadata.payload === "object" ? metadata.payload : '[reducer]'));
             let newState = originalCall();
             flowAnchor.bindBack(expectedStatusName, {
                 statusName: flowAnchor.currentStatus.name,
@@ -156,6 +189,7 @@ export class MutatorsFactory {
                 payload: metadata.payload,
                 result: newState,
             }, type)
+            tracker.end();
             return newState;
         });
     }

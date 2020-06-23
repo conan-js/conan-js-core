@@ -24,7 +24,7 @@ export class FlowAnchor<
     STATUSES,
     MUTATORS extends Mutators<STATUSES> = VoidMutators<STATUSES>,
 > {
-    private currentThread: CurrentThread<STATUSES, MUTATORS>;
+    public currentThread: CurrentThread<STATUSES, MUTATORS>;
 
     createNewThread(flowController: FlowImpl<STATUSES, MUTATORS>, flowOrchestrator: FlowOrchestrator): FlowThread<STATUSES, MUTATORS> {
         let flowEvents = new FlowEventsTracker<STATUSES>();

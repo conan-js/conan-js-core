@@ -8,6 +8,7 @@ import {FlowEventsTracker} from "../logic/flowEventsTracker";
 import {Context} from "./context";
 import {Asap} from "../../conan-utils/asap";
 import {DeferLike} from "./defer";
+import {FlowEventNature} from "./flowRuntimeEvents";
 
 export const $INIT = "$init";
 export const $STOP = "$stop";
@@ -69,4 +70,6 @@ export interface Flow<
     ): Asap<Context<STATUSES, STATUS_TO, MUTATORS>>;
 
     reactOnStatusChanged(customReaction: IConsumer<Status<STATUSES>>): this;
+
+    changeLoggingNature(nature: FlowEventNature): void;
 }

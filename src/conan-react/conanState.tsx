@@ -2,7 +2,7 @@ import * as React from "react";
 import {ReactElement} from "react";
 import {DataReactionDef, DataReactionLock} from "../conan-thread/domain/dataReaction";
 import {ConnectedState, StateConnect, StateMapConnect} from "./connect/stateConnect";
-import {IBiFunction, IFunction, IPredicate} from "..";
+import {IBiFunction, IFunction} from "..";
 import {StateLive} from "./live/stateLive";
 import {DefaultActionsFn} from "../conan-flow/domain/actions";
 import {MonitorFacade} from "../conan-monitor/domain/monitorFacade";
@@ -13,6 +13,7 @@ import {ThreadFacade} from "../conan-thread/domain/threadFacade";
 import {ITriFunction} from "../conan-utils/typesHelper";
 import {PipeThreadDef} from "../conan-pipe/domain/pipeThreadDef";
 import {Objects} from "../conan-utils/objects";
+import {FlowEventNature} from "../conan-flow/domain/flowRuntimeEvents";
 
 export class ConanState<DATA, ACTIONS = DefaultActionsFn<DATA>> {
 
@@ -108,11 +109,15 @@ export class ConanState<DATA, ACTIONS = DefaultActionsFn<DATA>> {
             throw new Error(`this conan state is not ready for async`);
         }
 
+        this.asMonitor().activateAsyncLog();
+
         let mergedThread: Thread<T> = Pipes.fromMonitor<DATA, T>(
+            `monitor[${this.getName()}]`,
             this.state as any,
             monitorMerger,
             dataMerger, {
-                initialData: baseValue
+                initialData: baseValue,
+                nature: FlowEventNature.HELPER
             }
         );
 

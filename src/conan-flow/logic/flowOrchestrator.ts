@@ -1,43 +1,39 @@
 import {
-    FlowRuntimeEvent,
-    FlowRuntimeEventSource,
-    FlowRuntimeEventTiming,
-    FlowRuntimeEventType
+    FlowEvent,
+    FlowEventNature, FlowEventSource,
+    FlowEventTiming,
+    FlowEventType
 } from "../domain/flowRuntimeEvents";
 import {FlowRuntimeTracker} from "./flowRuntimeTracker";
-import {IBiConsumer} from "../..";
-import {LoggingOptions} from "./flowLogger";
+import {IConsumer} from "../..";
 import {FlowImpl} from "./flowImpl";
 
 
 export class FlowOrchestrator {
-    private pastTrackers: FlowRuntimeTracker [] = [];
     private currentTracker: FlowRuntimeTracker;
 
     constructor(
-        private readonly eventsProcessor: IBiConsumer<FlowRuntimeEvent, LoggingOptions>[]
+        private readonly eventsProcessor: IConsumer<FlowEvent>[]
     ) {}
 
 
     onRuntimeEvent (
         tracker: FlowRuntimeTracker,
-        event: FlowRuntimeEvent,
-        loggingOptions: LoggingOptions
+        event: FlowEvent,
     ): void{
-        if (event.timing === FlowRuntimeEventTiming.REQUEST_START) {
+        if (event.timing === FlowEventTiming.START) {
             this.currentTracker = tracker;
-        } else if (event.timing === FlowRuntimeEventTiming.REQUEST_END || event.timing === FlowRuntimeEventTiming.REQUEST_CANCEL){
-            this.pastTrackers.push(tracker);
+        } else if (event.timing === FlowEventTiming.END || event.timing === FlowEventTiming.CANCEL){
             this.currentTracker = undefined;
         }
 
-        this.eventsProcessor.forEach(it=>it(event, loggingOptions));
+        this.eventsProcessor.forEach(it=>it(event));
     }
 
     createRuntimeTracker(
         flowController: FlowImpl<any, any>,
-        source: FlowRuntimeEventSource,
-        runtimeEvent: FlowRuntimeEventType,
+        source: FlowEventSource,
+        runtimeEvent: FlowEventType,
         payload?: any
     ): FlowRuntimeTracker {
         return new FlowRuntimeTracker(
@@ -46,7 +42,8 @@ export class FlowOrchestrator {
                 flowController: flowController,
                 source,
                 runtimeEvent,
-                payload
+                payload,
+                nature: flowController.flowDef.nature
             }
         );
     }

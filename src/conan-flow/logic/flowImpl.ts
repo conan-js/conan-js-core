@@ -1,10 +1,10 @@
 import {Mutators, VoidMutators} from "../domain/mutators";
 import {FlowThread} from "./flowThread";
-import {FlowDef, ICallback, IConsumer, IKeyValuePairs} from "../..";
+import {AsapType, FlowDef, ICallback, IConsumer, IKeyValuePairs} from "../..";
 import {FlowAnchor} from "./flowAnchor";
 import {FlowOrchestrator} from "./flowOrchestrator";
 import {Status, StatusLike, StatusLikeParser} from "../domain/status";
-import {FlowRuntimeEventSource, FlowRuntimeEventTiming, FlowRuntimeEventType} from "../domain/flowRuntimeEvents";
+import {FlowEventNature, FlowEventSource, FlowEventType} from "../domain/flowRuntimeEvents";
 import {ReactionType} from "../domain/reactions";
 import {Asap, AsapParser, Asaps} from "../../conan-utils/asap";
 import {Transition} from "../domain/transitions";
@@ -25,7 +25,7 @@ export class FlowImpl<
 
 
     constructor(
-        private readonly flowDef: FlowDef<STATUSES, MUTATORS>,
+        readonly flowDef: FlowDef<STATUSES, MUTATORS>,
         private readonly flowAnchor: FlowAnchor<STATUSES, MUTATORS>,
         private readonly flowOrchestrator: FlowOrchestrator,
     ) {
@@ -36,10 +36,10 @@ export class FlowImpl<
     ): this {
         let tracker = this.flowOrchestrator.createRuntimeTracker(
             this,
-            FlowRuntimeEventSource.FLOW_CONTROLLER,
-            FlowRuntimeEventType.START,
+            FlowEventSource.FLOW_CONTROLLER,
+            FlowEventType.STARTING,
             initialStatus
-        ).trace(FlowRuntimeEventTiming.REQUEST_START);
+        ).start();
         if (this.isRunning) {
             throw new Error(`can't request a flow that it has been started to start again`);
         }
@@ -54,7 +54,7 @@ export class FlowImpl<
         let doStart = (status: StatusLike<STATUSES>) => {
             this.addReaction($INIT as any, {
                 action: () => {
-                    tracker.highlight(FlowRuntimeEventTiming.TRACE, 'initialStatus - resolved', status)
+                    tracker.debug('initialStatus', status)
                     this.requestStatus(status);
                 },
                 reactionType: ReactionType.ONCE,
@@ -65,7 +65,7 @@ export class FlowImpl<
                 reactionType: ReactionType.ONCE,
                 action: onStop => {
                     onStop.chain(() => {
-                        tracker.highlight(FlowRuntimeEventTiming.TRACE, 'state machine stopped')
+                        tracker.debug('state machine stopped')
                         this.flowThread = null;
                         this.isRunning = false;
                     })
@@ -74,7 +74,7 @@ export class FlowImpl<
             this.requestStatus($INIT as any);
         }
         AsapParser.from(actualStarter).then(status=> doStart(status));
-        tracker.trace(FlowRuntimeEventTiming.REQUEST_END);
+        tracker.end();
         return this;
     }
 
@@ -140,17 +140,37 @@ export class FlowImpl<
     }
 
     onceOn<STATUS extends keyof STATUSES & keyof MUTATORS>(stateName: STATUS, def: ReactionCb<STATUSES, STATUS, MUTATORS>): this {
-        return this.addReaction(stateName as any, {
-            name: `-`,
+        let tracker = this.flowOrchestrator.createRuntimeTracker(
+            this,
+            FlowEventSource.FLOW_CONTROLLER,
+            FlowEventType.ONCE_ON,
+            stateName
+        ).start();
+
+        tracker.debug(`[onceOn(${stateName})`);
+        let flow = this.addReaction(stateName as any, {
+            name: `[userCode]`,
             reactionType: ReactionType.ONCE,
             action: def
-        })
+        });
+
+        tracker.end();
+        return flow
     }
 
     addReaction<STATUS extends keyof STATUSES & MUTATORS>(statusName: STATUS, reaction: ReactionDef<STATUSES, STATUS, MUTATORS>): this {
+        let tracker = this.flowOrchestrator.createRuntimeTracker(
+            this,
+            FlowEventSource.FLOW_CONTROLLER,
+            FlowEventType.ADDING_REACTION,
+            reaction.name
+        ).start();
+
         let needsToBeAdded: boolean = true;
         if (this.isRunning) {
             if (this.flowThread.tryToQueue(statusName as string, reaction)) {
+                tracker.debug([`queueing adding reaction: ${reaction.name}`])
+                tracker.end();
                 return this;
             }
 
@@ -176,6 +196,7 @@ export class FlowImpl<
             this.addReactionNext<STATUS>(statusDef as any, reaction);
         }
 
+        tracker.end();
         return this;
     }
 
@@ -245,10 +266,10 @@ export class FlowImpl<
     ) {
         let tracker = this.flowOrchestrator.createRuntimeTracker(
             this,
-            FlowRuntimeEventSource.FLOW_CONTROLLER,
-            FlowRuntimeEventType.PROCESS_REACTIONS,
+            FlowEventSource.FLOW_CONTROLLER,
+            FlowEventType.PROCESSING_REACTIONS,
             statusName
-        ).trace(FlowRuntimeEventTiming.REQUEST_START);
+        ).start();
 
         let onAllReactionsCompleted: ICallback
         this.getReactions(statusName).forEach(reaction => {
@@ -262,7 +283,7 @@ export class FlowImpl<
             onAllReactionsCompleted();
         }
 
-        tracker.trace(FlowRuntimeEventTiming.REQUEST_END, statusName);
+        tracker.end(statusName);
         return this;
     }
 
@@ -282,8 +303,16 @@ export class FlowImpl<
     }
 
     runIf<STATUS extends keyof STATUSES & keyof MUTATORS>(statusName: STATUS, reaction: ReactionDef<STATUSES, STATUS, MUTATORS>, elseIf?: ICallback): void {
+        let tracker = this.flowOrchestrator.createRuntimeTracker(
+            this,
+            FlowEventSource.FLOW_CONTROLLER,
+            FlowEventType.RUN_IF,
+            reaction.name
+        ).start();
+
         if (!this.isRunning) {
             if (elseIf) elseIf();
+            tracker.end();
             return;
         }
 
@@ -292,6 +321,7 @@ export class FlowImpl<
             if (elseIf) {
                 elseIf()
             }
+            tracker.end();
             return;
         }
 
@@ -302,6 +332,7 @@ export class FlowImpl<
                 elseIf()
             }
         }
+        tracker.end();
     }
 
 
@@ -309,7 +340,17 @@ export class FlowImpl<
         reaction: ReactionDef<STATUSES, STATUS, MUTATORS>,
         currentState: STATUS
     ) {
+        let tracker = this.flowOrchestrator.createRuntimeTracker(
+            this,
+            FlowEventSource.FLOW_CONTROLLER,
+            FlowEventType.RUN,
+            reaction.name
+        ).start();
+
+        tracker.debug(`${reaction.name}`);
         reaction.action(this.flowThread.createContext(currentState, (cb) => cb()) as any);
+
+        tracker.end();
     }
 
     assertOn<STATUS extends keyof STATUSES>(status: STATUS, then?:IConsumer<Context<STATUSES, STATUS, MUTATORS>>): this {
@@ -332,7 +373,7 @@ export class FlowImpl<
         const [
             next,
             asap
-        ] = Asaps.next<Context<STATUSES, STATUS_TO, MUTATORS>>()
+        ] = Asaps.next<Context<STATUSES, STATUS_TO, MUTATORS>>(`chain[${this.getName()}]-[${statusFrom}->${statusTo}]`, FlowEventNature.AUX)
 
         if (this.getCurrentStatusName() !== '$init'){
             this.assertOn(statusFrom);
@@ -354,26 +395,38 @@ export class FlowImpl<
         statusTo: STATUS_TO,
         mutatorsCbAsapLike: DeferLike<MUTATORS[STATUS_FROM]>
     ): Asap<Context<STATUSES, STATUS_TO, MUTATORS>> {
-        let mutatorsCbAsap: Defer<MUTATORS[STATUS_FROM]> = deferParser(mutatorsCbAsapLike, {
-            name: `[${this.getName()}]::${statusFrom}=>${statusTo}`,
-            payload: `[${this.getName()}]::${statusFrom}=>${statusTo}`
+        let description = `[${this.getName()}]::${statusFrom}=>${statusTo}`;
+        let defer: Defer<MUTATORS[STATUS_FROM]> = deferParser(mutatorsCbAsapLike, {
+            name: description,
+            payload: description
         });
         let tracker = this.flowOrchestrator.createRuntimeTracker(
             this,
-            FlowRuntimeEventSource.FLOW_CONTROLLER,
-            FlowRuntimeEventType.MONITOR,
+            FlowEventSource.FLOW_CONTROLLER,
+            FlowEventType.MONITORING,
             {
-                asap: mutatorsCbAsap.action,
-                name: mutatorsCbAsap.name,
-                payload: mutatorsCbAsap.payload
+                asap: defer.action,
+                name: defer.name,
+                payload: defer.payload
             } as AsynAction<any>
-        ).trace(FlowRuntimeEventTiming.REQUEST_START);
+        ).start();
 
-        return mutatorsCbAsap.action.merge(cb => {
-            tracker.trace(FlowRuntimeEventTiming.REQUEST_END);
+        if (defer.action.type === AsapType.LATER) {
+           tracker.milestone(`START monitoring - ${defer.name}`, defer.payload)
+        }
+
+        return defer.action.merge(cb => {
+            if (defer.action.type === AsapType.LATER) {
+                tracker.debug(`STOP monitoring - ${defer.name}`)
+            }
+            tracker.end();
             return this.chainInto(statusFrom, statusTo, cb);
         }).onCancel(()=>{
-            tracker.trace(FlowRuntimeEventTiming.REQUEST_CANCEL);
+            tracker.cancel();
         });
+    }
+
+    changeLoggingNature(nature: FlowEventNature) {
+        this.flowDef.nature = nature;
     }
 }

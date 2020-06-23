@@ -1,48 +1,82 @@
-import {FlowRuntimeEvent, FlowRuntimeEventTiming} from "../domain/flowRuntimeEvents";
+import {FlowEvent, FlowEventTiming, FlowEventLevel} from "../domain/flowRuntimeEvents";
 import {IPartial} from "../..";
 import {FlowOrchestrator} from "./flowOrchestrator";
-import {LoggingOptions} from "./flowLogger";
 
 export class FlowRuntimeTracker {
 
     constructor(
         private readonly orchestrator: FlowOrchestrator,
-        private readonly event: IPartial<FlowRuntimeEvent>
+        private readonly event: IPartial<FlowEvent>
     ) {}
 
-    trace (
-        timing: FlowRuntimeEventTiming,
+    end (
         shortDesc?: any,
         payload?: any
     ): FlowRuntimeTracker {
-        return this.doTick(timing, shortDesc, payload, {
-            highlight: false
-        });
+        return this.doTick(FlowEventLevel.TRACE, FlowEventTiming.END, shortDesc, payload);
     }
 
-    highlight (
-        timing: FlowRuntimeEventTiming,
+    cancel (
         shortDesc?: any,
         payload?: any
     ): FlowRuntimeTracker {
-        return this.doTick(timing, shortDesc, payload, {
-            highlight: true
-        });
+        return this.doTick(FlowEventLevel.TRACE, FlowEventTiming.CANCEL, shortDesc, payload);
     }
+
+
+    start (
+        shortDesc?: any,
+        payload?: any
+    ): FlowRuntimeTracker {
+        return this.doTick(FlowEventLevel.TRACE, FlowEventTiming.START, shortDesc, payload);
+
+    }
+
+    debug (
+        shortDesc?: any,
+        payload?: any
+    ): FlowRuntimeTracker {
+        return this.doTick(FlowEventLevel.DEBUG, FlowEventTiming.IN_PROCESS, shortDesc, payload);
+    }
+
+    info (
+        shortDesc?: any,
+        payload?: any
+    ): FlowRuntimeTracker {
+        return this.doTick(FlowEventLevel.INFO, FlowEventTiming.IN_PROCESS, shortDesc, payload);
+    }
+
+
+    milestone (
+        shortDesc?: any,
+        payload?: any
+    ): FlowRuntimeTracker {
+        return this.doTick(FlowEventLevel.MILESTONE, FlowEventTiming.IN_PROCESS, shortDesc, payload);
+    }
+
+    withLevel (
+        level: FlowEventLevel,
+        shortDesc?: any,
+        payload?: any
+    ): FlowRuntimeTracker {
+        return this.doTick(level, FlowEventTiming.IN_PROCESS, shortDesc, payload);
+    }
+
 
     private doTick(
-        timing: FlowRuntimeEventTiming,
+        level: FlowEventLevel,
+        timing: FlowEventTiming,
         shortDesc: any,
         payload: any,
-        loggingOptions: LoggingOptions
     ) {
-        let event: FlowRuntimeEvent = {
+        let event: FlowEvent = {
             ...this.event,
             shortDesc,
             timing,
-            ...(payload ? {payload}: undefined)
-        } as FlowRuntimeEvent;
-        this.orchestrator.onRuntimeEvent(this, event, loggingOptions);
+            level,
+            ...(payload!=null ? {payload}: undefined)
+        } as FlowEvent;
+        this.orchestrator.onRuntimeEvent(this, event);
         return this;
     }
 }

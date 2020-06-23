@@ -8,6 +8,7 @@ import {ThreadFlow, Threads} from "../../conan-thread/factories/threads";
 import {DefaultStepFn} from "../../conan-flow/domain/steps";
 import {DefaultActionsFn} from "../../conan-flow/domain/actions";
 import {PipeThreadDef} from "../domain/pipeThreadDef";
+import {FlowEventNature} from "../../conan-flow/domain/flowRuntimeEvents";
 
 export class PipeImpl<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = void> implements ThreadFacade<DATA, REDUCERS, ACTIONS>{
     private baseThread: ThreadFacade<DATA, REDUCERS, ACTIONS>;
@@ -81,6 +82,10 @@ export class PipeImpl<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = void
 
     get thread(): Thread<DATA, REDUCERS> {
         return this.baseThread.thread;
+    }
+
+    changeLoggingNature(nature: FlowEventNature) {
+        return this.baseThread.changeLoggingNature(nature);
     }
 
 }

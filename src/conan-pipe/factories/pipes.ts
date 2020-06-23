@@ -8,25 +8,30 @@ import {ThreadFacade} from "../../conan-thread/domain/threadFacade";
 import {PipeImpl} from "../logic/pipeImpl";
 import {Threads} from "../../conan-thread/factories/threads";
 import {ITriFunction} from "../../conan-utils/typesHelper";
+import {FlowEventNature} from "../../conan-flow/domain/flowRuntimeEvents";
 
 export class Pipes {
     static fromMonitor<FROM, INTO, ACTIONS = void> (
+        name: string,
         monitor: MonitorFacade<FROM>,
         monitorMerger: (ITriFunction<MonitorInfo, FROM, INTO, INTO>),
         dataMerger: ITriFunction<FROM, MonitorInfo, INTO, INTO>,
         pipeThreadDef ?: PipeThreadDef<INTO, {}, ACTIONS>
     ): ThreadFacade<INTO, {}, ACTIONS>{
         return Pipes.filter(
-            `unique-monitor`,
+            name,
             Pipes.merge<MonitorInfo, FROM, INTO, ACTIONS>(
-                `pipeMonitor=>raw[${monitor.getName()}]`,
+                name,
                 monitor.asyncThread,
                 monitorMerger,
                 monitor.mainThread,
                 dataMerger,
                 pipeThreadDef
             ),
-            (current, previous)=> !Objects.deepEquals(current, previous)
+            (current, previous)=> !Objects.deepEquals(current, previous),
+            {
+                nature: FlowEventNature.AUX
+            }
         );
     }
 
@@ -54,9 +59,9 @@ export class Pipes {
         rightMerger: (ITriFunction<RIGHT, LEFT, INTO, INTO>),
         pipeThreadDef ?: PipeThreadDef<INTO, {}, ACTIONS>
     ): ThreadFacade<INTO, {}, ACTIONS>{
-        let statesHistory$ = Threads.create<INTO>({name: 'last states'});
-        let leftHistory$ = Threads.create<LEFT>({name: 'last states'});
-        let rightHistory$ = Threads.create<RIGHT>({name: 'last states'});
+        let statesHistory$ = Threads.create<INTO>({name: 'last states', nature: FlowEventNature.AUX});
+        let leftHistory$ = Threads.create<LEFT>({name: 'last states', nature: FlowEventNature.AUX});
+        let rightHistory$ = Threads.create<RIGHT>({name: 'last states', nature: FlowEventNature.AUX});
 
         return new PipeImpl<INTO, {}, ACTIONS>(
             name,
@@ -98,8 +103,8 @@ export class Pipes {
         right$: Thread<RIGHT>,
         pipeThreadDef ?: PipeThreadDef<[LEFT, RIGHT], {}, ACTIONS>
     ): ThreadFacade<[LEFT, RIGHT], {}, ACTIONS>{
-        let leftHistory$ = Threads.create<LEFT>({name: 'last states'});
-        let rightHistory$ = Threads.create<RIGHT>({name: 'last states'});
+        let leftHistory$ = Threads.create<LEFT>({name: 'last states', nature: FlowEventNature.AUX});
+        let rightHistory$ = Threads.create<RIGHT>({name: 'last states', nature: FlowEventNature.AUX});
 
         return new PipeImpl<[LEFT, RIGHT], {}, ACTIONS>(
             `combineArray => [${left$.getName()}, ${right$.getName()}]`,
@@ -174,7 +179,7 @@ export class Pipes {
         predicate: (current: T, previous: T) => boolean,
         pipeThreadDef ?: PipeThreadDef<T, {}, ACTIONS>
     ): ThreadFacade<T, {}, ACTIONS> {
-        let statesHistory$ = Threads.create<T>({name: 'last states'});
+        let statesHistory$ = Threads.create<T>({name: 'last states', nature: FlowEventNature.AUX});
 
         return new PipeImpl<T, {}, ACTIONS>(
             name,

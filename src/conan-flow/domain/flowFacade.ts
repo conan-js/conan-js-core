@@ -8,6 +8,7 @@ import {Status, StatusLike} from "./status";
 import {Context} from "./context";
 import {Asap} from "../../conan-utils/asap";
 import {DeferLike} from "./defer";
+import {FlowEventNature} from "./flowRuntimeEvents";
 
 export interface FlowFacade<
     STATUSES,
@@ -115,5 +116,9 @@ export class FlowFacadeImpl<STATUSES, MUTATORS extends Mutators<STATUSES> = Void
 
     removeReaction<STATUS extends keyof STATUSES & keyof MUTATORS>(statusName: STATUS, reactionToRemove: ReactionDef<STATUSES, STATUS, MUTATORS>): void {
         this.flow.removeReaction(statusName, reactionToRemove);
+    }
+
+    changeLoggingNature(nature: FlowEventNature) {
+        this.flow.changeLoggingNature(nature);
     }
 }

@@ -1,9 +1,8 @@
 import {Reducers, ReducersFn} from "./reducers";
 import {AsapLike} from "../../conan-utils/asap";
 import {ActionsFn} from "./threadActions";
-import {IBiConsumer, IPartial} from "../..";
-import {FlowRuntimeEvent} from "../../conan-flow/domain/flowRuntimeEvents";
-import {LoggingOptions} from "../../conan-flow/logic/flowLogger";
+import {IConsumer, IPartial} from "../..";
+import {FlowEvent, FlowEventNature} from "../../conan-flow/domain/flowRuntimeEvents";
 import {UserReactionsDef} from "../../conan-flow/def/reactionDef";
 
 export interface StateDef<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = void> {
@@ -12,7 +11,8 @@ export interface StateDef<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = 
     reducers?: ReducersFn<DATA, REDUCERS>,
     actions?: ActionsFn<DATA, REDUCERS, IPartial<ACTIONS>>,
     autoBind?: any,
-    pipelineListener?: IBiConsumer<FlowRuntimeEvent, LoggingOptions>;
+    pipelineListener?: IConsumer<FlowEvent>;
     cancelAutoStart?: boolean;
-    reactions?: UserReactionsDef<{ nextData: DATA }, 'nextData', { nextData: ACTIONS & REDUCERS }>
+    reactions?: UserReactionsDef<{ nextData: DATA }, 'nextData', { nextData: ACTIONS & REDUCERS }>;
+    nature?: FlowEventNature;
 }

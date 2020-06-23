@@ -8,6 +8,7 @@ import {Context} from "../../conan-flow/domain/context";
 import {ThreadFlow} from "../../conan-thread/factories/threads";
 import {ThreadFacade} from "../../conan-thread/domain/threadFacade";
 import {MonitorActions} from "./monitorActions";
+import {FlowEventNature} from "../../conan-flow/domain/flowRuntimeEvents";
 
 export class MonitorFacade<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = any> implements Monitor<DATA, REDUCERS, ACTIONS>{
     constructor(
@@ -58,5 +59,9 @@ export class MonitorFacade<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS =
 
     get mainThread (): ThreadFacade<DATA, REDUCERS, ACTIONS> {
         return this.monitor.mainThread;
+    }
+
+    activateAsyncLog() {
+        this.monitor.asyncThread.thread.changeLoggingNature (FlowEventNature.ASYNC);
     }
 }
