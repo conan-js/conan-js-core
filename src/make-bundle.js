@@ -23,11 +23,17 @@ async function build() {
     console.log(bundleFileName)
 
     const codeText = (await readFile(path.join(compiledPath, "bundle.js"), "utf-8"))
+    console.log('Before Minify');
     let minified = uglifyEs.minify(codeText)
-    if (minified.error)
+    if (minified.error) {
+        console.log('Minify exploded');
         throw minified.error
+    }
+    console.log('After Minify');
     await writeFile(path.join(distNpmPath, `${packageName}.min.js`), minified.code)
+    console.log('After main.min.js');
     await writeFile(path.join(distNpmPath, `${packageName}.d.ts`), await makeDefinitionsCode())
+    console.log('After d.ts');
 }
 async function makeDefinitionsCode() {
     let defs = [

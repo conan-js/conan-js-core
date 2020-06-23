@@ -29,9 +29,9 @@ export class FlowLogger {
 
         if (event.payload != null){
             console.log(
+                Strings.padEnd(`${event.runtimeEvent}`, 30),
                 Strings.padEnd(`${event.flowController.getName()}`, 50),
                 Strings.padEnd(`${currentStatusName}`, 30),
-                Strings.padEnd(`${event.runtimeEvent}`, 30),
                 Strings.padEnd(`${event.nature}`, 20),
                 Strings.padEnd(`${event.level}`, 20),
             );
@@ -48,9 +48,9 @@ export class FlowLogger {
             console.log('------------------------------------------------------------------------------------------------------------------------------------------------')
         }else if (event.shortDesc != null){
             console.log(
+                Strings.padEnd(`${event.runtimeEvent}`, 30),
                 Strings.padEnd(`${event.flowController.getName()}`, 50),
                 Strings.padEnd(`${currentStatusName}`, 30),
-                Strings.padEnd(`${event.runtimeEvent}`, 30),
                 Strings.padEnd(`${event.level}`, 20),
                 Strings.padEnd(`${event.nature}`, 20),
                 Strings.padEnd(`=>${event.shortDesc}`, 60),
