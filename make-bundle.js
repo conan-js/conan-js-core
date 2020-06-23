@@ -10,6 +10,7 @@ const srcPath = __dirname
 const compiledPath = path.join(__dirname, "./dist/lib")
 const distNpmPath = path.join(__dirname, "./dist/lib")
 async function build() {
+    console.log('Make bundle build init...');
     let bundle = await rollup.rollup({
         input: path.join(compiledPath, "index.js"),
     })
@@ -19,15 +20,22 @@ async function build() {
         format: "cjs",
         sourcemap: false,
     };
-    let { code: bundleFileName } = await bundle.write(outputOptions)
+    let {code: bundleFileName} = await bundle.write(outputOptions)
+    console.log('Bundle written.');
     console.log(bundleFileName)
 
     const codeText = (await readFile(path.join(compiledPath, "bundle.js"), "utf-8"))
+    console.log('Before Minify');
     let minified = uglifyEs.minify(codeText)
-    if (minified.error)
+    if (minified.error) {
+        console.log('Minify exploded');
         throw minified.error
+    }
+    console.log('After Minify');
     await writeFile(path.join(distNpmPath, `${packageName}.min.js`), minified.code)
+    console.log('After main.min.js');
     await writeFile(path.join(distNpmPath, `${packageName}.d.ts`), await makeDefinitionsCode())
+    console.log('After d.ts');
 }
 async function makeDefinitionsCode() {
     let defs = [
