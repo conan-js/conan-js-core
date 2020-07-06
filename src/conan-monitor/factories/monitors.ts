@@ -7,7 +7,7 @@ import {MonitorActions} from "../domain/monitorActions";
 import {MonitorDef} from "../domain/monitorDef";
 import {FlowEvent, FlowEventNature, FlowEventTiming, FlowEventType} from "../../conan-flow/domain/flowRuntimeEvents";
 import {AsynAction} from "../domain/asynAction";
-import {Flows} from "../..";
+import {Flows} from "../../index";
 import {MetaMutators, MetaMutatorsFactory, MetaStatuses} from "../domain/metaFlow";
 import {MetaInfo, MetaStatus} from "../domain/metaInfo";
 import {FlowFacade} from "../../conan-flow/domain/flowFacade";
