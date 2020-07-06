@@ -1,4 +1,4 @@
-import {FlowEvent, FlowEventTiming, FlowEventLevel} from "../domain/flowRuntimeEvents";
+import {FlowEvent, FlowEventTiming, FlowEventLevel, FlowEventType} from "../domain/flowRuntimeEvents";
 import {IPartial} from "../..";
 import {FlowOrchestrator} from "./flowOrchestrator";
 
@@ -23,6 +23,12 @@ export class FlowRuntimeTracker {
         return this.doTick(FlowEventLevel.TRACE, FlowEventTiming.CANCEL, shortDesc, payload);
     }
 
+    continue (
+        shortDesc?: any,
+        payload?: any
+    ): FlowRuntimeTracker {
+        return this.doTick(FlowEventLevel.TRACE, FlowEventTiming.CONTINUE, shortDesc, payload);
+    }
 
     start (
         shortDesc?: any,
@@ -62,15 +68,34 @@ export class FlowRuntimeTracker {
         return this.doTick(level, FlowEventTiming.IN_PROCESS, shortDesc, payload);
     }
 
+    fork (
+        type: FlowEventType,
+        level: FlowEventLevel,
+        shortDesc?: any,
+        payload?: any
+    ): void {
+        let forkedTracker = this.orchestrator.createRuntimeTracker(
+            this.event.flowController,
+            this.event.source,
+            type,
+            payload
+        ).start();
+        forkedTracker.withLevel(level, shortDesc, payload);
+        forkedTracker.end();
+    }
+
+
 
     private doTick(
         level: FlowEventLevel,
         timing: FlowEventTiming,
         shortDesc: any,
         payload: any,
+        type?: FlowEventType
     ) {
         let event: FlowEvent = {
             ...this.event,
+            ...(type!=null ? {type}: undefined),
             shortDesc,
             timing,
             level,

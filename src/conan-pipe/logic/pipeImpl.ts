@@ -1,5 +1,5 @@
 import {ThreadFacade} from "../../conan-thread/domain/threadFacade";
-import {Asap, IConsumer, Reducers} from "../..";
+import {Asap, IBiConsumer, IConsumer, Reducers} from "../..";
 import {Thread} from "../../conan-thread/logic/thread";
 import {DataReactionDef, DataReactionLock} from "../../conan-thread/domain/dataReaction";
 import {FlowEventsTracker} from "../../conan-flow/logic/flowEventsTracker";
@@ -8,7 +8,9 @@ import {ThreadFlow, Threads} from "../../conan-thread/factories/threads";
 import {DefaultStepFn} from "../../conan-flow/domain/steps";
 import {DefaultActionsFn} from "../../conan-flow/domain/actions";
 import {PipeThreadDef} from "../domain/pipeThreadDef";
-import {FlowEventNature} from "../../conan-flow/domain/flowRuntimeEvents";
+import {FlowEventNature, FlowEventType} from "../../conan-flow/domain/flowRuntimeEvents";
+import {FlowRuntimeTracker} from "../../conan-flow/logic/flowRuntimeTracker";
+import {StateDef} from "../../conan-thread/domain/stateDef";
 
 export class PipeImpl<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = void> implements ThreadFacade<DATA, REDUCERS, ACTIONS>{
     private baseThread: ThreadFacade<DATA, REDUCERS, ACTIONS>;
@@ -86,6 +88,37 @@ export class PipeImpl<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = void
 
     changeLoggingNature(nature: FlowEventNature) {
         return this.baseThread.changeLoggingNature(nature);
+    }
+
+    log(msg: string): void {
+        this.baseThread.log(msg);
+    }
+
+    once(reaction: IConsumer<DATA>, name?: string): this {
+        this.baseThread.once(reaction, name);
+        return this;
+    }
+
+    createRuntimeTracker(runtimeEvent: FlowEventType, payload?: any): FlowRuntimeTracker {
+        return this.baseThread.createRuntimeTracker(runtimeEvent, payload);
+    }
+
+    monitor<T>(
+        toMonitor: Asap<T>,
+        thenCallback: IBiConsumer<T, REDUCERS & DefaultStepFn<T>>,
+        name?: string,
+        payload?: any
+    ): Asap<DATA>{
+        return this.baseThread.monitor(toMonitor, thenCallback, name, payload);
+    }
+
+    addReactionNext(def: DataReactionDef<DATA>): this {
+        this.baseThread.addReactionNext(def);
+        return this;
+    }
+
+    getDefinition(): StateDef<DATA, REDUCERS, ACTIONS> {
+        return this.baseThread.getDefinition();
     }
 
 }

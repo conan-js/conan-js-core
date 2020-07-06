@@ -2,7 +2,7 @@
   "name": "conan-js-core",
   "version": "0.0.0",
   "description": "",
-  "main": "dist/lib/main.min.js",
+  "ma@in": "dist/lib/main.min.js",
   "types": "dist/lib/index.d.ts",
   "typings": "dist/lib/index.d.ts",
   "scripts": {

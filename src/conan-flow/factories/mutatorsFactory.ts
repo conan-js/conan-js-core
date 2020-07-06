@@ -182,15 +182,23 @@ export class MutatorsFactory {
             let isMainNature = flowController.flowDef.nature === FlowEventNature.MAIN;
             let level = isMainNature && metadata.methodName !== '$update'? FlowEventLevel.MILESTONE : FlowEventLevel.DEBUG;
             tracker.withLevel(level, `calling: ${metadata.methodName}`, (typeof metadata.payload === "object" ? metadata.payload : '[reducer]'));
-            let newState = originalCall();
-            flowAnchor.bindBack(expectedStatusName, {
-                statusName: flowAnchor.currentStatus.name,
-                methodName: metadata.methodName,
-                payload: metadata.payload,
-                result: newState,
-            }, type)
-            tracker.end();
-            return newState;
+            try{
+                let newState = originalCall();
+                flowAnchor.bindBack(expectedStatusName, {
+                    statusName: flowAnchor.currentStatus.name,
+                    methodName: metadata.methodName,
+                    payload: metadata.payload,
+                    result: newState,
+                }, type)
+                tracker.end();
+                return newState;
+            } catch (e){
+                flowAnchor.createRuntimeTracker(
+                    FlowEventType.ERROR_USER_CODE,
+                    e
+                ).start().milestone(`error running ${metadata.methodName}`, e).end();
+                return undefined;
+            }
         });
     }
 

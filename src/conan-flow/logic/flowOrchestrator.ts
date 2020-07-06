@@ -1,16 +1,10 @@
-import {
-    FlowEvent,
-    FlowEventNature, FlowEventSource,
-    FlowEventTiming,
-    FlowEventType
-} from "../domain/flowRuntimeEvents";
+import {FlowEvent, FlowEventSource, FlowEventType} from "../domain/flowRuntimeEvents";
 import {FlowRuntimeTracker} from "./flowRuntimeTracker";
 import {IConsumer} from "../..";
 import {FlowImpl} from "./flowImpl";
 
 
 export class FlowOrchestrator {
-    private currentTracker: FlowRuntimeTracker;
 
     constructor(
         private readonly eventsProcessor: IConsumer<FlowEvent>[]
@@ -21,12 +15,6 @@ export class FlowOrchestrator {
         tracker: FlowRuntimeTracker,
         event: FlowEvent,
     ): void{
-        if (event.timing === FlowEventTiming.START) {
-            this.currentTracker = tracker;
-        } else if (event.timing === FlowEventTiming.END || event.timing === FlowEventTiming.CANCEL){
-            this.currentTracker = undefined;
-        }
-
         this.eventsProcessor.forEach(it=>it(event));
     }
 
@@ -41,7 +29,7 @@ export class FlowOrchestrator {
             {
                 flowController: flowController,
                 source,
-                runtimeEvent,
+                type: runtimeEvent,
                 payload,
                 nature: flowController.flowDef.nature
             }

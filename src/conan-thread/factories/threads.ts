@@ -4,10 +4,11 @@ import {Reducers} from "../domain/reducers";
 import {StateDef} from "../domain/stateDef";
 import {Flow} from "../../conan-flow/domain/flow";
 import {ThreadFacade} from "../domain/threadFacade";
-import {AsapParser} from "../../conan-utils/asap";
+import {Asap, AsapParser} from "../../conan-utils/asap";
 import {Proxyfier} from "../../conan-utils/proxyfier";
 import {MethodFinder} from "../../conan-utils/methodFinder";
 import {FlowEventNature} from "../../conan-flow/domain/flowRuntimeEvents";
+import {IFunction} from "../..";
 
 
 export interface ThreadFlow<DATA> {
@@ -17,7 +18,8 @@ export interface ThreadFlow<DATA> {
 
 export class Threads {
     static create<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = void>(
-        data: StateDef<DATA, REDUCERS, ACTIONS>
+        data: StateDef<DATA, REDUCERS, ACTIONS>,
+        actions?: ACTIONS
     ): ThreadFacade<DATA, REDUCERS, ACTIONS> {
         let flow: Flow<ThreadFlow<DATA>, { nextData: REDUCERS }> = Flows.createController<ThreadFlow<DATA>, { nextData: REDUCERS }>({
             name: data.name,
@@ -37,14 +39,19 @@ export class Threads {
             nature: data.nature ? data.nature : FlowEventNature.MAIN
         });
 
-        let threadImpl = new ThreadImpl<DATA, REDUCERS>(flow);
+        let threadImpl = new ThreadImpl<DATA, REDUCERS>(flow, data);
 
         if (data.actions && data.autoBind) {
             throw new Error(`you can only use actions or autoBind. Both in conjunction is illegal`)
         }
 
         let threadFacade: ThreadFacade<DATA, REDUCERS, ACTIONS>;
-        if (data.autoBind) {
+        if (actions != null){
+            threadFacade = new ThreadFacade<DATA, REDUCERS, ACTIONS>(
+                threadImpl,
+                actions
+            )
+        } else if (data.autoBind) {
             let methodsToProxy: string[] = [];
             let autoBindWrapper = {...data.autoBind};
 
@@ -82,10 +89,27 @@ export class Threads {
                 let matchingActionName: string = reducerKey.substring(1, reducerKey.length);
                 if (!actions[matchingActionName]) {
                     actions[matchingActionName] = (...params) => {
-                        return threadImpl.chain(reducers => reducers [reducerKey](...params))
+                        return threadImpl.chain(
+                            reducers => reducers [reducerKey](...params),
+                            `${threadFacade.getName()}.do.${matchingActionName} ()`
+                        )
                     }
                 }
             })
+            actions['updateAsap'] = (reducerAsap: IFunction<DATA, Asap<DATA>> | Asap<DATA>, name?: string)=> {
+                let asap;
+                if (!('then' in reducerAsap)) {
+                    asap = reducerAsap(threadImpl.getData())
+                } else {
+                    asap = reducerAsap;
+                }
+
+                return threadImpl.monitor(
+                    asap,
+                    (value, reducers) => reducers.$update(value),
+                    name == null ? 'updateAsap' : name,
+                )
+            }
             threadFacade = new ThreadFacade<DATA, REDUCERS, ACTIONS>(
                 threadImpl,
                 actions

@@ -9,6 +9,9 @@ import {ThreadFlow} from "../../conan-thread/factories/threads";
 import {ThreadFacade} from "../../conan-thread/domain/threadFacade";
 import {MonitorActions} from "./monitorActions";
 import {FlowEventNature} from "../../conan-flow/domain/flowRuntimeEvents";
+import {FlowFacade} from "../../conan-flow/domain/flowFacade";
+import {MetaMutators, MetaStatuses} from "./metaFlow";
+import {Asap, IConsumer} from "../..";
 
 export class MonitorFacade<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = any> implements Monitor<DATA, REDUCERS, ACTIONS>{
     constructor(
@@ -27,6 +30,11 @@ export class MonitorFacade<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS =
 
     addReaction(def: DataReactionDef<DATA>): DataReactionLock {
         return this.monitor.addReaction(def);
+    }
+
+    once(reaction: IConsumer<DATA>, name?: string): this {
+        this.monitor.once(reaction, name);
+        return this;
     }
 
     get do (): REDUCERS & DefaultStepFn<DATA> & ACTIONS{
@@ -61,7 +69,23 @@ export class MonitorFacade<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS =
         return this.monitor.mainThread;
     }
 
-    activateAsyncLog() {
-        this.monitor.asyncThread.thread.changeLoggingNature (FlowEventNature.ASYNC);
+    get metaFlow (): FlowFacade<MetaStatuses, MetaMutators> {
+        return this.monitor.metaFlow;
+    }
+
+    chain(operation: IConsumer<REDUCERS>, name?: string): Asap<DATA> {
+        return this.monitor.mainThread.chain(operation, name);
+    }
+
+    transaction (code: IConsumer<ACTIONS>): Asap<DATA> {
+        return this.monitor.transaction(code);
+    }
+
+    openTransaction(name?: string): void {
+        this.monitor.openTransaction(name);
+    }
+
+    closeTransaction(callback?: IConsumer<DATA>) {
+        this.monitor.closeTransaction(callback);
     }
 }

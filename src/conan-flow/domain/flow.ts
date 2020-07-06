@@ -1,14 +1,15 @@
-import {IConsumer} from "../../index";
+import {FlowDef, IConsumer} from "../../index";
 import {StatusDef} from "../def/status/statusDef";
 import {ReactionCb, ReactionDef} from "../def/reactionDef";
 import {Status, StatusLike} from "./status";
 import {Mutators, VoidMutators} from "./mutators";
-import {ThenInto} from "./actions";
 import {FlowEventsTracker} from "../logic/flowEventsTracker";
 import {Context} from "./context";
 import {Asap} from "../../conan-utils/asap";
 import {DeferLike} from "./defer";
-import {FlowEventNature} from "./flowRuntimeEvents";
+import {FlowEventNature, FlowEventType} from "./flowRuntimeEvents";
+import {FlowRuntimeTracker} from "../logic/flowRuntimeTracker";
+import {ThreadFacade} from "../../conan-thread/domain/threadFacade";
 
 export const $INIT = "$init";
 export const $STOP = "$stop";
@@ -35,9 +36,14 @@ export interface Flow<
 
     onceOnStop(def: ReactionCb<STATUSES, any, MUTATORS>): this;
 
-    onceOn<STATUS extends keyof STATUSES & keyof MUTATORS>(statusName: STATUS, def: ReactionCb<STATUSES, STATUS, MUTATORS>): this;
+    onceOn<STATUS extends keyof STATUSES & keyof MUTATORS>(statusName: STATUS, def: ReactionCb<STATUSES, STATUS, MUTATORS>, name?: string): this;
 
     addReaction<STATUS extends keyof STATUSES & MUTATORS>(statusName: STATUS, reaction: ReactionDef<STATUSES, STATUS, MUTATORS>): this;
+
+    addReactionNext<STATUS extends keyof STATUSES & keyof MUTATORS>(
+        statusDef: StatusDef<STATUSES, STATUS, MUTATORS>,
+        reaction: ReactionDef<STATUSES, STATUS, MUTATORS>
+    ): this
 
     removeReaction<STATUS extends keyof STATUSES & keyof MUTATORS, >(statusName: STATUS, reactionToRemove: ReactionDef<STATUSES, STATUS, MUTATORS>): void;
 
@@ -60,7 +66,8 @@ export interface Flow<
     chainInto<STATUS_FROM extends keyof STATUSES, STATUS_TO extends keyof STATUSES>(
         statusFrom: STATUS_FROM,
         statusTo: STATUS_TO,
-        mutatorsCb: IConsumer<MUTATORS[STATUS_FROM]>
+        mutatorsCb: IConsumer<MUTATORS[STATUS_FROM]>,
+        name?: string
     ): Asap<Context<STATUSES, STATUS_TO, MUTATORS>>;
 
     deferInto<STATUS_FROM extends keyof STATUSES, STATUS_TO extends keyof STATUSES>(
@@ -72,4 +79,14 @@ export interface Flow<
     reactOnStatusChanged(customReaction: IConsumer<Status<STATUSES>>): this;
 
     changeLoggingNature(nature: FlowEventNature): void;
+
+    log(msg: string);
+
+    createRuntimeTracker(runtimeEvent: FlowEventType, payload?: any): FlowRuntimeTracker;
+
+    getDefinition (): FlowDef<STATUSES, MUTATORS>;
+
+    toState<STATUS extends keyof STATUSES> (statusName: STATUS): ThreadFacade<STATUSES[STATUS]>;
+
+    toStateAll(): ThreadFacade <Status>;
 }

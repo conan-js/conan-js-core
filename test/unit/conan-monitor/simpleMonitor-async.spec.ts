@@ -12,6 +12,7 @@ describe(`simple monitor`, function () {
         setTo3Async (): Asap<number>;
         setTo5Async (): Asap<number>;
     }
+
     let Counter$: IProducer<MonitorFacade<number, { }, MonitorActions>> = ()=>Monitors.create<number, {}, MonitorActions>({
         name: 'counter',
         initialData: 0,

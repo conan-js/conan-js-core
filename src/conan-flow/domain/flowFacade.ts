@@ -1,14 +1,16 @@
 import {Flow} from "./flow";
 import {Mutators, VoidMutators} from "./mutators";
 import {ReactionCb, ReactionDef} from "../def/reactionDef";
-import {IConsumer} from "../..";
+import {FlowDef, IConsumer} from "../..";
 import {FlowEventsTracker} from "../logic/flowEventsTracker";
 import {StatusDef} from "../def/status/statusDef";
 import {Status, StatusLike} from "./status";
 import {Context} from "./context";
 import {Asap} from "../../conan-utils/asap";
 import {DeferLike} from "./defer";
-import {FlowEventNature} from "./flowRuntimeEvents";
+import {FlowEventNature, FlowEventType} from "./flowRuntimeEvents";
+import {FlowRuntimeTracker} from "../logic/flowRuntimeTracker";
+import {ThreadFacade} from "../../conan-thread/domain/threadFacade";
 
 export interface FlowFacade<
     STATUSES,
@@ -43,8 +45,13 @@ export class FlowFacadeImpl<STATUSES, MUTATORS extends Mutators<STATUSES> = Void
         return this;
     }
 
-    chainInto<STATUS_FROM extends keyof STATUSES, STATUS_TO extends keyof STATUSES>(statusFrom: STATUS_FROM, statusTo: STATUS_TO, mutatorsCb: IConsumer<MUTATORS[STATUS_FROM]>): Asap<Context<STATUSES, STATUS_TO, MUTATORS>> {
-        this.flow.chainInto(statusFrom, statusTo, mutatorsCb);
+    chainInto<STATUS_FROM extends keyof STATUSES, STATUS_TO extends keyof STATUSES>(
+        statusFrom: STATUS_FROM,
+        statusTo: STATUS_TO,
+        mutatorsCb: IConsumer<MUTATORS[STATUS_FROM]>,
+        name?: string
+    ): Asap<Context<STATUSES, STATUS_TO, MUTATORS>> {
+        this.flow.chainInto(statusFrom, statusTo, mutatorsCb, name);
         return undefined;
     }
 
@@ -72,8 +79,8 @@ export class FlowFacadeImpl<STATUSES, MUTATORS extends Mutators<STATUSES> = Void
         return this.flow.on(statusName);
     }
 
-    onceOn<STATUS extends keyof STATUSES & keyof MUTATORS>(stateName: STATUS, def: ReactionCb<STATUSES, STATUS, MUTATORS>): this {
-        this.flow.onceOn(stateName, def);
+    onceOn<STATUS extends keyof STATUSES & keyof MUTATORS>(stateName: STATUS, def: ReactionCb<STATUSES, STATUS, MUTATORS>, name?: string): this {
+        this.flow.onceOn(stateName, def, name);
         return this;
     }
 
@@ -120,5 +127,33 @@ export class FlowFacadeImpl<STATUSES, MUTATORS extends Mutators<STATUSES> = Void
 
     changeLoggingNature(nature: FlowEventNature) {
         this.flow.changeLoggingNature(nature);
+    }
+
+    log(msg: string) {
+        this.flow.log(msg);
+    }
+
+    createRuntimeTracker(runtimeEvent: FlowEventType, payload?: any): FlowRuntimeTracker {
+        return this.flow.createRuntimeTracker(runtimeEvent, payload);
+    }
+
+    addReactionNext<STATUS extends keyof STATUSES & keyof MUTATORS>(
+        statusDef: StatusDef<STATUSES, STATUS, MUTATORS>,
+        reaction: ReactionDef<STATUSES, STATUS, MUTATORS>
+    ): this {
+        this.flow.addReactionNext(statusDef, reaction);
+        return this;
+    }
+
+    getDefinition(): FlowDef<STATUSES, MUTATORS> {
+        return this.flow.getDefinition();
+    }
+
+    toState<STATUS extends keyof STATUSES>(statusName: STATUS): ThreadFacade<STATUSES[STATUS]> {
+        return this.flow.toState(statusName);
+    }
+
+    toStateAll(): ThreadFacade<Status> {
+        return this.flow.toStateAll();
     }
 }

@@ -1,6 +1,6 @@
 import {Status, StatusLike, StatusLikeParser} from "../domain/status";
 import {FlowRequest, StatusRequest} from "./flowRequest";
-import {ICallback, IConsumer, IKeyValuePairs} from "../../index";
+import {ICallback, IConsumer, IFunction, IKeyValuePairs} from "../../index";
 import {Transition} from "../domain/transitions";
 import {Context} from "../domain/context";
 import {ReactionDef} from "../def/reactionDef";
@@ -10,6 +10,7 @@ import {FlowOrchestrator} from "./flowOrchestrator";
 import {FlowEventLevel, FlowEventNature, FlowEventSource, FlowEventType} from "../domain/flowRuntimeEvents";
 import {FlowImpl} from "./flowImpl";
 import {FlowEventsTracker} from "./flowEventsTracker";
+import {MetaInfo} from "../../conan-monitor/domain/metaInfo";
 
 export interface OnContextProxyParams {
     statusName: string;
@@ -24,6 +25,7 @@ export class FlowThread<
 > {
     private ids: IKeyValuePairs<number> = {};
     public currentRequest: FlowRequest;
+    public requestStack: FlowRequest[] = [];
 
     constructor(
         readonly flowController: FlowImpl<STATUSES, MUTATORS>,
@@ -140,7 +142,15 @@ export class FlowThread<
     }
 
     processStateAndReactions(statusRequest: StatusRequest, isStep: boolean): void {
+        let tracker = this.flowOrchestrator.createRuntimeTracker(
+            this.flowController,
+            FlowEventSource.FLOW_THREAD,
+            FlowEventType.PROCESSING_STATUS,
+        ).start( `${statusRequest.status.name}`);
+
+        tracker.info(`processing status - ${statusRequest.status.name}`, this.flowController.flowDef.nature === FlowEventNature.MAIN ? statusRequest.status.data : undefined);
         this.flowEvents.addProcessingStatus(statusRequest, isStep);
+        tracker.end();
         this.flowController.processReactions(statusRequest.status.name);
     }
 
@@ -149,19 +159,42 @@ export class FlowThread<
             this.flowController,
             FlowEventSource.FLOW_THREAD,
             FlowEventType.SETTLING_STATUS,
-            statusRequest
         ).start( `${statusRequest.status.name}`);
 
         this.flowEvents.settleProcessingStatus(statusRequest, isStep);
+        let currentNature = this.flowController.flowDef.nature;
+        let payload = currentNature !== FlowEventNature.ASYNC ? statusRequest.status.data : (statusRequest.status.data as MetaInfo) ? (statusRequest.status.data as MetaInfo).status : undefined;
         if (!isStep){
-            tracker.milestone( `STATUS - ${statusRequest.status.name}`, statusRequest.status.data)
+            tracker.milestone( `STATUS - ${statusRequest.status.name}`, payload)
         } else {
-            tracker.milestone(  'STATE', statusRequest.status.data)
+            tracker.milestone(  'STATE', payload)
         }
         tracker.end();
     }
 
     onStateRequestCompleted(stateMachineRequest: FlowRequest, queuedReactions: [string, ReactionDef<any, any>] [], queuedStatuses: Status[], queuedStates: Status[], queuedTransitions: Transition[], queuedSteps: Transition[]): void {
+        let tracker = this.flowOrchestrator.createRuntimeTracker(
+            this.flowController,
+            FlowEventSource.FLOW_THREAD,
+            FlowEventType.STATUS_REQUEST_COMPLETED,
+        ).start( `${stateMachineRequest.status.name}`);
+
+        let rootRequestTracker = this.flowOrchestrator.createRuntimeTracker(
+            this.flowController,
+            FlowEventSource.FLOW_THREAD,
+            FlowEventType.ROOT_REQUEST,
+        )
+
+        if (this.requestStack.length === 0) {
+            rootRequestTracker.debug(`creating new execution stack: [${stateMachineRequest.status.name}]`);
+            rootRequestTracker.start(`${stateMachineRequest.status.name}`)
+        }  else {
+            rootRequestTracker.debug(`adding to current execution stack [${this.requestStack.length}-${this.requestStack[0].status.name}]`);
+            rootRequestTracker.continue(`${stateMachineRequest.status.name}`)
+        }
+
+
+
         if (this.currentRequest == null) {
             throw new Error(`can't complete the request for [${this.flowController.getName()} - ${stateMachineRequest.status.name}] as is not flagged as currently in process`);
         }
@@ -172,18 +205,48 @@ export class FlowThread<
             throw new Error(`can't have transitions and states forked at the same time!`)
         }
 
+        this.requestStack.push(this.currentRequest);
         this.currentRequest = undefined;
         if (queuedTransitions.length > 1 || queuedStatuses.length > 1){
             throw new Error('TBI');
         }
+
+        function logArray<T>(
+            name: string,
+            queuedItems: T[],
+            mapper: IFunction<T, string>
+        ) {
+            tracker.withLevel(
+                queuedItems.length === 0 ? FlowEventLevel.DEBUG : FlowEventLevel.INFO,
+                `executing ${name}: [(${queuedItems.length}) - ${queuedItems.map(mapper).join(',')}]`
+            );
+        }
+
+        logArray('queued transitions', queuedTransitions, (it)=>it.transitionName);
         queuedTransitions.forEach(it=>this.flowController.requestTransition(it));
+
+        logArray('queued statuses', queuedStatuses, (it)=>it.name);
         queuedStatuses.forEach(it=>this.flowController.requestStatus(it));
+
+        logArray('queued states', queuedStates, (it)=>it.name);
         queuedStates.forEach(it=>this.flowController.requestState(it.name, it.data));
+
+        logArray('queued steps', queuedSteps, (it)=>it.transitionName);
         queuedSteps.forEach(it=>{
             let into = StatusLikeParser.parse(it.into);
             this.flowController.requestStep(into.name, it.transitionName, it.payload, into.data)
         });
+
+        logArray('queued reactions', queuedReactions, (it)=>it[1].name);
         queuedReactions.forEach(it=>this.flowController.addReaction(it[0] as any, it[1] as any));
+
+
+        this.requestStack.pop();
+        if (this.requestStack.length === 0) {
+            rootRequestTracker.debug(`execution stack completed: [${stateMachineRequest.status.name}]`);
+            rootRequestTracker.end();
+        }
+        tracker.end();
     }
 
     createContext<STATUS extends keyof STATUSES>(statusLike: STATUS, doChain: IConsumer<ICallback>): Context<STATUSES, STATUS, MUTATORS> {
@@ -203,16 +266,7 @@ export class FlowThread<
                 this.flowController.stop();
             },
             log:(msg: string): FlowRuntimeTracker=> {
-                let tracker = this.flowOrchestrator.createRuntimeTracker(
-                    this.flowController,
-                    FlowEventSource.USER_MSG,
-                    FlowEventType.USER_CODE,
-                    msg
-                ).start();
-
-                let flowRuntimeTracker = tracker.milestone( undefined, msg);
-                tracker.end();
-                return flowRuntimeTracker;
+                return this.flowController.log(msg);
             }
         }
     }

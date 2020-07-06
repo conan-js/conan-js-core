@@ -21,5 +21,6 @@ export type FlowActionsDef<
 
 export interface DefaultActionsFn<DATA>{
     update (reducer: IReducer<DATA> | DATA): DATA;
+    updateAsap (reducerAsap: IFunction<DATA, Asap<DATA>> | Asap<DATA>, name?: string): Asap<DATA>;
 }
 

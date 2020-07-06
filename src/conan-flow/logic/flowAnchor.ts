@@ -6,6 +6,8 @@ import {Mutators, VoidMutators} from "../domain/mutators";
 import {FlowOrchestrator} from "./flowOrchestrator";
 import {FlowImpl} from "./flowImpl";
 import {FlowEventsTracker} from "./flowEventsTracker";
+import {FlowEventSource, FlowEventType} from "../domain/flowRuntimeEvents";
+import {FlowRuntimeTracker} from "./flowRuntimeTracker";
 
 export enum BindBackType {
     STEP = "STEP",
@@ -46,9 +48,10 @@ export class FlowAnchor<
     }
 
     getStatusDataProducerFn(): StatusDataProducer<STATUSES> {
-        return <STATUS extends keyof STATUSES>(statusName: STATUS, defaultValue: STATUSES[STATUS]): STATUSES[STATUS] => {
+        return <STATUS extends keyof STATUSES>(statusNameOpt?: STATUS, defaultValue?: STATUSES[STATUS]): STATUSES[STATUS] => {
+            let statusName = statusNameOpt != null ? statusNameOpt : this.currentStatus.name;
             let statusData: LastStatusData<STATUSES> = this.currentThread.flowEvents.getLastStates();
-            if (Object.keys(statusData).indexOf(statusName as any) === -1) {
+            if (Object.keys(statusData).indexOf(statusName) === -1) {
                 return defaultValue;
             }
             return statusData[statusName];
@@ -124,4 +127,16 @@ export class FlowAnchor<
     getStatusData(): { [STATUS in keyof STATUSES]?: STATUSES[STATUS] } {
         return this.currentThread.flowEvents.getLastStates();
     }
+
+    createRuntimeTracker(runtimeEvent: FlowEventType, payload?: any): FlowRuntimeTracker {
+        let flowThread = this.currentThread.flowThread;
+        let flowOrchestrator = flowThread.flowOrchestrator;
+        return flowOrchestrator.createRuntimeTracker(
+            flowThread.flowController,
+            FlowEventSource.FLOW_CONTROLLER,
+            runtimeEvent,
+            payload
+        )
+    }
+
 }

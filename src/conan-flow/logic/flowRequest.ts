@@ -54,7 +54,7 @@ export class FlowRequest {
             this.queuedStatuses,
             this.queuedStates,
             this.queuedTransitions,
-            this.queuedSteps
+            this.queuedSteps,
         );
     }
 
@@ -79,4 +79,5 @@ export class FlowRequest {
     queueReaction(eventName: string, reaction: ReactionDef<any, any>) {
         this.queuedReactions.push([eventName, reaction])
     }
+
 }

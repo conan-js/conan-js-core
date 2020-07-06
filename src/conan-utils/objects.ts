@@ -1,11 +1,10 @@
-import {IBiConsumer, IFunction, IKeyValuePairs, IPredicate} from "./typesHelper";
-import {StatusDef} from "../conan-flow/def/status/statusDef";
+import {IBiConsumer, IFunction, IKeyValuePairs, IReducer} from "./typesHelper";
 
 export class Objects {
     public static mapKeys<
         VALUE_TYPE,
         FINAL_VALUE_TYPE = VALUE_TYPE
-    >(from: IKeyValuePairs<any>, valueMapper: IFunction<VALUE_TYPE, FINAL_VALUE_TYPE>, keyMapper?: IPredicate<string>) : IKeyValuePairs<FINAL_VALUE_TYPE> {
+    >(from: IKeyValuePairs<any>, valueMapper: IFunction<VALUE_TYPE, FINAL_VALUE_TYPE>, keyMapper?: IReducer<string>) : IKeyValuePairs<FINAL_VALUE_TYPE> {
         let result: IKeyValuePairs<any> = {};
         Object.keys(from).forEach(key=>{
             let newKey = keyMapper ? keyMapper(key) : key;

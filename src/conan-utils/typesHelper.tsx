@@ -1,7 +1,7 @@
 export type IFunction <I, O> = (input: I) => O;
 export type ITriFunction <I1, I2, I3, O> = (input1: I1, input2: I2, input3: I3) => O;
 export type IReducer <T> = IFunction<T, T>;
-export type IPredicate <T> = IFunction<T, T>;
+export type IPredicate <T> = IFunction<T, boolean>;
 export type IFunctionVarArg<T> = (...args: any[]) => T;
 export type IBiFunction <A, B, R> = (a: A, b: B) => R;
 export type ICallback = () => void;

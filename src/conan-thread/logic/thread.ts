@@ -10,7 +10,9 @@ import {ReactionDef} from "../../conan-flow/def/reactionDef";
 import {ReactionType} from "../../conan-flow/domain/reactions";
 import {DeferLike} from "../../conan-flow/domain/defer";
 import {FlowEventsTracker} from "../../conan-flow/logic/flowEventsTracker";
-import {FlowEventNature} from "../../conan-flow/domain/flowRuntimeEvents";
+import {FlowEventNature, FlowEventType} from "../../conan-flow/domain/flowRuntimeEvents";
+import {FlowRuntimeTracker} from "../../conan-flow/logic/flowRuntimeTracker";
+import {StateDef} from "../domain/stateDef";
 
 export interface Thread<DATA, REDUCERS extends Reducers<DATA> = {}> {
     isRunning: boolean;
@@ -27,8 +29,18 @@ export interface Thread<DATA, REDUCERS extends Reducers<DATA> = {}> {
 
     addReaction(def: DataReactionDef<DATA>): DataReactionLock;
 
+    addReactionNext(def: DataReactionDef<DATA>): this;
+
     chain(
-        mutatorsCb: IConsumer<REDUCERS>
+        operation: IConsumer<REDUCERS>,
+        name?: string
+    ): Asap<DATA>;
+
+    monitor<T>(
+        toMonitor: Asap<T>,
+        thenCallback: IBiConsumer<T, REDUCERS & DefaultStepFn<T>>,
+        name?: string,
+        payload?: any
     ): Asap<DATA>;
 
     getEvents(): FlowEventsTracker<{ nextData: DATA}>
@@ -38,11 +50,21 @@ export interface Thread<DATA, REDUCERS extends Reducers<DATA> = {}> {
     getName(): string;
 
     changeLoggingNature(nature: FlowEventNature): void;
+
+    log(msg: string): void;
+
+    once(reaction: IConsumer<DATA>, name?: string): this;
+
+    createRuntimeTracker(
+        runtimeEvent: FlowEventType,
+        payload?: any
+    ): FlowRuntimeTracker;
 }
 
 export class ThreadImpl<DATA, REDUCERS extends Reducers<DATA> = {}> implements Thread<DATA, REDUCERS> {
     constructor(
         private readonly flow: Flow<ThreadFlow<DATA>, {nextData:REDUCERS}>,
+        private readonly def: StateDef<DATA, REDUCERS, any>,
     ) {}
 
     start(initialData?: DATA): this {
@@ -59,9 +81,10 @@ export class ThreadImpl<DATA, REDUCERS extends Reducers<DATA> = {}> implements T
     }
 
     chain(
-        mutatorsCb: IConsumer<REDUCERS & DefaultStepFn<DATA>>
+        mutatorsCb: IConsumer<REDUCERS & DefaultStepFn<DATA>>,
+        name?: string
     ): Asap<DATA> {
-        return this.flow.chainInto('nextData', 'nextData', mutatorsCb).map<DATA>(context=>context.getData())
+        return this.flow.chainInto('nextData', 'nextData', mutatorsCb, name).map<DATA>(context=>context.getData())
     }
 
     monitor<T>(
@@ -115,5 +138,34 @@ export class ThreadImpl<DATA, REDUCERS extends Reducers<DATA> = {}> implements T
 
     changeLoggingNature(nature: FlowEventNature) {
         this.flow.changeLoggingNature (nature);
+    }
+
+    log(msg: string): void {
+        this.flow.log(msg)
+    }
+
+    once(reaction: IConsumer<DATA>, name?: string): this {
+        this.flow.onceOn('nextData', onNextData=>reaction(onNextData.getData()), name)
+        return this;
+    }
+
+    createRuntimeTracker(runtimeEvent: FlowEventType, payload?: any): FlowRuntimeTracker {
+        return this.flow.createRuntimeTracker(runtimeEvent, payload);
+    }
+
+    addReactionNext(def: DataReactionDef<DATA>): this {
+        this.flow.addReactionNext (
+            this.flow.on('nextData') as any,
+            {
+                name: def.name,
+                reactionType: ReactionType.ALWAYS,
+                action: (onNextData)=> def.dataConsumer (onNextData.getData())
+            }
+        );
+        return this;
+    }
+
+    getDefinition <ACTIONS>(): StateDef<DATA, REDUCERS, ACTIONS>{
+        return this.def;
     }
 }

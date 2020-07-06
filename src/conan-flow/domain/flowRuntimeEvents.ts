@@ -2,6 +2,7 @@ import {FlowImpl} from "../logic/flowImpl";
 
 export enum FlowEventNature {
     MAIN = "MAIN",
+    META = "META",
     HELPER = "HELPER",
     ASYNC = "ASYNC",
     AUX = "AUX",
@@ -26,6 +27,7 @@ export enum FlowEventLevel {
 }
 
 export enum FlowEventTiming {
+    CONTINUE = "CONTINUE",
     START = "START",
     END = "END",
     CANCEL = "CANCEL",
@@ -40,9 +42,14 @@ export enum FlowEventType {
     RUN_IF = "RUN_IF",
     RUN = "RUN",
     ADDING_REACTION = "ADDING_REACTION",
+    ERROR_USER_CODE = "ERROR_USER_CODE",
+    MONITOR_TRANSACTION = "MONITOR_TRANSACTION",
     REQUESTING_STATUS = "REQUESTING_STATUS",
     SETTLING_STATUS = "SETTLING_STATUS",
+    PROCESSING_STATUS = "PROCESSING_STATUS",
+    STATUS_REQUEST_COMPLETED = "STATUS_REQUEST_COMPLETED",
     REQUESTING_TRANSITION = "REQUESTING_TRANSITION",
+    ROOT_REQUEST = "ROOT_REQUEST",
     CREATING = "CREATING",
     USER_REACTIONS = "USER_REACTIONS",
     USER_CODE = "USER_CODE",
@@ -52,7 +59,7 @@ export interface FlowEvent {
     nature: FlowEventNature,
     flowController: FlowImpl<any, any>,
     source: FlowEventNature,
-    runtimeEvent: FlowEventType,
+    type: FlowEventType,
     timing: FlowEventTiming,
     level: FlowEventLevel,
     payload?: any,

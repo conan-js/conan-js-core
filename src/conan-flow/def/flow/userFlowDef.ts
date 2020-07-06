@@ -4,8 +4,9 @@ import {Mutators, VoidMutators} from "../../domain/mutators";
 import {StatusLike} from "../../domain/status";
 import {FlowActionsDef} from "../../domain/actions";
 import {AsapLike} from "../../../conan-utils/asap";
-import {IConsumer, IFunction} from "../../..";
+import {IConsumer} from "../../..";
 import {FlowEvent, FlowEventNature} from "../../domain/flowRuntimeEvents";
+import {Rule} from "../../../conan-utils/rules/_rules";
 
 export interface UserFlowDef<
     STATUSES,
@@ -19,6 +20,6 @@ export interface UserFlowDef<
     $onInit?: ReactionCb<STATUSES, any> [];
     $onStop?: ReactionCb<STATUSES, any> [];
     pipelineListener?: IConsumer<FlowEvent>;
-    logger?: IFunction<FlowEvent, boolean>;
+    loggingRule?: Rule<FlowEvent>;
     nature?: FlowEventNature
 }

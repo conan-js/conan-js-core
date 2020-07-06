@@ -1,14 +1,16 @@
-import {Thread} from "../logic/thread";
+import {Thread, ThreadImpl} from "../logic/thread";
 import {DefaultStepFn} from "../../conan-flow/domain/steps";
 import {Reducers} from "./reducers";
-import {IConsumer} from "../..";
+import {IBiConsumer, IConsumer} from "../..";
 import {Context} from "../../conan-flow/domain/context";
 import {ThreadFlow} from "../factories/threads";
 import {Asap} from "../../conan-utils/asap";
 import {DataReactionDef, DataReactionLock} from "./dataReaction";
 import {FlowEventsTracker} from "../../conan-flow/logic/flowEventsTracker";
 import {DefaultActionsFn} from "../../conan-flow/domain/actions";
-import {FlowEventNature} from "../../conan-flow/domain/flowRuntimeEvents";
+import {FlowEventNature, FlowEventType} from "../../conan-flow/domain/flowRuntimeEvents";
+import {FlowRuntimeTracker} from "../../conan-flow/logic/flowRuntimeTracker";
+import {StateDef} from "./stateDef";
 
 export class ThreadFacade<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = void> implements Thread<DATA, REDUCERS>{
     constructor(
@@ -16,8 +18,8 @@ export class ThreadFacade<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = 
         public readonly actions: ACTIONS,
     ) {}
 
-    chain(mutatorsCb: IConsumer<REDUCERS>): Asap<DATA> {
-        this.thread.chain(mutatorsCb);
+    chain(mutatorsCb: IConsumer<REDUCERS>, name?: string): Asap<DATA> {
+        this.thread.chain(mutatorsCb, name);
         return undefined;
     }
 
@@ -70,4 +72,36 @@ export class ThreadFacade<DATA, REDUCERS extends Reducers<DATA> = {}, ACTIONS = 
     changeLoggingNature(nature: FlowEventNature) {
         this.thread.changeLoggingNature(nature);
     }
+
+    log(msg: string) {
+        this.thread.log(msg);
+    }
+
+    once(reaction: IConsumer<DATA>, name?: string): this {
+        this.thread.once(reaction, name);
+        return this;
+    }
+
+    createRuntimeTracker(runtimeEvent: FlowEventType, payload?: any): FlowRuntimeTracker {
+        return this.thread.createRuntimeTracker(runtimeEvent, payload);
+    }
+
+    monitor<T>(
+        toMonitor: Asap<T>,
+        thenCallback: IBiConsumer<T, REDUCERS & DefaultStepFn<T>>,
+        name?: string,
+        payload?: any
+    ): Asap<DATA>{
+        return this.thread.monitor(toMonitor, thenCallback, name, payload);
+    }
+
+    addReactionNext(def: DataReactionDef<DATA>): this {
+        this.thread.addReactionNext(def);
+        return this;
+    }
+
+    getDefinition (): StateDef<DATA, REDUCERS, ACTIONS>{
+        return (this.thread as ThreadImpl<DATA, REDUCERS>).getDefinition();
+    }
+
 }

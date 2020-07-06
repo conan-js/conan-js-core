@@ -51,7 +51,7 @@ export class FlowDefFactory {
             name: userFlowDef.name,
             nature: userFlowDef.nature ? userFlowDef.nature : FlowEventNature.MAIN,
             ... userFlowDef.hasOwnProperty('initialStatus') ? {starter: ()=>userFlowDef.initialStatus}: undefined,
-            ... userFlowDef.hasOwnProperty('logger') ? {logger: userFlowDef.logger}: undefined
+            ... userFlowDef.hasOwnProperty('loggingRule') ? {loggingRule: userFlowDef.loggingRule}: undefined
         } as any
     }
 

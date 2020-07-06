@@ -3,7 +3,7 @@ import {UserFlowDef} from "../def/flow/userFlowDef";
 import {FlowAnchor} from "../logic/flowAnchor";
 import {Mutators, VoidMutators} from "../domain/mutators";
 import {FlowOrchestrator} from "../logic/flowOrchestrator";
-import {FlowEvent, FlowEventNature, FlowEventSource, FlowEventType} from "../domain/flowRuntimeEvents";
+import {FlowEvent, FlowEventSource, FlowEventType} from "../domain/flowRuntimeEvents";
 import {FLOW_LOGGER} from "../logic/flowLogger";
 import {FlowImpl} from "../logic/flowImpl";
 import {FlowFacade, FlowFacadeImpl} from "../domain/flowFacade";

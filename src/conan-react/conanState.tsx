@@ -2,7 +2,7 @@ import * as React from "react";
 import {ReactElement} from "react";
 import {DataReactionDef, DataReactionLock} from "../conan-thread/domain/dataReaction";
 import {ConnectedState, StateConnect, StateMapConnect} from "./connect/stateConnect";
-import {IBiFunction, IFunction} from "..";
+import {Conan, IBiFunction, IConsumer, IFunction} from "..";
 import {StateLive} from "./live/stateLive";
 import {DefaultActionsFn} from "../conan-flow/domain/actions";
 import {MonitorFacade} from "../conan-monitor/domain/monitorFacade";
@@ -14,16 +14,22 @@ import {ITriFunction} from "../conan-utils/typesHelper";
 import {PipeThreadDef} from "../conan-pipe/domain/pipeThreadDef";
 import {Objects} from "../conan-utils/objects";
 import {FlowEventNature} from "../conan-flow/domain/flowRuntimeEvents";
+import {FlowEventsTracker} from "../conan-flow/logic/flowEventsTracker";
+import {Monitors} from "../conan-monitor/factories/monitors";
+import {MonitorActions} from "../conan-monitor/domain/monitorActions";
+import {ConanFlow} from "./conanFlow";
+import {MetaInfo} from "../conan-monitor/domain/metaInfo";
+import {MetaMutators, MetaStatuses} from "../conan-monitor/domain/metaFlow";
 
 export class ConanState<DATA, ACTIONS = DefaultActionsFn<DATA>> {
 
     constructor(
-        private readonly state: MonitorFacade<DATA, any, ACTIONS> | ThreadFacade<DATA, any, ACTIONS>
+        private readonly monitor: MonitorFacade<DATA, any, ACTIONS>
     ) {
     }
 
     getName(): string {
-        return this.state.getName();
+        return this.monitor.getName();
     }
 
     connectMap <PROPS>(
@@ -68,36 +74,33 @@ export class ConanState<DATA, ACTIONS = DefaultActionsFn<DATA>> {
     }
 
     addAsyncReaction(def: DataReactionDef<DATA>): DataReactionLock {
-        if (this.isThreadBased()){
-            return;
-        }
-        return this.asMonitor().addAsyncReaction(def);
+        return this.monitor.addAsyncReaction(def);
     }
 
     addDataReaction(def: DataReactionDef<DATA>): DataReactionLock {
-        return this.state.addReaction(def);
+        return this.monitor.addReaction(def);
     }
 
     get do(): ACTIONS & DefaultActionsFn<DATA> {
-        return this.state.do;
+        return this.monitor.do;
     }
 
     start(): this {
-        this.state.start();
+        this.monitor.start();
         return this;
     }
 
     stop(eventsConsumer: (events) => void): this {
-        this.state.stop(eventsConsumer);
+        this.monitor.stop(eventsConsumer);
         return this;
     }
 
     get actions (): ACTIONS & DefaultActionsFn<DATA>{
-        return this.state.actions as any;
+        return this.monitor.actions as any;
     }
 
     getData(): DATA {
-        return this.state.getData();
+        return this.monitor.getData();
     }
 
     asyncMerge<T>(
@@ -105,15 +108,9 @@ export class ConanState<DATA, ACTIONS = DefaultActionsFn<DATA>> {
         monitorMerger: (ITriFunction<MonitorInfo, DATA, T, T>),
         dataMerger: ITriFunction<DATA, MonitorInfo, T, T>
     ): ConanState<T, ACTIONS> {
-        if (this.isThreadBased()){
-            throw new Error(`this conan state is not ready for async`);
-        }
-
-        this.asMonitor().activateAsyncLog();
-
         let mergedThread: Thread<T> = Pipes.fromMonitor<DATA, T>(
             `monitor[${this.getName()}]`,
-            this.state as any,
+            this.monitor as any,
             monitorMerger,
             dataMerger, {
                 initialData: baseValue,
@@ -122,32 +119,32 @@ export class ConanState<DATA, ACTIONS = DefaultActionsFn<DATA>> {
         );
 
         return new ConanState<T, ACTIONS>(
-            new ThreadFacade<T, {}, ACTIONS>(
+            Monitors.fromThread(new ThreadFacade<T, {}, ACTIONS>(
                 mergedThread,
                 this.actions
-            )
+            ))
         );
     }
 
     filter(mapper: (current: DATA, previous: DATA) => boolean): ConanState<DATA> {
         let state: ThreadFacade<DATA> = Pipes.filter<DATA>(
             `filter=>${this.getName()}`,
-            this.isThreadBased() ? this.asThread() as any : this.asMonitor().mainThread,
+            this.mainThread as any,
             mapper
         );
         return new ConanState<DATA>(
-            state as any
+            Monitors.fromThread(state) as any
         );
     }
 
     map<T>(mapper: IFunction<DATA, T>): ConanState<T> {
         let state: ThreadFacade<T> = Pipes.map<DATA, T>(
             `map=>${this.getName()}`,
-            this.isThreadBased() ? this.asThread() as any : this.asMonitor().mainThread,
+            this.mainThread as any,
             mapper
         );
         return new ConanState<T>(
-            state as any
+            Monitors.fromThread(state) as any
         );
     }
 
@@ -157,13 +154,13 @@ export class ConanState<DATA, ACTIONS = DefaultActionsFn<DATA>> {
     ): ConanState<T>  {
         let state: ThreadFacade<T> = Pipes.merge<DATA, TO_MERGE, T>(
             `merge=>${this.getName()}`,
-            this.isThreadBased() ? this.asThread() as any : this.asMonitor().mainThread,
+            this.mainThread,
             merger,
-            toMerge$.asThread(),
+            toMerge$.mainThread,
             (right, left, current)=>merger(left, right, current)
         );
         return new ConanState<T>(
-            state as any
+            Monitors.fromThread(state) as any
         );
     }
 
@@ -172,34 +169,27 @@ export class ConanState<DATA, ACTIONS = DefaultActionsFn<DATA>> {
     ): ConanState<[DATA, TO_MERGE]>  {
         let state: ThreadFacade<[DATA, TO_MERGE]> = Pipes.tupleCombine<DATA, TO_MERGE>(
             `mergeTuple=>${this.getName()}`,
-            this.isThreadBased() ? this.asThread() as any : this.asMonitor().mainThread,
-            toMerge$.asThread(),
+            this.mainThread,
+            toMerge$.mainThread,
         );
         return new ConanState<[DATA, TO_MERGE]>(
-            state as any
+            Monitors.fromThread(state) as any
         );
     }
 
 
-    private isThreadBased (){
-        return !this.isMonitorBased();
+    get mainThread (): ThreadFacade<DATA, any, ACTIONS>{
+        return this.monitor.mainThread;
     }
 
-    private isMonitorBased (){
-        return this.state instanceof MonitorFacade;
+    get asyncState (): ConanState<MonitorInfo, MonitorActions>{
+        return Conan.fromThread(this.monitor.asyncThread);
     }
 
-    public asThread (): ThreadFacade<DATA, any, ACTIONS>{
-        if (this.isThreadBased()) {
-            return this.state as ThreadFacade<DATA, any, ACTIONS>;
-        }
-
-        return this.asMonitor().mainThread;
+    get metaFlow (): ConanFlow<MetaStatuses, MetaMutators>{
+        return Conan.fromFlow(this.monitor.metaFlow);
     }
 
-    private asMonitor (): MonitorFacade<DATA, any, ACTIONS>{
-        return this.state as MonitorFacade<DATA, any, ACTIONS>;
-    }
 
     static combine<T extends {}, ACTIONS = void>(
         name: string,
@@ -208,9 +198,28 @@ export class ConanState<DATA, ACTIONS = DefaultActionsFn<DATA>> {
     ) : ConanState<T, ACTIONS>{
         let threadFacade = Pipes.combine<T, ACTIONS>(
             name,
-            Objects.mapKeys<ConanState<any>, ThreadFacade<any, any, any>>(fromState, conanState=>conanState.asThread()) as any,
+            Objects.mapKeys<ConanState<any>, ThreadFacade<any, any, any>>(fromState, conanState=>conanState.mainThread) as any,
             pipeThreadDef
         );
-        return new ConanState<T, ACTIONS>(threadFacade);
+        return new ConanState<T, ACTIONS>(Monitors.fromThread(threadFacade));
+    }
+
+    getEvents(): FlowEventsTracker<{ nextData: DATA}>{
+        return this.mainThread.getEvents();
+    }
+
+    always(dataConsumer: IConsumer<DATA>) {
+        this.addDataReaction({
+            name: `always`,
+            dataConsumer: (data)=>dataConsumer(data)
+        })
+    }
+
+    openTransaction (name?: string): void{
+        this.monitor.openTransaction(name);
+    }
+
+    closeTransaction (callback?: IConsumer<DATA>): void{
+        this.monitor.closeTransaction(callback);
     }
 }

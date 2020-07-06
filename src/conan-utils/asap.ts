@@ -1,4 +1,4 @@
-import {IBiConsumer, ICallback, IConsumer, IFunction} from "./typesHelper";
+import {IBiConsumer, ICallback, IConsumer, IFunction, IProducer} from "./typesHelper";
 import {Flow} from "../conan-flow/domain/flow";
 import {Flows} from "../conan-flow/factories/flows";
 import {FlowEventNature} from "../conan-flow/domain/flowRuntimeEvents";
@@ -20,7 +20,7 @@ export interface Asap<T> {
 
     map<Z>(mapper: IFunction<T, Z>): Asap<Z>;
 
-    merge<Z>(mapper: IFunction<T, Asap<Z>>): Asap<Z>;
+    chain<Z>(chainProducer: IFunction<T, Asap<Z>>): Asap<Z>;
 
     type: AsapType;
 
@@ -59,7 +59,7 @@ class NowImpl<T> implements Asap<T> {
         return Asaps.now(mapper(this.rawValue));
     }
 
-    merge<Z>(mapper: IFunction<T, Asap<Z>>): Asap<Z> {
+    chain<Z>(mapper: IFunction<T, Asap<Z>>): Asap<Z> {
         const [next, asap] = Asaps.next<Z>('map', FlowEventNature.AUX);
         this.then(value =>
             mapper(value).then(toMerge => next(toMerge))
@@ -174,10 +174,10 @@ class LaterImpl<T> implements Asap<T> {
 
     }
 
-    merge<Z>(mapper: IFunction<T, Asap<Z>>): Asap<Z> {
+    chain<Z>(chainProducer: IFunction<T, Asap<Z>>): Asap<Z> {
         const [next, asap] = Asaps.next<Z>('merge', FlowEventNature.AUX);
         this.then(value =>
-            mapper(value)
+            chainProducer(value)
                 .then(toMerge => next(toMerge))
                 .onCancel(() => asap.cancel())
         ).onCancel(() => asap.cancel());
@@ -196,6 +196,50 @@ class LaterImpl<T> implements Asap<T> {
     }
 
 }
+
+class ProxyThen<T> implements Asap<T>{
+    constructor(
+        private readonly baseAsap: Asap<T>,
+        private readonly beforeThen: ICallback,
+        private readonly afterThen: IConsumer<any>,
+    ) {}
+
+    cancel(): boolean {
+        return this.baseAsap.cancel();
+    }
+
+    catch(error: IConsumer<Error>): this {
+        this.baseAsap.catch(error);
+        return this;
+    }
+
+    chain<Z>(chainProducer: IFunction<T, Asap<Z>>): Asap<Z> {
+        let chained = this.baseAsap.chain<Z>(chainProducer);
+        return Asaps.proxyThen(chained, this.beforeThen, this.afterThen);
+    }
+
+    map<Z>(mapper: IFunction<T, Z>): Asap<Z> {
+        let mapped = this.baseAsap.map<Z>(mapper);
+        return Asaps.proxyThen(mapped, this.beforeThen, this.afterThen);
+    }
+
+    onCancel(consumer: ICallback): this {
+        this.baseAsap.onCancel(consumer);
+        return this;
+    }
+
+    then(consumer: IConsumer<T>): this {
+        this.beforeThen ();
+        this.baseAsap.then(consumer);
+        this.baseAsap.then(this.afterThen);
+        return this;
+    }
+
+    get type (): AsapType {
+        return this.baseAsap.type;
+    }
+}
+
 
 export class AsapParser {
     static from<T>(toParse: AsapLike<T>): Asap<T> {
@@ -238,8 +282,14 @@ export class Asaps {
         return promiseImpl;
     }
 
-    static delayed<T>(value: T, ms: number, name?: string): Asap<T> {
-        return Asaps.fromPromise(new Promise((done) => setTimeout(() => done(value), ms)), `delay[${name? name: 'anonymous'}]`);
+    static delayed<T>(value: T | IProducer<T>, ms: number, name?: string): Asap<T> {
+        return Asaps.fromPromise(new Promise((done) => setTimeout(() => {
+            if (typeof value === "function") {
+                done ((value as IProducer<T>)())
+            }else {
+                done(value)
+            }
+        }, ms)), `delay[${name? name: 'anonymous'}]`);
     }
 
     static fetch<T>(url: string): Asap<T> {
@@ -274,6 +324,10 @@ export class Asaps {
             nature: nature ? nature : FlowEventNature.ASAP
         }).start());
         return [(value) => laterImpl.resolve(value), laterImpl];
+    }
+
+    static proxyThen<T>(toProxy: Asap<T>, beforeThen: ICallback, afterThen: IConsumer<any>): Asap<T> {
+        return new ProxyThen(toProxy, beforeThen, afterThen);
     }
 
 }

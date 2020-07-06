@@ -7,11 +7,12 @@ import {ConanState} from "../conanState";
 import {ReactStateContext} from "./stateConnect";
 import {DefaultActions} from "../conan";
 import {DefaultActionsFn} from "../../conan-flow/domain/actions";
+import {ConanFlow} from "../conanFlow";
 
 export function useFlow<USER_STATE = string,
     STATUSES = any
 >(
-    flow: Flow<STATUSES>,
+    flow: ConanFlow<STATUSES>,
     setState: IConsumer<IReducer<USER_STATE>>,
     mapper?: IBiFunction<Status<STATUSES>, USER_STATE, USER_STATE>
 ): void {
@@ -29,7 +30,7 @@ export function useFlowStatus<
     STATUSES,
     STATUS extends keyof STATUSES
 >(
-    flow: Flow<STATUSES>,
+    flow: ConanFlow<STATUSES>,
     status: STATUS,
     setState: IConsumer<IReducer<USER_STATE>>,
     mapper?: IBiFunction<STATUSES[STATUS], USER_STATE, USER_STATE>
