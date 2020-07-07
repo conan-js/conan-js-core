@@ -4,6 +4,8 @@
 
 import {FlowDef} from "./conan-flow/def/flow/flowDef";
 
+import {StateEvent, StatusEventType} from "./conan-flow/domain/flowEvents"
+
 import {
     DynamicOrStatics,
     IBiConsumer,
@@ -154,3 +156,5 @@ export {Flows}
 export {ActionsFn, Then}
 
 export {Lists}
+
+export {StateEvent, StatusEventType}
