@@ -1,7 +1,7 @@
 import {FlowFacade} from "../conan-flow/domain/flowFacade";
 import {Mutators, VoidMutators} from "../conan-flow/domain/mutators";
 import {StatusDef} from "../conan-flow/def/status/statusDef";
-import {Conan, ConanState, IConsumer} from "..";
+import {Conan, ConanState, IConsumer} from "../index";
 import {Status, StatusLike} from "../conan-flow/domain/status";
 import {ReactionCb} from "../conan-flow/def/reactionDef";
 

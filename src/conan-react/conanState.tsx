@@ -2,7 +2,7 @@ import * as React from "react";
 import {ReactElement} from "react";
 import {DataReactionDef, DataReactionLock} from "../conan-thread/domain/dataReaction";
 import {ConnectedState, StateConnect, StateMapConnect} from "./connect/stateConnect";
-import {Conan, IBiFunction, IConsumer, IFunction} from "..";
+import {Conan, IBiFunction, IConsumer, IFunction} from "../index";
 import {StateLive} from "./live/stateLive";
 import {DefaultActionsFn} from "../conan-flow/domain/actions";
 import {MonitorFacade} from "../conan-monitor/domain/monitorFacade";
@@ -18,7 +18,6 @@ import {FlowEventsTracker} from "../conan-flow/logic/flowEventsTracker";
 import {Monitors} from "../conan-monitor/factories/monitors";
 import {MonitorActions} from "../conan-monitor/domain/monitorActions";
 import {ConanFlow} from "./conanFlow";
-import {MetaInfo} from "../conan-monitor/domain/metaInfo";
 import {MetaMutators, MetaStatuses} from "../conan-monitor/domain/metaFlow";
 
 export class ConanState<DATA, ACTIONS = DefaultActionsFn<DATA>> {

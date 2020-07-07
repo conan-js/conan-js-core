@@ -1,7 +1,7 @@
 import {ConanState} from "./conanState";
 import {Reducers} from "../conan-thread/domain/reducers";
 import {StateDef} from "../conan-thread/domain/stateDef";
-import {Flows, IReducer, IVarArgConstructor} from "..";
+import {Flows, IReducer, IVarArgConstructor} from "../index";
 import {Asap} from "../conan-utils/asap";
 import {DefaultActionsFn} from "../conan-flow/domain/actions";
 import {Monitors} from "../conan-monitor/factories/monitors";
@@ -11,7 +11,6 @@ import {ConanFlow} from "./conanFlow";
 import {Mutators, VoidMutators} from "../conan-flow/domain/mutators";
 import {UserFlowDef} from "../conan-flow/def/flow/userFlowDef";
 import {FlowFacade} from "../conan-flow/domain/flowFacade";
-import {UserFlowStatusesDef} from "../conan-flow/def/status/userStatusDef";
 
 export type DefaultActions<DATA> = { update (reducer: IReducer<DATA> | DATA): Asap<DATA> };
 export type DefaultReducers<DATA> = { $update (reducer: IReducer<DATA> | DATA): DATA };
