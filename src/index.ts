@@ -26,8 +26,9 @@ import {
     ProvidedOrStaticOf,
     WithMetadata,
     WithMetadataArray,
-    WithMetadataKeyValuePairs
+    WithMetadataKeyValuePairs,
 } from "./conan-utils/typesHelper";
+import {Objects} from "./conan-utils/objects";
 import {DiAnnotationsMetadataFactory} from "./conan-di/core/annotations/diAnnotatinosMetadataFactory"
 import {diAnnotationsCrud, InjectByName, InjectByType, InjectDynamic} from "./conan-di/core/annotations/diAnnotations"
 import {DiContextFactory} from "./conan-di/core/diContext"
@@ -101,6 +102,7 @@ export {
     IReducer,
     ProvidedOrStaticOf,
     WithMetadataKeyValuePairs,
+    Objects
 }
 
 //********************
