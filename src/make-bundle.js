@@ -13,7 +13,10 @@ async function build() {
     console.log('Make bundle build init...');
     let bundle = await rollup.rollup({
         input: path.join(compiledPath, "index.js"),
-    })
+    }).catch(e => {
+        console.log(e);
+        throw e;
+    });
     console.log(bundle.watchFiles);
     let outputOptions = {
         file: path.join(compiledPath, "bundle.js"),
