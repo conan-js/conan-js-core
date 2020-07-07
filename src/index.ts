@@ -30,6 +30,9 @@ import {
     WithMetadataArray,
     WithMetadataKeyValuePairs,
 } from "./conan-utils/typesHelper";
+
+import {getLoggingFilter, LoggerFilters, setLoggingFilter, updateLoggingFilter} from "./conan-flow/logic/flowLogger"
+
 import {Objects} from "./conan-utils/objects";
 import {DiAnnotationsMetadataFactory} from "./conan-di/core/annotations/diAnnotatinosMetadataFactory"
 import {diAnnotationsCrud, InjectByName, InjectByType, InjectDynamic} from "./conan-di/core/annotations/diAnnotations"
@@ -69,6 +72,9 @@ import {Reducers, ReducersFn} from "./conan-thread/domain/reducers"
 import {Flows} from "./conan-flow/factories/flows"
 import {ActionsFn, Then} from "./conan-thread/domain/threadActions"
 import {Lists} from "./conan-utils/lists"
+import {Rule} from "./conan-utils/rules/_rules"
+
+import {FlowEvent, FlowEventType} from "./conan-flow/domain/flowRuntimeEvents";
 
 //********************
 //conan-sm
@@ -158,3 +164,9 @@ export {ActionsFn, Then}
 export {Lists}
 
 export {StateEvent, StatusEventType}
+
+export {getLoggingFilter, LoggerFilters, setLoggingFilter, updateLoggingFilter}
+
+export {Rule}
+
+export {FlowEvent, FlowEventType}
